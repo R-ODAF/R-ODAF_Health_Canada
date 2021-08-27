@@ -1,0 +1,17 @@
+# filename for genome
+genome_filename:  Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+
+# filename for gene annotations
+annotation_filename:  Mus_musculus.GRCm39.104.gtf
+
+# used for labeling genome index files
+genome_name: "GRCm39" 
+
+# one of 'rnaseq' or 'temposeq'
+seqtype: rnaseq
+
+# one of 'se' (single end) or 'pe' (paired end)
+mode: se
+
+# number of threads to use, for multi-threaded programs
+threads: 8

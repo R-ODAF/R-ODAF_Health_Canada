@@ -1,0 +1,149 @@
+# Pathway Analysis using Enriched WikiPathways and GSEA (KEGG)
+
+## WikiPathways: Enrichment based on all DEGs
+
+This section uses clusterProfiler to detect enriched gene sets using [WikiPathways](https://www.wikipathways.org/) data.  
+
+```{r 'pathway_analysis', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+entrez_IDs <- as.character(id_table_entrez$entrezgene_id)
+entrezDEGs <- dplyr::left_join(significantResults,
+                               id_table_entrez,
+                               by = biomart_filter)
+entrezDEGs <- as.vector(entrezDEGs$entrezgene_id)
+
+#Wiki <- rWikiPathways::downloadPathwayArchive(organism=species_sci, format = "gmt", destpath = paths$DEG_output, date="20210310")
+#wp2gene <- clusterProfiler::read.gmt(file.path(paths$DEG_output,Wiki))
+wp2gene <- clusterProfiler::read.gmt(file.path(paths$wikipathways,wiki))
+wp2gene <- wp2gene %>% tidyr::separate(1, c("name","version","wpid","org"), "%")
+wpid2gene <- wp2gene %>% dplyr::select(wpid,gene) #TERM2GENE
+wpid2name <- wp2gene %>% dplyr::select(wpid,name) #TERM2NAME
+wpid2gene
+wpid2name
+
+DEG_pathways <- clusterProfiler::enricher(
+  entrezDEGs,
+  universe = entrez_IDs,
+  pAdjustMethod = "fdr",
+  pvalueCutoff = 0.05, #p.adjust cutoff
+  TERM2GENE = wpid2gene,
+  TERM2NAME = wpid2name)
+DEG_pathways <- DOSE::setReadable(DEG_pathways, orgdb, keyType = "ENTREZID")
+
+if (nrow(DEG_pathways@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 0) {
+  clusterProfiler::dotplot(DEG_pathways, showCategory = 20, font.size=9)  +
+    theme(axis.text.y = element_text(angle = 0)) +
+    scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
+  
+  write.table(as.data.frame(DEG_pathways),
+              file = file.path(paths$pathway_analysis, "Enriched.WikiPathways.txt"))
+} else { print("No significantly enriched terms using criteria selected") }
+```
+
+## WikiPathways: Enrichment by DEGs within each contrast {.tabset .tabset-fade}
+
+This section uses clusterProfiler `enricher()` to detect enriched gene sets using [WikiPathways](https://www.wikipathways.org/) data. Only contrasts with results are shown here.  
+
+```{r 'pathway_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+plotList <- list()
+for (i in seq_along(levels(significantResults$contrast))) {
+  entrezDEGs <- dplyr::left_join(significantResults %>% filter(contrast==levels(significantResults$contrast)[i]),
+                                 id_table_entrez,
+                                 by=biomart_filter)
+  entrezDEGs <- entrezDEGs$entrezgene_id
+  if (length(entrezDEGs) < 10) {
+    plotList[[i]] <- NA
+    next
+  }
+  DEG_pathways <- clusterProfiler::enricher(entrezDEGs,
+                                            universe = entrez_IDs,
+                                            pAdjustMethod = "fdr",
+                                            pvalueCutoff = 0.05, #p.adjust cutoff
+                                            TERM2GENE = wpid2gene,
+                                            TERM2NAME = wpid2name)
+  DEG_pathways <- DOSE::setReadable(DEG_pathways, orgdb, keyType = "ENTREZID")
+  if (nrow(DEG_pathways@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 0) {
+    plotList[[i]] <- clusterProfiler::dotplot(DEG_pathways, showCategory = 20, font.size=9)  +
+      theme(axis.text.y = element_text(angle = 0)) +
+      scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
+    write.table(as.data.frame(DEG_pathways),
+                file = file.path(paths$pathway_analysis,paste0("Enriched.WikiPathways.",
+                                                         str_replace_all(levels(significantResults$contrast)[i],
+                                                                         " ",
+                                                                         "_"),
+                                                         ".txt")))
+  } else { plotList[[i]] <- NA }
+}
+```
+
+```{r 'pathway_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+for (i in seq_along(levels(significantResults$contrast))) {
+  if(any(!is.na(plotList[[i]]))) {
+    cat("###", levels(significantResults$contrast)[i], "  \n\n")
+    print(plotList[[i]])
+    cat('  \n\n')
+  }
+}
+
+```
+
+## GSEA: By contrast {.tabset .tabset-fade}
+
+This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
+
+```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+plotListGSEA <- list()
+plotListGSEA_escore <- list()
+for (i in seq_along(levels(significantResults$contrast))) {
+  DEGs_full <- dplyr::left_join(significantResults %>% filter(contrast==levels(significantResults$contrast)[i]),
+                                id_table_entrez,
+                                by=biomart_filter)
+  foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
+  names(foldChanges) <- DEGs_full %>% dplyr::pull(entrezgene_id)
+  foldChanges <- foldChanges %>% sort() %>% rev()
+  foldChanges <- foldChanges[!is.na(names(foldChanges))]
+  if (length(foldChanges) < 10) {
+    plotListGSEA[[i]] <- NA
+    plotListGSEA_escore[[i]] <- NA
+    next
+  }
+  kk <- gseKEGG(foldChanges, keyType="ncbi-geneid", organism=kegg_organism)
+  gsea_sorted <- kk %>% filter(p.adjust < 0.05) %>% arrange(desc(enrichmentScore))
+  write.table(as.data.frame(gsea_sorted),
+              file = file.path(paths$pathway_analysis,paste0("Enriched.KEGG_Pathways.",
+                                                       str_replace_all(levels(significantResults$contrast)[i],
+                                                                       " ",
+                                                                       "_"),
+                                                       ".txt")))
+  if(dim(kk@result)[1] > 0){
+    plotListGSEA[[i]] <- ridgeplot(kk)
+    plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(gsea_sorted, geneSetID = c(seq_along(gsea_sorted$ID)))
+  } else {
+    plotListGSEA[[i]] <- NA
+    plotListGSEA_escore[[i]] <- NA
+  }
+}
+```
+
+```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+for (i in seq_along(levels(significantResults$contrast))) {
+  if(any(!is.na(plotListGSEA[[i]]))) {
+    cat("###", levels(significantResults$contrast)[i], "  \n\n")
+    print(plotListGSEA[[i]])
+    cat('  \n\n')
+  }
+}
+```
+
+## GSEA Enrichment Score Plots: By contrast {.tabset .tabset-fade}
+
+In this section, only the pathway with the top enrichment score is shown (for simplicity). Note that it is possible to plot any pathway of interest by altering the call to `gseaplot`.
+
+```{r 'gsea_scores_plot', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+for (i in seq_along(levels(significantResults$contrast))) {
+  if(any(!is.na(plotListGSEA_escore[[i]]))) {
+    cat("###", levels(significantResults$contrast)[i], "  \n\n")
+    print(plotListGSEA_escore[[i]])
+    cat('  \n\n')
+  }
+}
+```
