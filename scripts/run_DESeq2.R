@@ -3,6 +3,7 @@
 suppressMessages(library('tidyverse'))
 suppressMessages(library('yaml'))
 suppressMessages(library('DESeq2'))
+suppressMessages(library('gtools'))
 
 # assume this is being run from within the R project
 projectdir <- here::here()
@@ -18,6 +19,7 @@ get_analysis_id <- get_analysis_id(params)
 
 # Identify where metadata can be found
 SampleKeyFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
+ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
@@ -27,6 +29,25 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           quote = "\"",
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
+DESeqDesignAsRead <- DESeqDesign
+print(DESeqDesign)
+
+# read in contrasts
+contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
+
+# set interesting groups
+intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
+# TODO: maybe here's where the factor conversion should happen?
+# TODO: what about nuisance variables?
+
+DESeqDesign <- filter_metadata(DESeqDesign, params)
+if(!is.na(params$sortcol)){
+  sorted <- sort_metadata(DESeqDesign, contrasts, params)
+  DESeqDesign <- sorted$design
+  contrasts <- sorted$contrasts
+}
+
+print(DESeqDesign)
 
 # Identify where count data can be found
 if (params$platform == "TempO-Seq") {
