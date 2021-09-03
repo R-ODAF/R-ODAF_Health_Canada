@@ -27,7 +27,7 @@ params:
   platform: "RNA-Seq"            # RNA-Seq or TempO-Seq
   group_facet: !expr NA       #!expr NA # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  !expr NA        # !expr NA # Which group will this report be done on?
-  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  sortcol: "timepoint"                # Optionally, a column by which to sort the contrasts
   strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !expr NA      # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !expr NA       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
