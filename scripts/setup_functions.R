@@ -19,6 +19,7 @@ set_up_paths <- function(params) {
     paths$pathway_analysis <- file.path(paths$DEG_output, "/pathway_analysis")
     paths$RData <- file.path(paths$DEG_output, "/RData")
     paths$BMD_output <- file.path(paths$results, "/DEG_output/BMD_and_biomarker_files")
+    return(paths)
 }
 
 

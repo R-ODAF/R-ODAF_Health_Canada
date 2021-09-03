@@ -4,19 +4,20 @@ suppressMessages(library('tidyverse'))
 suppressMessages(library('yaml'))
 suppressMessages(library('DESeq2'))
 
-source("setup_functions.R")
-
+# assume this is being run from within the R project
 projectdir <- here::here()
 print(projectdir)
-config <- yaml::read_yaml(file.path(projectdir, "Rmd/config.yml"), eval.expr = T)
 
+source(here::here("scripts","setup_functions.R"))
+
+config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
 params <- config$params
 
 paths <- set_up_paths(params)
 get_analysis_id <- get_analysis_id(params)
 
 # Identify where metadata can be found
-SampleKeyFile <- file.path(params$projectdir, "metadata/metadata.QC_applied.txt")
+SampleKeyFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
@@ -27,9 +28,8 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 
-
 # Identify where count data can be found
-if (Platform == "TempO-Seq") {
+if (params$platform == "TempO-Seq") {
   SampleDataFile <- file.path(paths$processed, "count_table.csv")
   sampledata_sep = ","
 } else {
@@ -38,10 +38,8 @@ if (Platform == "TempO-Seq") {
 }
 
 
-
 if (is.na(params$group_facet)) { # all data in one facet
-  message(paste0("Making multiple reports based on ",
-                 params$group_facet ,"..."))
+  message("Writing a single report for whole experiment.")
     # load data
     # run DEseq2
 
@@ -58,7 +56,7 @@ if (is.na(params$group_facet)) { # all data in one facet
                  "Writing a single report for that (those) groups."))
 
     } else { # do all facets separately
-        message("Writing a single report for whole experiment.")
+      message(paste0("Making multiple reports based on ", params$group_facet, "..."))
 
     }
 }
