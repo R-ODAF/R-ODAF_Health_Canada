@@ -1,8 +1,8 @@
 #!/usr/bin/R
 # Custom parameters for the report
-library('tidyverse')
-library('yaml')
-library('DESeq2')                                                                                                                                                            
+suppressMessages(library('tidyverse'))
+suppressMessages(library('yaml'))
+suppressMessages(library('DESeq2'))
 
 source("setup_functions.R")
 
