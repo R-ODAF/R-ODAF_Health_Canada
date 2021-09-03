@@ -30,7 +30,6 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 DESeqDesignAsRead <- DESeqDesign
-print(DESeqDesign)
 
 # read in contrasts
 contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
@@ -47,7 +46,6 @@ if(!is.na(params$sortcol)){
   contrasts <- sorted$contrasts
 }
 
-print(DESeqDesign)
 
 # Identify where count data can be found
 if (params$platform == "TempO-Seq") {
