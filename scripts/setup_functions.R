@@ -147,3 +147,30 @@ load_count_data <- function(SampleDataFile. sampledata_sep){
                          check.names = FALSE)
   return(sampleData)
 }
+
+load_biospyder <- function(biospyder_dbs, temposeq_manifest){
+  return_data = list()
+  biospyder <- read.delim(file.path(biospyder_dbs, temposeq_manifest), # Assay manifest...
+                        stringsAsFactors = FALSE,
+                        sep = "\t",
+                        header = TRUE,
+                        quote = "\"")
+  # Annoyingly, the manifests are different depending on platform and version.
+  if (colnames(biospyder)[1] == "PROBE_NAME") {
+    biospyder_ID = "ENSEMBL_GENE_ID"
+    biomart_filter <- "PROBE_NAME"
+    biospyder_filter = "ensembl_gene_id"
+  } else if (colnames(biospyder)[1] == "Probe.name") {
+    biospyder_ID = "Reference.Transcript"
+    biomart_filter = "Probe.name"
+    biospyder_filter = "refseq_mrna"
+  }
+  # Fill in the blanks for TempO-Seq Manifest...
+  # Set NULL values to NA
+  biospyder[ biospyder == "NULL" ] <- NA
+  return_data$biospyder <- biospyder
+  return_data$biospyder_ID <- biospyder_ID
+  return_data$biomart_filter <- biomart_filter
+  return_data$biospyder_filter <- biospyder_filter
+  return(return_data)
+}

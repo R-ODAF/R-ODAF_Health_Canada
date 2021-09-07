@@ -56,6 +56,10 @@ if (params$platform == "TempO-Seq") {
   sampledata_sep = "\t"
 }
 
+ensembl <- useMart("ensembl",
+                   dataset = ensembl_species,
+                   host = "uswest.ensembl.org")
+
 
 if (is.na(params$group_facet)) { # all data in one facet
   message("Writing a single report for whole experiment.")
@@ -78,4 +82,25 @@ if (is.na(params$group_facet)) { # all data in one facet
       message(paste0("Making multiple reports based on ", params$group_facet, "..."))
 
     }
+}
+
+if (Platform == "RNA-Seq") {
+  threshold = 1000000 # Number of aligned reads per sample required
+  MinCount <- 1
+  alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
+  linear_fc_filter <- 1.5
+  biomart_filter <- "ensembl_gene_id"
+} else if (Platform == "TempO-Seq") {
+  threshold = 100000 # Number of aligned reads per sample required
+  MinCount <- 0.5
+  alpha <- pAdjValue <- 0.05 
+  linear_fc_filter <- 1.5
+  
+  bs <- load_biospyder(biospyder_dbs, temposeq_manifest)
+  biospyder_ID <- bs$biospyder_ID
+  biomart_filter <- bs$biomart_filter
+  biospyder_filter <- bs$biospyder_filter
+  biospyder <- bs$biospyder
+} else { 
+  stop("Platform/technology not recognized") 
 }
