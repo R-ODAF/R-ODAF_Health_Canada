@@ -136,3 +136,14 @@ sort_metadata <- function(DESeqDesign, contrasts, params){
         unique()
     return(list(design=ordered_metadata,contrasts=contrasts))
 }
+
+load_count_data <- function(SampleDataFile. sampledata_sep){
+  sampleData <- read.delim(SampleDataFile,
+                         sep = sampledata_sep,
+                         stringsAsFactors = FALSE,
+                         header = TRUE, 
+                         quote = "\"",
+                         row.names = 1,
+                         check.names = FALSE)
+  return(sampleData)
+}
