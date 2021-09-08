@@ -61,29 +61,6 @@ ensembl <- useMart("ensembl",
                    host = "uswest.ensembl.org")
 
 
-if (is.na(params$group_facet)) { # all data in one facet
-  message("Writing a single report for whole experiment.")
-    # load data
-    # run DEseq2
-
-} else {
-    facets <- DESeqDesign %>%
-        filter(!(params$group_facet) %in% c(params$exclude_groups, skip_extra)) %>%
-        filter(!solvent_control) %>%
-        pull(params$group_facet) %>% 
-        unique()
-
-    if (any(!is.na(params$group_filter))) { # filter facets
-        message(paste0("The group(s) of interest is (are) ",
-                 paste(params$group_filter, collapse = " and "),".\n",
-                 "Writing a single report for that (those) groups."))
-
-    } else { # do all facets separately
-      message(paste0("Making multiple reports based on ", params$group_facet, "..."))
-
-    }
-}
-
 if (Platform == "RNA-Seq") {
   threshold = 1000000 # Number of aligned reads per sample required
   MinCount <- 1
@@ -103,4 +80,44 @@ if (Platform == "RNA-Seq") {
   biospyder <- bs$biospyder
 } else { 
   stop("Platform/technology not recognized") 
+}
+
+if (is.na(params$group_facet)) { # all data in one facet
+  message("Writing a single report for whole experiment.")
+  if(params$use_cached_RData){
+    load_cached_data(paths$RData, params)
+  } else {
+    sampleData <- read.delim(SampleDataFile,
+                         sep = sampledata_sep,
+                         stringsAsFactors = FALSE,
+                         header = TRUE, 
+                         quote = "\"",
+                         row.names = 1,
+                         check.names = FALSE)
+
+    processed <- process_data(sampledata, DESeqDesign, intgroup, params)
+    sampleData <- processed$sampleData
+    DESeqDesign <- processed$DESeqDesign
+
+    dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
+
+    save_cached_data(dds, paths$RData, params)
+  }
+} else {
+  stop("not implemented yet")
+    facets <- DESeqDesign %>%
+        filter(!(params$group_facet) %in% c(params$exclude_groups, skip_extra)) %>%
+        filter(!solvent_control) %>%
+        pull(params$group_facet) %>% 
+        unique()
+
+    if (any(!is.na(params$group_filter))) { # filter facets
+        message(paste0("The group(s) of interest is (are) ",
+                 paste(params$group_filter, collapse = " and "),".\n",
+                 "Writing a single report for that (those) groups."))
+
+    } else { # do all facets separately
+      message(paste0("Making multiple reports based on ", params$group_facet, "..."))
+
+    }
 }
