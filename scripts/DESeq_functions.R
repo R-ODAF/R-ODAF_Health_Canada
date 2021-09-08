@@ -5,25 +5,26 @@ filter_data <- function(sampleData, DESeqDesign, threshold){
 
     DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
     sampleData <- sampleData[,DESeqDesign$original_names]
+    return(sampleData)
 }
 
-#TODO: make this more better
-check_data <- function(sampleData){
-    # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
-    metadata_in_sampledata <- all(DESeqDesign$original_names %in% colnames(sampleData))
-    # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
-    sampledata_in_metadata <- all(colnames(sampleData) %in% DESeqDesign$original_names)
-    # Find samples that were removed because they weren't in metadata
-    removed <- colnames(sampleData[which(!colnames(sampleData) %in% DESeqDesign$original_names)])
-    # Reorder the metadata table to correspond to the order of columns in the count data
-    DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-    # DESeqDesign <- na.omit(DESeqDesign) # This can cause issues since it removes any lines with missing data. Should instead check for NAs in required columns.
-    sampleData <- sampleData[,DESeqDesign$original_names]
-    samples_after <- nrow(DESeqDesign)
+#TODO: make this more better. Should run actual tests on this to make sure that stuff matches
+check_data <- function(sampleData, DESeqDesign){
+  # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
+  metadata_in_sampledata <- all(DESeqDesign$original_names %in% colnames(sampleData))
+  # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
+  sampledata_in_metadata <- all(colnames(sampleData) %in% DESeqDesign$original_names)
+  # Find samples that were removed because they weren't in metadata
+  removed <- colnames(sampleData[which(!colnames(sampleData) %in% DESeqDesign$original_names)])
+  # Reorder the metadata table to correspond to the order of columns in the count data
+  DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
+  # DESeqDesign <- na.omit(DESeqDesign) # This can cause issues since it removes any lines with missing data. Should instead check for NAs in required columns.
+  sampleData <- sampleData[,DESeqDesign$original_names]
+  samples_after <- nrow(DESeqDesign)
 
-    head(DESeqDesign$original_names)
-    head(colnames(sampleData)) # Output should match
-
+  head(DESeqDesign$original_names)
+  head(colnames(sampleData)) # Output should match
+  return(sampleData)
 }
 
 format_and_sort_metadata <- function(DESeqDesign, intgroup){
@@ -39,6 +40,15 @@ format_and_sort_metadata <- function(DESeqDesign, intgroup){
                                         ordered = FALSE)
         DESeqDesign[[params$design]] <- design_factor_reordered
     }
+    return(DESeqDesign)
+}
+
+process_data <- function(sampledata, DESeqDesign, intgroup, params){
+  sampleData <- filter_data(sampleData, DESeqDesign, params$threshold)
+  DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup)
+  # need to fix this still
+  #check_data(sampleData, DESeqDesign)
+  return(list(sampleData=sampleData, DESeqDesign=DESeqDesign))
 }
 
 
