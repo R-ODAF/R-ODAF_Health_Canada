@@ -1021,7 +1021,7 @@ Please note that in these pairwise plots, some relationships are meaningless (e.
 ### Common columns - vector of NMR_data, Ncov5_data, Nsig80_data, Gini_data
 
 QAQC_metadata_subset <- QAQC_annotated %>%
-  dplyr::select(unlist(groups),
+  dplyr::select(unlist(groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
 
 QAQC_metadata_subset %>%
@@ -1080,10 +1080,17 @@ if (length(groups) > 1 & !is.null(batch_var)) {
 ## Plate position effects
 
 ```{r plate_pos, eval = any(grepl("column", colnames(QAQC_annotated), ignore.case = T))}
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
+colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))
+rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))
+colname <- names(QAQC_annotated[colnum])
+rowname <- names(QAQC_annotated[rownum])
+plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
+                                         y = factor(!!ensym(rowname),
+                                                    levels = rev(levels(factor(!!ensym(rowname)))))))
+
 #  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
 #  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = NMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
@@ -1094,10 +1101,7 @@ ggplot(QAQC_annotated, aes(x = factor(column),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = FMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
@@ -1108,10 +1112,7 @@ ggplot(QAQC_annotated, aes(x = factor(column),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Nsig80_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
@@ -1122,10 +1123,7 @@ ggplot(QAQC_annotated, aes(x = factor(column),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Ncov5_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
@@ -1136,10 +1134,7 @@ ggplot(QAQC_annotated, aes(x = factor(column),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Gini_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
@@ -1150,14 +1145,14 @@ ggplot(QAQC_annotated, aes(x = factor(column),
         axis.title.x = element_blank(),
         axis.title.y = element_blank())
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-  geom_tile(mapping = aes(fill = log(dose + 1)), data = QAQC_annotated) +   
+plate_plot +
+  geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
+            data = QAQC_annotated) +   
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
+  facet_wrap(paste0("~", batch_var)) +
   ggtitle("Any samples failed") +
   theme_bw() +
   theme(legend.position = "right",
