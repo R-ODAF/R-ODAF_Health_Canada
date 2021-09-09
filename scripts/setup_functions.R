@@ -1,29 +1,3 @@
-set_up_paths <- function(params) {
-    paths <- list()
-    # Other important system paths to specify in config
-    paths$wikipathways <- params$wikipathways_directory
-    # For project structure
-    # Should probably update this to use the file.path() function.
-    paths$root <- params$projectdir
-    paths$data <- file.path(paths$root, "data")
-      paths$raw <- file.path(paths$data, "raw")
-      paths$processed <- file.path(paths$data, "processed")
-      paths$metadata <- file.path(paths$data, "metadata")
-    paths$reports <- file.path(paths$root, "reports")
-    paths$results <- file.path(paths$root, "results")
-    if (is.na(params$group_facet)) {
-      paths$DEG_output <- file.path(paths$results, "DEG_output")
-    } else {
-      paths$DEG_output <- file.path(paths$results, "DEG_output", paste0("group_", paste(params$group_filter, collapse = "_")))
-    }
-    paths$pathway_analysis <- file.path(paths$DEG_output, "/pathway_analysis")
-    paths$RData <- file.path(paths$DEG_output, "/RData")
-    paths$BMD_output <- file.path(paths$results, "/DEG_output/BMD_and_biomarker_files")
-    lapply(paths, function(x) if(!dir.exists(x)) dir.create(x))
-    return(paths)
-}
-
-
 load_species <- function(species){
   species_data = list()
   species_data$loaded <- FALSE
@@ -92,62 +66,6 @@ get_analysis_id <- function(params){
     return(analysisID)
 }
 
-filter_metadata <- function(DESeqDesign, params){
-    # exclude samples
-    if (any(!is.na(params$exclude_samples))) {
-        DESeqDesign <- DESeqDesign %>% 
-            dplyr::filter(!original_names %in% params$exclude_samples)
-    }
-    # exclude groups
-    if (any(!is.na(params$exclude_groups))) {
-        DESeqDesign <- DESeqDesign %>%
-            dplyr::filter(!(!!sym(params$design)) %in% params$exclude_groups)
-        contrasts_to_filter <- DESeqDesign %>% 
-            dplyr::filter(!(!!sym(params$design)) %in% params$exclude_groups) %>%
-            pull(params$design) %>% 
-            unique()
-        contrasts <- contrasts %>%
-            dplyr::filter(V1 %in% contrasts_to_filter)
-        if (params$strict_contrasts == T) {
-            contrasts <- contrasts %>%
-                dplyr::filter(V2 %in% contrasts_to_filter)
-        }
-    }
-    if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
-        DESeqDesign <- DESeqDesign %>%
-            dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
-        limit_contrasts <- DESeqDesign %>%
-            pull(!!sym(params$design)) %>%
-            unique() %>%
-            as.character()
-        contrasts <- contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
-    }
-    return(DESeqDesign)
-}
-
-# TODO: this might need work. Conversion to factors might require sorting?
-sort_metadata <- function(DESeqDesign, contrasts, params){
-    # reorder contrast list by the specified column
-    ordered_metadata <- DESeqDesign[mixedorder(DESeqDesign[,params$sortcol]),]
-    ordered_design <- ordered_metadata %>%
-        dplyr::select(params$design) %>%
-        dplyr::pull()
-    contrasts <- contrasts %>%
-        dplyr::slice(match(ordered_design, V1)) %>%
-        unique()
-    return(list(design=ordered_metadata,contrasts=contrasts))
-}
-
-load_count_data <- function(SampleDataFile, sampledata_sep){
-  sampleData <- read.delim(SampleDataFile,
-                         sep = sampledata_sep,
-                         stringsAsFactors = FALSE,
-                         header = TRUE, 
-                         quote = "\"",
-                         row.names = 1,
-                         check.names = FALSE)
-  return(sampleData)
-}
 
 load_biospyder <- function(biospyder_dbs, temposeq_manifest){
   return_data = list()
