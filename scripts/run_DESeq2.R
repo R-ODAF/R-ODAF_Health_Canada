@@ -52,29 +52,24 @@ if(!is.na(params$sortcol)){
 }
 
 species_data <- load_species(params$species)
-
-
-# Identify where count data can be found
-if (params$platform == "TempO-Seq") {
-  SampleDataFile <- file.path(paths$processed, "count_table.csv")
-  sampledata_sep = ","
-} else {
-  SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
-  sampledata_sep = "\t"
-}
-
 ensembl <- useMart("ensembl",
                    dataset = species_data$ensembl_species,
                    host = "useast.ensembl.org")
 
 
 if (params$platform == "RNA-Seq") {
+  SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
+  sampledata_sep = "\t"
+  
   params$threshold <- 1000000 # Number of aligned reads per sample required
   params$MinCount <- 1
   params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
   params$linear_fc_filter <- 1.5
   params$biomart_filter <- "ensembl_gene_id"
 } else if (params$platform == "TempO-Seq") {
+  SampleDataFile <- file.path(paths$processed, "count_table.csv")
+  sampledata_sep = ","
+
   params$threshold = 100000 # Number of aligned reads per sample required
   params$MinCount <- 0.5
   params$alpha <- pAdjValue <- 0.05 
