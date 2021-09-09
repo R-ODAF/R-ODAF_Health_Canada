@@ -19,6 +19,7 @@ set_up_paths <- function(params) {
     paths$pathway_analysis <- file.path(paths$DEG_output, "/pathway_analysis")
     paths$RData <- file.path(paths$DEG_output, "/RData")
     paths$BMD_output <- file.path(paths$results, "/DEG_output/BMD_and_biomarker_files")
+    lapply(paths, function(x) if(!dir.exists(x)) dir.create(x))
     return(paths)
 }
 
@@ -137,7 +138,7 @@ sort_metadata <- function(DESeqDesign, contrasts, params){
     return(list(design=ordered_metadata,contrasts=contrasts))
 }
 
-load_count_data <- function(SampleDataFile. sampledata_sep){
+load_count_data <- function(SampleDataFile, sampledata_sep){
   sampleData <- read.delim(SampleDataFile,
                          sep = sampledata_sep,
                          stringsAsFactors = FALSE,
