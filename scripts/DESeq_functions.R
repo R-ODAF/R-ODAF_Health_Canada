@@ -2,7 +2,6 @@ filter_data <- function(sampleData, DESeqDesign, threshold){
     # First data clean-up: replace NA & remove samples with total readcount < threshold
     sampleData[ is.na(sampleData) ] <- 0 
     sampleData <- sampleData[,(colSums(sampleData) > threshold)] # reads required per sample
-
     DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
     sampleData <- sampleData[,DESeqDesign$original_names]
     return(sampleData)
@@ -75,7 +74,7 @@ save_cached_data <- function(dds, RDataPath, params){
 
 
 get_design <- function(intgroup){
-  return(formula(paste0("~", paste0(intgroup, collapse = " + ")))
+  return(formula(paste0("~", paste0(intgroup, collapse = " + "))))
 }
 
 

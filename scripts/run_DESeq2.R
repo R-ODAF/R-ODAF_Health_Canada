@@ -4,12 +4,15 @@ suppressMessages(library('tidyverse'))
 suppressMessages(library('yaml'))
 suppressMessages(library('DESeq2'))
 suppressMessages(library('gtools'))
+suppressMessages(library('biomaRt'))
+suppressMessages(library('BiocParallel'))
 
 # assume this is being run from within the R project
 projectdir <- here::here()
 print(projectdir)
 
 source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
 
 config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
 params <- config$params
@@ -46,6 +49,8 @@ if(!is.na(params$sortcol)){
   contrasts <- sorted$contrasts
 }
 
+species_data <- load_species(params$species)
+
 
 # Identify where count data can be found
 if (params$platform == "TempO-Seq") {
@@ -57,27 +62,27 @@ if (params$platform == "TempO-Seq") {
 }
 
 ensembl <- useMart("ensembl",
-                   dataset = ensembl_species,
-                   host = "uswest.ensembl.org")
+                   dataset = species_data$ensembl_species,
+                   host = "useast.ensembl.org")
 
 
-if (Platform == "RNA-Seq") {
-  threshold = 1000000 # Number of aligned reads per sample required
-  MinCount <- 1
-  alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
-  linear_fc_filter <- 1.5
-  biomart_filter <- "ensembl_gene_id"
-} else if (Platform == "TempO-Seq") {
-  threshold = 100000 # Number of aligned reads per sample required
-  MinCount <- 0.5
-  alpha <- pAdjValue <- 0.05 
-  linear_fc_filter <- 1.5
+if (params$platform == "RNA-Seq") {
+  params$threshold <- 1000000 # Number of aligned reads per sample required
+  params$MinCount <- 1
+  params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
+  params$linear_fc_filter <- 1.5
+  params$biomart_filter <- "ensembl_gene_id"
+} else if (params$platform == "TempO-Seq") {
+  params$threshold = 100000 # Number of aligned reads per sample required
+  params$MinCount <- 0.5
+  params$alpha <- pAdjValue <- 0.05 
+  params$linear_fc_filter <- 1.5
   
   bs <- load_biospyder(biospyder_dbs, temposeq_manifest)
-  biospyder_ID <- bs$biospyder_ID
-  biomart_filter <- bs$biomart_filter
-  biospyder_filter <- bs$biospyder_filter
-  biospyder <- bs$biospyder
+  params$biospyder_ID <- bs$biospyder_ID
+  params$biomart_filter <- bs$biomart_filter
+  params$biospyder_filter <- bs$biospyder_filter
+  params$biospyder <- bs$biospyder
 } else { 
   stop("Platform/technology not recognized") 
 }
@@ -87,14 +92,7 @@ if (is.na(params$group_facet)) { # all data in one facet
   if(params$use_cached_RData){
     load_cached_data(paths$RData, params)
   } else {
-    sampleData <- read.delim(SampleDataFile,
-                         sep = sampledata_sep,
-                         stringsAsFactors = FALSE,
-                         header = TRUE, 
-                         quote = "\"",
-                         row.names = 1,
-                         check.names = FALSE)
-
+    sampleData <- load_count_data(SampleDataFile, sampledata_sep)
     processed <- process_data(sampledata, DESeqDesign, intgroup, params)
     sampleData <- processed$sampleData
     DESeqDesign <- processed$DESeqDesign
