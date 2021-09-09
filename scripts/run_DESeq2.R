@@ -12,6 +12,8 @@ projectdir <- here::here()
 print(projectdir)
 
 source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","data_functions.R"))
+source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
 config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
