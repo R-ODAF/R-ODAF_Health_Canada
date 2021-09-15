@@ -1650,6 +1650,7 @@ get_clean_names <- function(vector_of_names) {
     #dplyr::mutate(combined = paste0(!!ensym(species_gene_symbol), collapse = ", ")) %>%
     dplyr::mutate(combined = coalesce(!!ensym(species_gene_symbol), !!ensym(biomart_filter))) %>%
     dplyr::select(-!!ensym(species_gene_symbol)) %>%
+    slice(1) %>% # This is bit of a hack - ran into problems with TempO-Seq probes that map to multiple genes.
     dplyr::distinct() %>%
     dplyr::pull(combined)
   return(hm_names)
