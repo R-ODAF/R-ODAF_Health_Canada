@@ -23,23 +23,33 @@ set_up_paths <- function(params) {
     return(paths)
 }
 
-load_cached_data <- function(RDataPath, params){
-  if(!is.na(params$group_facet)){
-    stop("TODO: implement cached data loading for faceted data")
-  }
-  if (file.exists(file.path(RDataPath, "dds.RData")) ) {
-    print(paste("Already found DESeq2 object from previous run; loading from disk."))
-    load(file.path(RDataPath, "dds.RData"))
-  }
-  if (!identical(as.data.frame(round(counts(dds))), round(sampleData), 0)) {
-    stop("Attempted to load a cached file that contained non-identical count data, exiting")
+load_cached_data <- function(RDataPath, params, sampleData, facets=NULL){
+    if(!is.na(params$group_facet)){
+        ddsList = list()
+        for (current_filter in facets) {
+            dds <- readRDS(file = file.path(RDataPath, paste0("dds_", paste(current_filter, collapse = "_"), ".RData")))
+            if (!identical(as.data.frame(round(counts(dds))), round(sampleData), 0)) {
+                stop("Attempted to load a cached file that contained non-identical count data, exiting")
+            }
+            ddsList[[current_filter]] <- dds
+        }
+        return(ddsList)
+  } else {
+    if (file.exists(file.path(RDataPath, "dds.RData")) ) {
+        print(paste("Already found DESeq2 object from previous run; loading from disk."))
+        dds <- readRDS(file.path(RDataPath, "dds.RData"))
+        if (!identical(as.data.frame(round(counts(dds))), round(sampleData), 0)) {
+            stop("Attempted to load a cached file that contained non-identical count data, exiting")
+        }
+    }
+    return(dds)
   }
 }
 
-save_cached_data <- function(dds, RDataPath, params){
-  if (is.na(params$group_facet)) {
-    save(dds, file = file.path(RDataPath, "dds.RData"))
-  } else {
-    save(dds, file = file.path(RDataPath, paste0("dds_", paste(params$group_filter, collapse = "_"), ".RData")))
-  }
+save_cached_data <- function(dds, RDataPath, current_filter=NULL){
+    if (is.na(current_filter)) {
+        saveRDS(dds, file = file.path(RDataPath, "dds.RData"))
+    } else {
+        saveRDS(dds, file = file.path(RDataPath, paste0("dds_", paste(current_filter, collapse = "_"), ".RData")))
+    }
 }

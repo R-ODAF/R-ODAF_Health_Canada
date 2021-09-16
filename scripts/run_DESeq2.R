@@ -9,7 +9,6 @@ suppressMessages(library('BiocParallel'))
 
 # assume this is being run from within the R project
 projectdir <- here::here()
-print(projectdir)
 
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
@@ -43,13 +42,8 @@ contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", hea
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
 # TODO: maybe here's where the factor conversion should happen?
 # TODO: what about nuisance variables?
+# TODO: faceting might make certain experimental designs illegal. Should we check for those or let DESeq do it?
 
-DESeqDesign <- filter_metadata(DESeqDesign, params)
-if(!is.na(params$sortcol)){
-  sorted <- sort_metadata(DESeqDesign, contrasts, params)
-  DESeqDesign <- sorted$design
-  contrasts <- sorted$contrasts
-}
 
 species_data <- load_species(params$species)
 ensembl <- useMart("ensembl",
@@ -59,7 +53,7 @@ ensembl <- useMart("ensembl",
 
 if (params$platform == "RNA-Seq") {
   SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
-  sampledata_sep = "\t"
+  params$sampledata_sep = "\t"
   
   params$threshold <- 1000000 # Number of aligned reads per sample required
   params$MinCount <- 1
@@ -68,7 +62,7 @@ if (params$platform == "RNA-Seq") {
   params$biomart_filter <- "ensembl_gene_id"
 } else if (params$platform == "TempO-Seq") {
   SampleDataFile <- file.path(paths$processed, "count_table.csv")
-  sampledata_sep = ","
+  params$sampledata_sep = ","
 
   params$threshold = 100000 # Number of aligned reads per sample required
   params$MinCount <- 0.5
@@ -84,35 +78,92 @@ if (params$platform == "RNA-Seq") {
   stop("Platform/technology not recognized") 
 }
 
-if (is.na(params$group_facet)) { # all data in one facet
-  message("Writing a single report for whole experiment.")
-  if(params$use_cached_RData){
-    load_cached_data(paths$RData, params)
-  } else {
-    sampleData <- load_count_data(SampleDataFile, sampledata_sep)
-    processed <- process_data(sampledata, DESeqDesign, intgroup, params)
-    sampleData <- processed$sampleData
-    DESeqDesign <- processed$DESeqDesign
+# Se this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
+params$R_ODAF_plots = FALSE
 
+
+#################9
+# TODO: set aside saving/loading data for now
+# it might be less important anyway, since the script will save the DESeq output
+# just focus on the DEseq calculation, including faceting and saving the output
+# maybe if no facets, can format the data the same with facet name "all" or something.
+#################
+# if(params$use_cached_RData){
+#     if(is.na(params$group_facet)){
+#         dds <- load_cached_data(paths$RData, sampleData, params)
+#     } else {
+#         ddsList <- load_cached_data(paths$RData, sampleData, params)
+#     }
+# } else {
+#     sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
+#     processed <- process_data(sampledata, DESeqDesign, intgroup, params)
+#     sampleData <- processed$sampleData
+#     DESeqDesign <- processed$DESeqDesign
+
+#     if(is.na(params$group_facet)){
+#         dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
+#         save_cached_data(dds, paths$RData, params)
+#     } else {
+#         for (current_filter in facets) {
+            
+#         }
+#     }
+
+# }
+
+sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
+
+processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, params)
+sampleData <- processed$sampleData
+DESeqDesign <- processed$DESeqDesign
+contrasts <- processed$contrasts
+
+# set up facets if necessary
+# facets will be all facets if group_filter is not set, and the filter otherwise
+if(!is.na(params$group_facet)){
+    if(!is.na(params$group_filter)){
+        facets <- params$group_filter
+    }else {
+        facets <- DESeqDesign %>%
+            filter(!(params$group_facet) %in% c(params$exclude_groups, skip_extra)) %>%
+            filter(!solvent_control) %>%
+            pull(params$group_facet) %>% 
+            unique()
+    }
+}
+
+if(is.na(params$group_facet)){
     dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
-
-    save_cached_data(dds, paths$RData, params)
-  }
+    #save_cached_data(dds, paths$RData, params)
 } else {
-  stop("not implemented yet")
-    facets <- DESeqDesign %>%
-        filter(!(params$group_facet) %in% c(params$exclude_groups, skip_extra)) %>%
-        filter(!solvent_control) %>%
-        pull(params$group_facet) %>% 
-        unique()
+    ddsList <- list()
+    metadata_subset <- subset_metadata(DESeqDesign, params, contrasts)
+    DESeqDesign_subset <- metadata_subset$DESeqDesign
+    contrasts_subset <- metadata_subset$contrasts
+    sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
 
+    for (current_filter in facets) {
+        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, params)
+    }
+}
+
+
+
+if (is.na(params$group_facet)) { # all data in one facet
+    message("Learning a single model for the whole experiment.")
+    res <- get_DESeq_results(dds, contrasts, params, NA, paths$DEG_output)
+} else {
+    resList <- list()
     if (any(!is.na(params$group_filter))) { # filter facets
         message(paste0("The group(s) of interest is (are) ",
                  paste(params$group_filter, collapse = " and "),".\n",
-                 "Writing a single report for that (those) groups."))
-
+                 "Learning a single model for that (those) groups."))
     } else { # do all facets separately
-      message(paste0("Making multiple reports based on ", params$group_facet, "..."))
-
+        message(paste0("Learning multiple models based on ", params$group_facet, "..."))
+    }
+    for (current_filter in facets) {
+        res <- get_DESeq_results(ddsList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
+        resList[[current_filter]] <- res
     }
 }
+

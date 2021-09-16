@@ -1,4 +1,5 @@
-
+# filter metadata
+# this only applies to specifically included/excluded data, not the facet filtering
 filter_metadata <- function(DESeqDesign, params){
     # exclude samples
     if (any(!is.na(params$exclude_samples))) {
@@ -48,14 +49,35 @@ format_and_sort_metadata <- function(DESeqDesign, intgroup){
     return(DESeqDesign)
 }
 
-process_data <- function(sampledata, DESeqDesign, intgroup, params){
-  sampleData <- filter_data(sampleData, DESeqDesign, params$threshold)
-  DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup)
-  # need to fix this still
-  #check_data(sampleData, DESeqDesign)
-  return(list(sampleData=sampleData, DESeqDesign=DESeqDesign))
+sort_contrasts <- function(DESeqDesign, contrasts, params){
+    ordered_design <- DESeqDesign[mixedorder(DESeqDesign[,params$sortcol]),] %>%
+        dplyr::select(params$design) %>%
+        dplyr::pull()
+    ordered_contrasts <- contrasts %>%
+        dplyr::slice(match(ordered_design, V1)) %>%
+        unique()
+    # print("contrasts:")
+    # print(contrasts)
+    # print("ordered design:")
+    # print(ordered_design)
+    # print("ordered contrasts:")
+    # print(ordered_contrasts)
+    return(ordered_contrasts)
 }
 
+process_data_and_metadata <- function(sampledata, DESeqDesign, contrasts, intgroup, params){
+    sampleData <- filter_data(sampleData, DESeqDesign, params$threshold)
+    DESeqDesign <- filter_metadata(DESeqDesign, params)
+    DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup)
+    if(!is.na(params$sortcol)){
+        contrasts <- sort_contrasts(DESeqDesign, contrasts, params)
+    }
+    # need to fix this still
+    #check_data(sampleData, DESeqDesign)
+    return(list(sampleData=sampleData, DESeqDesign=DESeqDesign, contrasts=contrasts))
+}
+
+# filter count data based on minimum counts. Does not do facet filtering
 filter_data <- function(sampleData, DESeqDesign, threshold){
     # First data clean-up: replace NA & remove samples with total readcount < threshold
     sampleData[ is.na(sampleData) ] <- 0 
@@ -94,4 +116,33 @@ load_count_data <- function(SampleDataFile, sampledata_sep){
                          row.names = 1,
                          check.names = FALSE)
   return(sampleData)
+}
+
+# subset metadata based on facet + filter
+subset_metadata <- function(DESeqDesign, params, contrasts){
+    #print(head(DESeqDesign))
+    print(params$design)
+    print(contrasts)
+
+    contrasts_to_filter <- DESeqDesign %>%
+        dplyr::filter(!!sym(params$group_facet) %in% params$group_filter) %>% # NOTE: Not sure if %in% or == is better here.
+        pull(params$design) %>% 
+        unique()
+    contrasts_subset <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
+    if (params$strict_contrasts == T) {
+        contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
+    }
+    DESeqDesign_subset <- DESeqDesign %>% dplyr::filter(!!sym(params$design) %in% (unlist(contrasts_subset) %>% unique()) )
+    return(list(DESeqDesign=DESeqDesign_subset, contrasts=contrasts_subset))
+}
+
+# subset count data to samples in metadata
+# TODO: add some tests here. Maybe test for zero samples left or something
+# TODO: also should be a check earlier on, separate from this, that checks that all sample names are in metadata and vice versa to start with
+# TODO: finally, there should be a check after all the processing is done that the actual count data hasn't changed
+subset_data <- function(sampleData, DESeqDesign){
+    # Reorder the metadata table to correspond to the order of columns in the count data
+    DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
+    sampleData_subset <- sampleData[,DESeqDesign_sorted$original_names]
+    return(sampleData_subset)
 }
