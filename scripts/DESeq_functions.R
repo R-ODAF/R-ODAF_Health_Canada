@@ -10,7 +10,9 @@ learn_deseq_model <- function(sd, des, intgroup, params){
                                     design    = current_design)
     # TODO: what is this filtering for?
     #dds <- dds[, DESeqDesign$original_names]
-    #dds <- dds[rowSums(counts(dds)) > 1]
+    if(params$filter_gene_counts){
+        dds <- dds[rowSums(counts(dds)) > 1]
+    }
     bpparam <- MulticoreParam(params$cpus)
     dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
     return(dds)
@@ -33,14 +35,12 @@ regularize_data <- function(dds, covariates, nuisance, blind=FALSE){
   return(rld)
 }
 
-get_DESeq_results <- function(dds, contrasts, params, current_group_filter, outdir){
+get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group_filter, outdir){
     # Initial setup for DESeq2 contrasts
     resList <- list()
     resListAll <- list()
     Counts  <- counts(dds, normalized = TRUE)
     CPMdds  <- edgeR::cpm(counts(dds, normalized = TRUE))
-
-
 
     # Make new directory for the ODAF-specific files
     ODAFdir <- file.path(outdir, "R-ODAF")
@@ -62,9 +62,17 @@ get_DESeq_results <- function(dds, contrasts, params, current_group_filter, outd
         FileName <- paste(analysisID, condition2, "vs", condition1, "FDR", pAdjValue, sep = "_")
 
         message(paste0(condition2, " vs ", condition1))
+
         DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, params$design] %in% c(condition1, condition2),])
         sample_subset   <- sampleData[, DESeqDesign_subset[, "original_names"]]
         colnames(sample_subset) <- NULL
+
+        stopifnot(exprs = {
+            ncol(sample_subset) > 0
+            nrow(DESeqDesign_subset) > 0
+            all(DESeqDesign_subset$original_names %in% colnames(sample_subset))
+            all(colnames(sample_subset) %in% DESeqDesign_subset$original_names)
+        })
 
         Filter <- matrix(data = NA, ncol = 3, nrow = nrow(Counts))
         rownames(Filter) <- rownames(Counts)

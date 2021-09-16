@@ -81,18 +81,19 @@ filter_data <- function(sampleData, DESeqDesign, threshold){
 }
 
 # sanity checks
-check_data <- function(sampleData, DESeqDesign, contrasts){
+check_data <- function(sd, des, con){
     message("Sanity checks for data")
     # make sure they're not empty
     stopifnot(exprs = {
-        nrow(sampleData) > 0
-        nrow(DESeqDesign) > 0
-        nrow(contrasts) > 0
+        ncol(sd) > 0
+        nrow(des) > 0
+        nrow(con) > 0
     })
   # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
-  stopifnot(all(DESeqDesign$original_names %in% colnames(sampleData)))
+  stopifnot(all(des$original_names %in% colnames(sd)))
   # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
-  stopifnot(all(colnames(sampleData) %in% DESeqDesign$original_names))
+  stopifnot(all(colnames(sd) %in% des$original_names))
+  message("All OK 👍")
 }
 
 
