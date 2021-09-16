@@ -118,10 +118,8 @@ sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts
 
-
-
 # set up facets if necessary
-# facets will be all facets if group_filter is not set, and the filter otherwise
+# the facets array will be all facets if group_filter is not set, and the filter otherwise
 if(!is.na(params$group_facet)){
     if(!is.na(params$group_filter)){
         facets <- params$group_filter
@@ -134,8 +132,12 @@ if(!is.na(params$group_facet)){
     }
 }
 
+stopifnot((is.na(params$group_facet) || length(facets) > 0))
+
 if(is.na(params$group_facet)){
     dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
+    # TODO: do this. need nuisance params
+    # rld <- regularize_data(dds, covariates, nuisance)
     #save_cached_data(dds, paths$RData, params)
 } else {
     ddsList <- list()
@@ -144,8 +146,12 @@ if(is.na(params$group_facet)){
     contrasts_subset <- metadata_subset$contrasts
     sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
 
+    check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
+
     for (current_filter in facets) {
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, params)
+        # TODO: do this. need nuisance params
+        # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
     }
 }
 
