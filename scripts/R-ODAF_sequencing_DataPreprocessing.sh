@@ -390,7 +390,7 @@ multiqc \
 ${BASEDIR} \
 --filename MultiQC_Report.html \
 --interactive \
---replace-names "${RAW_SAMPLE_DIR}/../../metadata/metadata.multiqc.txt" \
+--replace-names "${RAW_SAMPLE_DIR}/../../metadata/metadata.txt" \
 --outdir ${QC_DIR_multiQC}
 
 ###################################################################################################
