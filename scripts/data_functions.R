@@ -56,12 +56,6 @@ sort_contrasts <- function(DESeqDesign, contrasts, params){
     ordered_contrasts <- contrasts %>%
         dplyr::slice(match(ordered_design, V1)) %>%
         unique()
-    # print("contrasts:")
-    # print(contrasts)
-    # print("ordered design:")
-    # print(ordered_design)
-    # print("ordered contrasts:")
-    # print(ordered_contrasts)
     return(ordered_contrasts)
 }
 
@@ -72,8 +66,7 @@ process_data_and_metadata <- function(sampledata, DESeqDesign, contrasts, intgro
     if(!is.na(params$sortcol)){
         contrasts <- sort_contrasts(DESeqDesign, contrasts, params)
     }
-    # need to fix this still
-    #check_data(sampleData, DESeqDesign)
+    check_data(sampleData, DESeqDesign, contrasts)
     return(list(sampleData=sampleData, DESeqDesign=DESeqDesign, contrasts=contrasts))
 }
 
@@ -87,23 +80,19 @@ filter_data <- function(sampleData, DESeqDesign, threshold){
     return(sampleData)
 }
 
-#TODO: make this more better. Should run actual tests on this to make sure that stuff matches
-check_data <- function(sampleData, DESeqDesign){
+# sanity checks
+check_data <- function(sampleData, DESeqDesign, contrasts){
+    message("Sanity checks for data")
+    # make sure they're not empty
+    stopifnot(exprs = {
+        nrow(sampleData) > 0
+        nrow(DESeqDesign) > 0
+        nrow(contrasts) > 0
+    })
   # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
-  metadata_in_sampledata <- all(DESeqDesign$original_names %in% colnames(sampleData))
+  stopifnot(all(DESeqDesign$original_names %in% colnames(sampleData)))
   # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
-  sampledata_in_metadata <- all(colnames(sampleData) %in% DESeqDesign$original_names)
-  # Find samples that were removed because they weren't in metadata
-  removed <- colnames(sampleData[which(!colnames(sampleData) %in% DESeqDesign$original_names)])
-  # Reorder the metadata table to correspond to the order of columns in the count data
-  DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-  # DESeqDesign <- na.omit(DESeqDesign) # This can cause issues since it removes any lines with missing data. Should instead check for NAs in required columns.
-  sampleData <- sampleData[,DESeqDesign$original_names]
-  samples_after <- nrow(DESeqDesign)
-
-  head(DESeqDesign$original_names)
-  head(colnames(sampleData)) # Output should match
-  return(sampleData)
+  stopifnot(all(colnames(sampleData) %in% DESeqDesign$original_names))
 }
 
 
@@ -120,10 +109,6 @@ load_count_data <- function(SampleDataFile, sampledata_sep){
 
 # subset metadata based on facet + filter
 subset_metadata <- function(DESeqDesign, params, contrasts){
-    #print(head(DESeqDesign))
-    print(params$design)
-    print(contrasts)
-
     contrasts_to_filter <- DESeqDesign %>%
         dplyr::filter(!!sym(params$group_facet) %in% params$group_filter) %>% # NOTE: Not sure if %in% or == is better here.
         pull(params$design) %>% 

@@ -118,6 +118,8 @@ sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts
 
+
+
 # set up facets if necessary
 # facets will be all facets if group_filter is not set, and the filter otherwise
 if(!is.na(params$group_facet)){
