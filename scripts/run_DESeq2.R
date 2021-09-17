@@ -118,6 +118,8 @@ sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts
 
+skip_extra <- c("DMSO", "DMSO 24 h", "DMSO 96 h") # Remove DMSO controls as a facet
+
 # set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
 if(!is.na(params$group_facet)){
@@ -135,43 +137,38 @@ if(!is.na(params$group_facet)){
 stopifnot((is.na(params$group_facet) || length(facets) > 0))
 
 if(is.na(params$group_facet)){
+    message("### Learning a single model for the whole experiment. ###")
     dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
     # TODO: do this. need nuisance params
     # rld <- regularize_data(dds, covariates, nuisance)
     #save_cached_data(dds, paths$RData, params)
+    res <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
 } else {
     ddsList <- list()
-    metadata_subset <- subset_metadata(DESeqDesign, params, contrasts)
-    DESeqDesign_subset <- metadata_subset$DESeqDesign
-    contrasts_subset <- metadata_subset$contrasts
-    sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
-
-    check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
-
+    designList <- list()
+    resList <- list()
     for (current_filter in facets) {
+        message(paste0("### Learning model for ", current_filter, ". ###"))
+        metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
+        DESeqDesign_subset <- metadata_subset$DESeqDesign
+        contrasts_subset <- metadata_subset$contrasts
+        sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
+
+        check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
+
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, params)
+        designList[[current_filter]] <- DESeqDesign_subset
         # TODO: do this. need nuisance params
         # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
-    }
-}
-
-
-
-if (is.na(params$group_facet)) { # all data in one facet
-    message("Learning a single model for the whole experiment.")
-    res <- get_DESeq_results(dds, contrasts, params, NA, paths$DEG_output)
-} else {
-    resList <- list()
-    if (any(!is.na(params$group_filter))) { # filter facets
-        message(paste0("The group(s) of interest is (are) ",
-                 paste(params$group_filter, collapse = " and "),".\n",
-                 "Learning a single model for that (those) groups."))
-    } else { # do all facets separately
-        message(paste0("Learning multiple models based on ", params$group_facet, "..."))
-    }
-    for (current_filter in facets) {
-        res <- get_DESeq_results(ddsList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
+        res <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
         resList[[current_filter]] <- res
     }
 }
 
+# TODO 
+# create summary table
+# figure out why I'm getting 0 DEGs lol
+if(is.na(params$group_facet)){
+    
+} else {
+}

@@ -109,9 +109,9 @@ load_count_data <- function(SampleDataFile, sampledata_sep){
 }
 
 # subset metadata based on facet + filter
-subset_metadata <- function(DESeqDesign, params, contrasts){
+subset_metadata <- function(DESeqDesign, params, contrasts, current_filter){
     contrasts_to_filter <- DESeqDesign %>%
-        dplyr::filter(!!sym(params$group_facet) %in% params$group_filter) %>% # NOTE: Not sure if %in% or == is better here.
+        dplyr::filter(!!sym(params$group_facet) %in% current_filter) %>% # NOTE: Not sure if %in% or == is better here.
         pull(params$design) %>% 
         unique()
     contrasts_subset <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)

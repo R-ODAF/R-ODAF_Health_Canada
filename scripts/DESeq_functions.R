@@ -8,8 +8,10 @@ learn_deseq_model <- function(sd, des, intgroup, params){
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
                                     design    = current_design)
+
     # TODO: what is this filtering for?
     #dds <- dds[, DESeqDesign$original_names]
+
     if(params$filter_gene_counts){
         dds <- dds[rowSums(counts(dds)) > 1]
     }
@@ -64,18 +66,14 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
         message(paste0(condition2, " vs ", condition1))
 
         DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, params$design] %in% c(condition1, condition2),])
-        sample_subset   <- sampleData[, DESeqDesign_subset[, "original_names"]]
-        colnames(sample_subset) <- NULL
-
+        
+        # sanity checks
         stopifnot(exprs = {
-            ncol(sample_subset) > 0
             nrow(DESeqDesign_subset) > 0
-            all(DESeqDesign_subset$original_names %in% colnames(sample_subset))
-            all(colnames(sample_subset) %in% DESeqDesign_subset$original_names)
         })
 
         Filter <- matrix(data = NA, ncol = 3, nrow = nrow(Counts))
-        rownames(Filter) <- rownames(Counts)
+        rownames(Filter) <- rownames(Counts) # genes
         colnames(Filter) <- c("Low", "quantile", "spike")
 
         # Apply the "Relevance" condition
@@ -89,7 +87,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
                 Check <- sum(CPMdds[gene,sampleCols] >= params$MinCount) >= 0.75 * SampPerGroup[group]
                 CountsPass <- c(CountsPass, Check)
             }
-        if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
+            if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
         }
 
         compte <- Counts[Filter[,1] == 1,]
@@ -102,24 +100,26 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
         message("Obtaining the DESeq2 results")
 
         currentContrast <- c(params$design, condition2, condition1)
-        asdf <- dds[rownames(compte),]
         bpparam <- MulticoreParam(params$cpus)
+
         res <- DESeq2::results(dds[rownames(compte),],
                                 parallel = TRUE,
                                 BPPARAM = bpparam,
                                 contrast = currentContrast,
                                 pAdjustMethod = 'fdr',
                                 cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
+
         res <- lfcShrink(dds = dds[rownames(compte),],
                         contrast = currentContrast,
                         res = res,
                         type = "ashr")
+
         resListAll[[x]] <- res
 
 
         # Create output tables
-        norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
-        DEsamples <<- subset(res, res$padj < pAdjValue)
+        norm_data <- counts(dds[rownames(compte)], normalized = TRUE)
+        DEsamples <- subset(res, res$padj < pAdjValue)
         if (nrow(DEsamples) == 0) {
             message("No significant results were found for this contrast. Moving on...")
             next
@@ -142,7 +142,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
             Check <- median(as.numeric(DECounts[gene, sampleColsg2])) > quantile(DECounts[gene, sampleColsg1], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
-                
+
             if (sum(quantilePass) > 0) {
                 Filter[gene, 2] <- 1
             }  else {
@@ -172,7 +172,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
         DECounts_spike <- DEsamples[Filter[, 3] == 0 ,]
 
         message(paste0("A total of ", nrow(DECounts_real),
-                    " DEGs were selected, after ", nrow(DECounts_no_quant),
+                    " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
                     " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
                     " gene(s) with a spike"))
 
@@ -200,27 +200,30 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         resList[[x]] <- DECounts_real
 
-        if (params$R_ODAF_plots == TRUE) {
-            message("creating Read count Plots")
-            # top DEGs
-            plotdir <- file.path(outdir, "plots")
-            if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-            barplot.dir <- file.path(outdir, "plots", "/barplot_genes/")
-            if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
 
-            TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
-            if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
-            setwd(TOPbarplot.dir)
-            draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
-            message("Top 20 DEG plots done")
+        # Is this stuff needed? Would prefer to keep plotting stuff out of this script
+        #
+        # if (params$R_ODAF_plots == TRUE) {
+        #     message("creating Read count Plots")
+        #     # top DEGs
+        #     plotdir <- file.path(outdir, "plots")
+        #     if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
+        #     barplot.dir <- file.path(outdir, "plots", "/barplot_genes/")
+        #     if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
 
-            # Spurious spikes
-            SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
-            if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
-            setwd(SPIKEbarplot.dir)
-            draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
-            message("All DE_Spurious_spike plots done")
-        }
+        #     TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
+        #     if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
+        #     setwd(TOPbarplot.dir)
+        #     draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
+        #     message("Top 20 DEG plots done")
+
+        #     # Spurious spikes
+        #     SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
+        #     if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
+        #     setwd(SPIKEbarplot.dir)
+        #     draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
+        #     message("All DE_Spurious_spike plots done")
+        # }
     }
     # If there are no significant results - remove the empty contrast from the list:
     resList <- resList[!sapply(resList, is.null)]
