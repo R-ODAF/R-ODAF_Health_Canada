@@ -20,13 +20,13 @@ params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
   project_name: "UV"        # Change depending on your project name
   species: "mouse"                 # one of human, mouse, rat, hamster
-  design: "dose"                # single experimental group of interest; entries in this column must match the contrast names.
-  intgroup: ["dose"]            # experimental group of interest plus covariates; can be more than one
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   nuisance: !expr NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   flag: TRUE                     # runs all analysis by default when set to TRUE
   platform: "RNA-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: "timepoint" # !expr NA       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  !expr NA        # Which group will this report be done on?
+  group_facet: !expr NA       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter: !expr NA        # Which group will this report be done on?
   display_group_facet: !expr NA 
   display_group_filter:  !expr NA
   sortcol: "timepoint"                # Optionally, a column by which to sort the contrasts

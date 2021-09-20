@@ -61,9 +61,11 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
         condition1 <- contrasts[x, 2] # Control
         condition2 <- contrasts[x, 1] # Experimental
 
-        FileName <- paste(analysisID, condition2, "vs", condition1, "FDR", pAdjValue, sep = "_")
+        contrast_string <- paste(condition2, "vs", condition1, sep = "_")
 
-        message(paste0(condition2, " vs ", condition1))
+        FileName <- paste(analysisID, contrast_string, "FDR", pAdjValue, sep = "_")
+
+        message(contrast_string)
 
         DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, params$design] %in% c(condition1, condition2),])
         
@@ -114,7 +116,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
                         res = res,
                         type = "ashr")
 
-        resListAll[[x]] <- res
+        resListAll[[contrast_string]] <- res
 
 
         # Create output tables
@@ -198,7 +200,10 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         colnames(norm_data) <- colData(dds)[, params$design]
 
-        resList[[x]] <- DECounts_real
+        # TODO: the sapply at the end should be handling this, why doesn't it work?
+        if (nrow(DECounts_real) > 0){
+            resList[[contrast_string]] <- DECounts_real
+        }
 
 
         # Is this stuff needed? Would prefer to keep plotting stuff out of this script

@@ -138,15 +138,16 @@ stopifnot((is.na(params$group_facet) || length(facets) > 0))
 
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
-    dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
+    dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, params)
     # TODO: do this. need nuisance params
     # rld <- regularize_data(dds, covariates, nuisance)
     #save_cached_data(dds, paths$RData, params)
-    res <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
+    DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
+    resList <- DESeq_results$resList
 } else {
     ddsList <- list()
     designList <- list()
-    resList <- list()
+    overallResList <- list()
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
         metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
@@ -160,15 +161,36 @@ if(is.na(params$group_facet)){
         designList[[current_filter]] <- DESeqDesign_subset
         # TODO: do this. need nuisance params
         # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
-        res <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
-        resList[[current_filter]] <- res
+        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
+        overallResList[[current_filter]] <- DESeq_results$resList
     }
 }
 
-# TODO 
-# create summary table
-# figure out why I'm getting 0 DEGs lol
+summary_counts <- data.frame()
 if(is.na(params$group_facet)){
-    
+    for(res in resList){ # by comparison
+        comparisons <- names(resList)
+        for(comp in comparisons){ # by comparison
+            res <- resList[[comp]]
+            counts <- nrow(res)
+            row <- data.frame(comparison=comp,DEG=counts)
+            summary_counts <- rbind(summary_counts, row)
+        }
+    }
 } else {
+    for (current_filter in facets) {
+        resList <- overallResList[[current_filter]]
+        comparisons <- names(resList)
+        for(comp in comparisons){ # by comparison
+            res <- resList[[comp]]
+            counts <- nrow(res)
+            row <- data.frame(facet=current_filter,comparison=comp,DEG=counts)
+            summary_counts <- rbind(summary_counts, row)
+        }
+    }
 }
+
+message("DEG counts found. Missing rows indicate 0 DEGs passed filters")
+message(paste(capture.output(summary_counts), collapse="\n"))
+
+
