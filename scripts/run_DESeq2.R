@@ -193,4 +193,8 @@ if(is.na(params$group_facet)){
 message("DEG counts found. Missing rows indicate 0 DEGs passed filters")
 message(paste(capture.output(summary_counts), collapse="\n"))
 
-
+# write the table of DEG counts to a file
+write.table(summary_counts,
+            file = file.path(paths$DEG_output, paste0(params$project_name, "_DEG_counts_summary.txt")),
+            sep = "\t",
+            quote = FALSE)

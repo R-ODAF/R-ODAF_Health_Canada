@@ -63,7 +63,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         contrast_string <- paste(condition2, "vs", condition1, sep = "_")
 
-        FileName <- paste(analysisID, contrast_string, "FDR", pAdjValue, sep = "_")
+        FileName <- paste(analysisID, contrast_string, "FDR", params$alpha, sep = "_")
 
         message(contrast_string)
 
@@ -121,7 +121,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         # Create output tables
         norm_data <- counts(dds[rownames(compte)], normalized = TRUE)
-        DEsamples <- subset(res, res$padj < pAdjValue)
+        DEsamples <- subset(res, res$padj < params$alpha)
         if (nrow(DEsamples) == 0) {
             message("No significant results were found for this contrast. Moving on...")
             next
