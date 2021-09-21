@@ -42,8 +42,26 @@ contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", hea
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
 # TODO: maybe here's where the factor conversion should happen?
 # TODO: what about nuisance variables?
-# TODO: faceting might make certain experimental designs illegal. Should we check for those or let DESeq do it?
 
+# if multiple intgroups, combine into new group variable
+if (length(intgroup) > 1){
+    new_group_name <- paste(intgroup,collapse="_")
+    if(new_group_name %in% colnames(DESeqDesign)){
+        stop(paste0("Metadata cannot contain the column name ",new_group_name))
+    }
+    DESeqDesign <- DESeqDesign %>% unite((!!sym(new_group_name)), intgroup, remove = FALSE)
+    # now redo the contrasts
+    contrasts <- contrasts %>%
+        left_join(DESeqDesign, by=c("V1"=params$design)) %>%
+        dplyr::select(V1, V1.new = dose_timepoint, V2) %>%
+        unique() %>%
+        left_join(DESeqDesign, by=c("V2"=params$design)) %>%
+        dplyr::select(V1, V1.new, V2, V2.new=dose_timepoint) %>%
+        unique() %>%
+        dplyr::select(V1=V1.new, V2=V2.new)
+    params$design <- new_group_name
+    intgroup <- new_group_name
+}
 
 species_data <- load_species(params$species)
 ensembl <- useMart("ensembl",
@@ -161,10 +179,11 @@ if(is.na(params$group_facet)){
         designList[[current_filter]] <- DESeqDesign_subset
         # TODO: do this. need nuisance params
         # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
-        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts, params, current_filter, paths$DEG_output)
+        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, params, current_filter, paths$DEG_output)
         overallResList[[current_filter]] <- DESeq_results$resList
     }
 }
+
 
 summary_counts <- data.frame()
 if(is.na(params$group_facet)){
