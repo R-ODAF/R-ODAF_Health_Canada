@@ -169,7 +169,7 @@ if(is.na(params$group_facet)){
         for(comp in comparisons){ # by comparison
             res <- resList[[comp]]
             counts <- nrow(res)
-            row <- data.frame(comparison=comp,=counts)
+            row <- data.frame(comparison=comp, DEG=counts)
             summary_counts <- rbind(summary_counts, row)
         }
     }
@@ -180,7 +180,7 @@ if(is.na(params$group_facet)){
         for(comp in comparisons){ # by comparison
             res <- resList[[comp]]
             counts <- nrow(res)
-            row <- data.frame(facet=current_filter,comparison=comp,DEG=counts)
+            row <- data.frame(facet=current_filter, comparison=comp, DEG=counts)
             summary_counts <- rbind(summary_counts, row)
         }
     }
