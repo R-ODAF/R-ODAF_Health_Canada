@@ -131,6 +131,12 @@ if(!is.na(params$group_facet)){
 
 stopifnot((is.na(params$group_facet) || length(facets) > 0))
 
+
+ddsList <- list()
+designList <- list()
+overallResList <- list()
+ rldList <- list()
+
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
     dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, params)
@@ -138,11 +144,11 @@ if(is.na(params$group_facet)){
     # rld <- regularize_data(dds, covariates, nuisance)
     DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
     resList <- DESeq_results$resList
+    ddsList[['all']] <- dds
+    overallResList[['all']] <- DESeq_results$resList
+    designList[['all']] <- DESeqDesign_subset
+    # rldList[['all']] <- rld
 } else {
-    ddsList <- list()
-    designList <- list()
-    overallResList <- list()
-    # rldList <- list()
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
         metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
@@ -192,3 +198,7 @@ write.table(summary_counts,
             file = file.path(paths$DEG_output, paste0(params$project_name, "_DEG_counts_summary.txt")),
             sep = "\t",
             quote = FALSE)
+
+# save DESeq results to a file
+
+save(ddsList, designList, overallResList, rldList, DESeqDesign, facets, params, contrasts, intgroup, paths,file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))
