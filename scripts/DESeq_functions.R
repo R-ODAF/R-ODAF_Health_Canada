@@ -8,10 +8,6 @@ learn_deseq_model <- function(sd, des, intgroup, params){
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
                                     design    = current_design)
-
-    # TODO: what is this filtering for?
-    #dds <- dds[, DESeqDesign$original_names]
-
     if(params$filter_gene_counts){
         dds <- dds[rowSums(counts(dds)) > 1]
     }
