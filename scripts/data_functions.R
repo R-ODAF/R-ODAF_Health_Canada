@@ -123,9 +123,6 @@ subset_metadata <- function(DESeqDesign, params, contrasts, current_filter){
 }
 
 # subset count data to samples in metadata
-# TODO: add some tests here. Maybe test for zero samples left or something
-# TODO: also should be a check earlier on, separate from this, that checks that all sample names are in metadata and vice versa to start with
-# TODO: finally, there should be a check after all the processing is done that the actual count data hasn't changed
 subset_data <- function(sampleData, DESeqDesign){
     # Reorder the metadata table to correspond to the order of columns in the count data
     DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
