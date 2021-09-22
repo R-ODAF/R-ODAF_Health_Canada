@@ -15,7 +15,7 @@ source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
-config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
+config <- yaml::read_yaml(here::here("config","config.new.yaml"), eval.expr = T)
 params <- config$params
 
 paths <- set_up_paths(params)
