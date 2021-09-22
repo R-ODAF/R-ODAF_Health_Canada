@@ -164,14 +164,12 @@ if(is.na(params$group_facet)){
 
 summary_counts <- data.frame()
 if(is.na(params$group_facet)){
-    for(res in resList){ # by comparison
-        comparisons <- names(resList)
-        for(comp in comparisons){ # by comparison
-            res <- resList[[comp]]
-            counts <- nrow(res)
-            row <- data.frame(comparison=comp, DEG=counts)
-            summary_counts <- rbind(summary_counts, row)
-        }
+    comparisons <- names(resList)
+    for(comp in comparisons){ # by comparison
+        res <- resList[[comp]]
+        counts <- nrow(res)
+        row <- data.frame(comparison=comp, DEG=counts)
+        summary_counts <- rbind(summary_counts, row)
     }
 } else {
     for (current_filter in facets) {
