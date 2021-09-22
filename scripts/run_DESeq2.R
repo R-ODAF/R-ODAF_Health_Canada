@@ -15,60 +15,23 @@ source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
+
+##############################################################################################
+# SETUP
+##############################################################################################
+
 config <- yaml::read_yaml(here::here("config","config.new.yaml"), eval.expr = T)
 params <- config$params
 
 paths <- set_up_paths(params)
 get_analysis_id <- get_analysis_id(params)
 
-# Identify where metadata can be found
-SampleKeyFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
-ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
-
-# Read in metadata
-DESeqDesign <- read.delim(SampleKeyFile,
-                          stringsAsFactors = FALSE,
-                          sep = "\t",
-                          header = TRUE,
-                          quote = "\"",
-                          row.names = 1) # Column must have unique IDs!!
-DESeqDesign$original_names <- rownames(DESeqDesign)
-DESeqDesignAsRead <- DESeqDesign
-
-# read in contrasts
-contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
-
-# set interesting groups
-intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
-# TODO: maybe here's where the factor conversion should happen?
-# TODO: what about nuisance variables?
-
-# if multiple intgroups, combine into new group variable
-if (length(intgroup) > 1){
-    new_group_name <- paste(intgroup,collapse="_")
-    if(new_group_name %in% colnames(DESeqDesign)){
-        stop(paste0("Metadata cannot contain the column name ",new_group_name))
-    }
-    DESeqDesign <- DESeqDesign %>% unite((!!sym(new_group_name)), intgroup, remove = FALSE)
-    # now redo the contrasts
-    contrasts <- contrasts %>%
-        left_join(DESeqDesign, by=c("V1"=params$design)) %>%
-        dplyr::select(V1, V1.new = dose_timepoint, V2) %>%
-        unique() %>%
-        left_join(DESeqDesign, by=c("V2"=params$design)) %>%
-        dplyr::select(V1, V1.new, V2, V2.new=dose_timepoint) %>%
-        unique() %>%
-        dplyr::select(V1=V1.new, V2=V2.new)
-    params$design <- new_group_name
-    intgroup <- new_group_name
-}
-
 species_data <- load_species(params$species)
 ensembl <- useMart("ensembl",
                    dataset = species_data$ensembl_species,
                    host = "useast.ensembl.org")
 
-
+# set some additional parameters based on platform
 if (params$platform == "RNA-Seq") {
   SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
   params$sampledata_sep = "\t"
@@ -96,47 +59,61 @@ if (params$platform == "RNA-Seq") {
   stop("Platform/technology not recognized") 
 }
 
-# Se this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
+# Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
 params$R_ODAF_plots = FALSE
 
 
-#################9
-# TODO: set aside saving/loading data for now
-# it might be less important anyway, since the script will save the DESeq output
-# just focus on the DEseq calculation, including faceting and saving the output
-# maybe if no facets, can format the data the same with facet name "all" or something.
-#################
-# if(params$use_cached_RData){
-#     if(is.na(params$group_facet)){
-#         dds <- load_cached_data(paths$RData, sampleData, params)
-#     } else {
-#         ddsList <- load_cached_data(paths$RData, sampleData, params)
-#     }
-# } else {
-#     sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
-#     processed <- process_data(sampledata, DESeqDesign, intgroup, params)
-#     sampleData <- processed$sampleData
-#     DESeqDesign <- processed$DESeqDesign
+##############################################################################################
+# DATA LOADING AND PROCESSING
+##############################################################################################
 
-#     if(is.na(params$group_facet)){
-#         dds <- learn_deseq_model(sampledata, DESeqDesign, intgroup, params)
-#         save_cached_data(dds, paths$RData, params)
-#     } else {
-#         for (current_filter in facets) {
-            
-#         }
-#     }
+# Identify where metadata can be found
+MetadataFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
+ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
 
-# }
+# Read in metadata
+DESeqDesign <- read.delim(MetadataFile,
+                          stringsAsFactors = FALSE,
+                          sep = "\t",
+                          header = TRUE,
+                          quote = "\"",
+                          row.names = 1) # Column must have unique IDs!!
+DESeqDesign$original_names <- rownames(DESeqDesign)
+DESeqDesignAsRead <- DESeqDesign
 
+# read in contrasts
+contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
+
+# set interesting groups
+intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
+
+# if multiple intgroups, combine into new group variable
+if (length(intgroup) > 1){
+    new_group_name <- paste(intgroup,collapse="_")
+    if(new_group_name %in% colnames(DESeqDesign)){
+        stop(paste0("Metadata cannot contain the column name ",new_group_name))
+    }
+    DESeqDesign <- DESeqDesign %>% unite((!!sym(new_group_name)), intgroup, remove = FALSE)
+    # now redo the contrasts
+    contrasts <- contrasts %>%
+        left_join(DESeqDesign, by=c("V1"=params$design)) %>%
+        dplyr::select(V1, V1.new = dose_timepoint, V2) %>%
+        unique() %>%
+        left_join(DESeqDesign, by=c("V2"=params$design)) %>%
+        dplyr::select(V1, V1.new, V2, V2.new=dose_timepoint) %>%
+        unique() %>%
+        dplyr::select(V1=V1.new, V2=V2.new)
+    params$design <- new_group_name
+    intgroup <- new_group_name
+}
+
+# load count data
 sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
 
 processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, params)
 sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts
-
-skip_extra <- c("DMSO", "DMSO 24 h", "DMSO 96 h") # Remove DMSO controls as a facet
 
 # set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
@@ -145,7 +122,7 @@ if(!is.na(params$group_facet)){
         facets <- params$group_filter
     }else {
         facets <- DESeqDesign %>%
-            filter(!(params$group_facet) %in% c(params$exclude_groups, skip_extra)) %>%
+            filter(!(params$group_facet) %in% c(params$exclude_groups)) %>%
             filter(!solvent_control) %>%
             pull(params$group_facet) %>% 
             unique()
@@ -159,13 +136,13 @@ if(is.na(params$group_facet)){
     dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, params)
     # TODO: do this. need nuisance params
     # rld <- regularize_data(dds, covariates, nuisance)
-    #save_cached_data(dds, paths$RData, params)
     DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
     resList <- DESeq_results$resList
 } else {
     ddsList <- list()
     designList <- list()
     overallResList <- list()
+    # rldList <- list()
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
         metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
@@ -192,7 +169,7 @@ if(is.na(params$group_facet)){
         for(comp in comparisons){ # by comparison
             res <- resList[[comp]]
             counts <- nrow(res)
-            row <- data.frame(comparison=comp,DEG=counts)
+            row <- data.frame(comparison=comp,=counts)
             summary_counts <- rbind(summary_counts, row)
         }
     }
@@ -209,7 +186,7 @@ if(is.na(params$group_facet)){
     }
 }
 
-message("DEG counts found. Missing rows indicate 0 DEGs passed filters")
+message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows indicate 0 DEGs passed filters"))
 message(paste(capture.output(summary_counts), collapse="\n"))
 
 # write the table of DEG counts to a file
