@@ -68,3 +68,4 @@ paths.txt
 /logs/
 run.sh
 preprocessing.txt
+data/metadata/metadata.QC_applied.txt
