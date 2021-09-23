@@ -69,4 +69,5 @@ paths.txt
 run.sh
 preprocessing.txt
 data/metadata/metadata.QC_applied.txt
+*metadata.QC_applied.txt
 TODO.txt
