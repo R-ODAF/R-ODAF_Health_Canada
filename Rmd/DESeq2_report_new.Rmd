@@ -1,0 +1,46 @@
+---
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
+subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
+---
+
+
+***
+
+# Revision History
+
+**This version**  
+  
+*Current version: 1*  
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+Report prepared for: Name  
+Purpose of report:  
+
+* Exercise to analyze RNA-Seq data  
+
+**Previous revisions**  
+
+N/A  
+
+***
+
+
+# TODO: Rmd parameters like author and prepared for should be in the config
+
+This report is meant to help explore DESeq2 results and was generated using RMarkdown. This section contains the code for setting up the rest of the report.  
+
+## Load libraries
+
+```{r docSetup, warning = FALSE, message = FALSE}
+
+library('tidyverse')
+
+
+```
