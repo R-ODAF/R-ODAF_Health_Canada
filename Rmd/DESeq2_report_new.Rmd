@@ -39,8 +39,80 @@ This report is meant to help explore DESeq2 results and was generated using RMar
 ## Load libraries
 
 ```{r docSetup, warning = FALSE, message = FALSE}
-
 library('tidyverse')
+library('knitr')
+library('kableExtra')
 
 
 ```
+
+
+## load functions
+```{r load_functions}
+
+
+
+```
+
+
+```{r load_data, collapse=TRUE}
+
+load(params$dataFile) # metadata, contrasts, counts, resultsList
+
+
+```
+
+
+# metadata tables
+```{r tables, collapse=TRUE}
+
+# table of sample metadata
+metadata_table <- metadata %>% arrange(!!sym(params$design))
+knitr::kable(metadata_table,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of contrasts
+knitr::kable(contrasts,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of #samples/group
+nSamples_table <- table(metadata_table %>% dplyr::pull(!!sym(params$design))) 
+knitr::kable(nSamples_table,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of #DEGs/contrast 
+
+
+```
+
+
+# descriptive plots
+
+# boxplots of reads/sample (by group)
+# PCA plots (all genes, DEGs only, top 1000 most variable genes)
+# sample-to-sample heatmaps
+# DEG heatmaps
+
+# Differential gene expression plots
+
+# MA plots
+# volcano plots
+# p-value distribution
+# DEG gene info table
+# gene-level plots across timepoints (?)
+
+# Pathway analysis plots
+
+# todo
+
+# methods summary
+# references
