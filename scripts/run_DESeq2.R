@@ -86,6 +86,7 @@ contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", hea
 
 # set interesting groups
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
+design_to_use <- params$design
 
 # if multiple intgroups, combine into new group variable
 if (length(intgroup) > 1){
@@ -103,14 +104,15 @@ if (length(intgroup) > 1){
         dplyr::select(V1, V1.new, V2, V2.new=dose_timepoint) %>%
         unique() %>%
         dplyr::select(V1=V1.new, V2=V2.new)
-    params$design <- new_group_name
+    design_to_use <- new_group_name
     intgroup <- new_group_name
 }
 
 # load count data
 sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
+print(typeof(sampleData))
 
-processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, params)
+processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, design_to_use, params)
 sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts
@@ -135,14 +137,14 @@ stopifnot((is.na(params$group_facet) || length(facets) > 0))
 ddsList <- list()
 designList <- list()
 overallResList <- list()
- rldList <- list()
+rldList <- list()
 
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
-    dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, params)
+    dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, design_to_use, params)
     # TODO: do this. need nuisance params
     # rld <- regularize_data(dds, covariates, nuisance)
-    DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, params, NA, paths$DEG_output)
+    DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, design_to_use, params, NA, paths$DEG_output)
     resList <- DESeq_results$resList
     ddsList[['all']] <- dds
     overallResList[['all']] <- DESeq_results$resList
@@ -151,18 +153,18 @@ if(is.na(params$group_facet)){
 } else {
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
-        metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
+        metadata_subset <- subset_metadata(DESeqDesign, design_to_use, contrasts, current_filter)
         DESeqDesign_subset <- metadata_subset$DESeqDesign
         contrasts_subset <- metadata_subset$contrasts
         sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
 
         check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
 
-        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, params)
+        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
         # TODO: do this. need nuisance params
         # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
-        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, params, current_filter, paths$DEG_output)
+        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
         overallResList[[current_filter]] <- DESeq_results$resList
     }
 }
