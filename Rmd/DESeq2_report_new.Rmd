@@ -67,7 +67,7 @@ load(params$dataFile) # metadata, contrasts, counts, resultsList
 ```{r tables, collapse=TRUE}
 
 # table of sample metadata
-metadata_table <- metadata %>% arrange(!!sym(params$design))
+metadata_table <- metadata %>% arrange(!!sym(design_to_use))
 knitr::kable(metadata_table,
              row.names =  F,
              caption = "Sample metadata") %>%

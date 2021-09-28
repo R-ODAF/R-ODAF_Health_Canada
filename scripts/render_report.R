@@ -56,9 +56,8 @@ if(is.na(params$display_group_facet)){
 
         params$current_filter = current_filter
 
-
         # subset data
-        metadata_subset <- subset_metadata(DESeqDesign, params, contrasts, current_filter)
+        metadata_subset <- subset_metadata(DESeqDesign, design_to_use, contrasts, current_filter)
         metadata <- metadata_subset$DESeqDesign
         contrasts <- metadata_subset$contrasts
         counts <- data.frame() # subset_data(sampleData, metadata)

@@ -119,6 +119,7 @@ subset_metadata <- function(DESeqDesign, design, contrasts, current_filter){
         contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
     }
     DESeqDesign_subset <- DESeqDesign %>% dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) )
+    levels(DESeqDesign_subset[design,]) <- unlist(contrasts_subset) %>% unique()
     return(list(DESeqDesign=DESeqDesign_subset, contrasts=contrasts_subset))
 }
 
