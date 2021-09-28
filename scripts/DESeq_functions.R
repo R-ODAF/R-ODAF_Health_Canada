@@ -1,10 +1,11 @@
-get_design <- function(intgroup){
-  return(formula(paste0("~", paste0(intgroup, collapse = " + "))))
+get_design <- function(design){
+  #return(formula(paste0("~", paste0(c(design), collapse = " + "))))
+  return(formula(paste0("~",design)))
 }
 
 
-learn_deseq_model <- function(sd, des, intgroup, params){
-    current_design <- get_design(intgroup)
+learn_deseq_model <- function(sd, des, intgroup, design, params){
+    current_design <- get_design(design)
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
                                     design    = current_design)
@@ -33,7 +34,7 @@ regularize_data <- function(dds, covariates, nuisance, blind=FALSE){
   return(rld)
 }
 
-get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group_filter, outdir){
+get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, current_group_filter, outdir){
     # Initial setup for DESeq2 contrasts
     resList <- list()
     resListAll <- list()
@@ -63,7 +64,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         message(contrast_string)
 
-        DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, params$design] %in% c(condition1, condition2),])
+        DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, design] %in% c(condition1, condition2),])
         
         # sanity checks
         stopifnot(exprs = {
@@ -76,12 +77,12 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         # Apply the "Relevance" condition
         message(paste0("Filtering genes: 75% of at least 1 group need to be above ", params$MinCount, " CPM"))
-        SampPerGroup <- table(DESeqDesign_subset[, params$design])
+        SampPerGroup <- table(DESeqDesign_subset[, design])
 
         for (gene in 1:nrow(dds)) {
             CountsPass <- NULL
             for (group in 1:length(SampPerGroup)) { 
-                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[, params$design])
+                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[, design])
                 Check <- sum(CPMdds[gene,sampleCols] >= params$MinCount) >= 0.75 * SampPerGroup[group]
                 CountsPass <- c(CountsPass, Check)
             }
@@ -97,7 +98,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         message("Obtaining the DESeq2 results")
 
-        currentContrast <- c(params$design, condition2, condition1)
+        currentContrast <- c(design, condition2, condition1)
         bpparam <- MulticoreParam(params$cpus)
 
         res <- DESeq2::results(dds[rownames(compte),],
@@ -132,8 +133,8 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
         for (gene in 1:nrow(DECounts)) {
             # Check the median against third quantile
             quantilePass <- NULL
-            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,params$design])
-            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,params$design])
+            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design])
+            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design])
 
             Check <- median(as.numeric(DECounts[gene, sampleColsg1])) > quantile(DECounts[gene, sampleColsg2], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
@@ -150,7 +151,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,params$design])
+                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
                 if (max(DECounts[gene,sampleCols]) == 0) {Check <- FALSE} else {
                 Check <- (max(DECounts[gene, sampleCols]) / sum(DECounts[gene, sampleCols])) >= 1.4 * (SampPerGroup[group])^(-0.66)
                 spikePass <- c(spikePass, Check)
@@ -194,7 +195,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, params, current_group
 
         message("DESeq2 Done")
 
-        colnames(norm_data) <- colData(dds)[, params$design]
+        colnames(norm_data) <- colData(dds)[, design]
 
         # TODO: the sapply at the end should be handling this, why doesn't it work?
         if (nrow(DECounts_real) > 0){
