@@ -203,4 +203,4 @@ write.table(summary_counts,
 
 # save DESeq results to a file
 
-save(ddsList, designList, overallResList, rldList, DESeqDesign, facets, params, contrasts, intgroup, paths,file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))
+save(ddsList, designList, overallResList, rldList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))
