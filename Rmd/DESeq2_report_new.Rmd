@@ -60,6 +60,7 @@ library('kableExtra')
 load(params$dataFile) # metadata, contrasts, counts, resultsList
 
 
+
 ```
 
 
@@ -90,6 +91,21 @@ knitr::kable(nSamples_table,
   scroll_box(width = "100%", height = "480px")
 
 # table of #DEGs/contrast 
+summary_counts <- data.frame()
+comparisons <- names(resultsList)
+for(comp in comparisons){ # by comparison
+    res <- resultsList[[comp]]
+    c <- nrow(res)
+    row <- data.frame(comparison=comp, DEG=c)
+    summary_counts <- rbind(summary_counts, row)
+}
+
+knitr::kable(summary_counts,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
 
 
 ```
@@ -98,7 +114,31 @@ knitr::kable(nSamples_table,
 # descriptive plots
 
 # boxplots of reads/sample (by group)
+```{r nReads_boxplot, collapse=TRUE}
+df<-data.frame(colSums(counts))
+names(df) <- c("nReads")
+df$original_names = rownames(df)
+df2 <- df %>%
+    left_join(metadata) %>%
+    dplyr::select(original_names,sym(design_to_use),nReads)
+
+ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
+    geom_boxplot() +
+    xlab("Group") +
+    ylab("Number of reads") +
+    theme_bw()
+
+```
+
 # PCA plots (all genes, DEGs only, top 1000 most variable genes)
+```{r PCA, collapse=TRUE}
+
+plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(ncol = 3))
+
+```
+
 # sample-to-sample heatmaps
 # DEG heatmaps
 

@@ -23,9 +23,6 @@ load(file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
 # TODO: take params out of save on other script
 #config <- yaml::read_yaml(here::here("config","config.new.yaml"), eval.expr = T)
 #params <- config$params
-# TODO ok it makes sense for the params to come from the yaml file, not the save. But there needs to be some way for the DESeq script to save stuff that was changed if a new group was generated
-# basically the DESeq script shouldn't modify the parameters, that should be read-only.
-# I can make some edits to the other branch to facilitate this
 
 
 # figure out if we're doing one or multiple reports
@@ -60,13 +57,11 @@ if(is.na(params$display_group_facet)){
         metadata_subset <- subset_metadata(DESeqDesign, design_to_use, contrasts, current_filter)
         metadata <- metadata_subset$DESeqDesign
         contrasts <- metadata_subset$contrasts
-        counts <- data.frame() # subset_data(sampleData, metadata)
+        counts <- subset_data(sampleData, metadata)
 
-        print("data subsetted!!!")
-        print(contrasts)
 
         dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_report_data.RData"))
-        save(metadata, contrasts, counts, resultsList, file=dataFile)
+        save(metadata, contrasts, counts, resultsList, design_to_use, file=dataFile)
         params$dataFile <- dataFile
 
 
