@@ -19,7 +19,7 @@ genome_dir = Path(os.environ["genomedir"])
 
 data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist
-metadata_dir = main_dir / "metadata" # should already exist
+metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
