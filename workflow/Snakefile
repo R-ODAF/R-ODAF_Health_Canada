@@ -23,8 +23,13 @@ metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
+temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
+
 # set up conditions and samples
-SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
+if config["seqtype"] == "rnaseq":
+    SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
+else:
+    SAMPLES = pd.read_csv(metadata_file)['sample_id'].tolist()
 
 print("samples: " + str(SAMPLES))
 
@@ -63,6 +68,31 @@ rule all:
         processed_dir / "genes.data.tsv",
         processed_dir / "isoforms.data.tsv" 
     log: log_dir / "all.log"
+
+rule all_temposeq:
+    input:
+        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        qc_dir / "multiqc_report.html"
+        processed_dir / "count_table.csv"
+        processed_dir / "mapped_unmapped.csv"
+    log: log_dir / "temposeq.log"
+
+rule temposeq:
+    params:
+        threads = config["threads"],
+        index_name = genome_dir / "STAR_index" / config["genome_name"],
+    input:
+        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+    output:
+        processed_dir / "count_table.csv"
+        processed_dir / "mapped_unmapped.csv"
+    shell:
+        '''
+        Rscript {temposeq_script} {index_name} {trim_dir} {threads}
+        mv count_table.csv {processed_dir}
+        mv mapped_unmapped.csv {processed_dir}
+        mv TempOSeq_log.txt {log_dir}
+        '''
 
 ##################################
 ### Trimming raw reads : Fastp ###
@@ -336,19 +366,30 @@ rule counts_matrix:
         sed -i 's/"//g' {output.isoforms}
         '''
 
+
 # multiqc
-
-rule multiqc:
-    message: "running multiqc"
-    input:
-        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
-        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
-        expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
-        expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
-    output:
-        qc_dir / "multiqc_report.html"
-    log: log_dir / "multiqc.log"
-    run:
-        shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {raw_dir} {trim_dir} {align_dir} {quant_dir}")
-        shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
-
+if config["seqtype"] =="temposeq":
+    rule multiqc_temposeq:
+        message: "running multiqc for temposeq data"
+        input:
+            expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+        output:
+            qc_dir / "multiqc_report.html"
+        log: log_dir / "multiqc.log"
+        run:
+            shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {raw_dir} {trim_dir}")
+            shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
+else:
+    rule multiqc:
+        message: "running multiqc"
+        input:
+            expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+            expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
+            expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
+            expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
+        output:
+            qc_dir / "multiqc_report.html"
+        log: log_dir / "multiqc.log"
+        run:
+            shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {raw_dir} {trim_dir} {align_dir} {quant_dir}")
+            shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
