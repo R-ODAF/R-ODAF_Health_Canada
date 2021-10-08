@@ -88,7 +88,7 @@ rule temposeq:
         processed_dir / "mapped_unmapped.csv"
     shell:
         '''
-        Rscript {temposeq_script} {index_name} {trim_dir} {threads}
+        Rscript {temposeq_script} {params.index_name} {trim_dir} {params.threads}
         mv count_table.csv {processed_dir}
         mv mapped_unmapped.csv {processed_dir}
         mv TempOSeq_log.txt {log_dir}
