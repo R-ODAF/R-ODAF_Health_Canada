@@ -72,8 +72,8 @@ rule all:
 rule all_temposeq:
     input:
         expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
-        qc_dir / "multiqc_report.html"
-        processed_dir / "count_table.csv"
+        qc_dir / "multiqc_report.html",
+        processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
     log: log_dir / "temposeq.log"
 
@@ -84,7 +84,7 @@ rule temposeq:
     input:
         expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
     output:
-        processed_dir / "count_table.csv"
+        processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
     shell:
         '''
