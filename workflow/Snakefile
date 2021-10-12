@@ -80,7 +80,7 @@ rule all_temposeq:
 rule temposeq:
     params:
         threads = config["threads"],
-        index_name = genome_dir / "STAR_index" / config["genome_name"],
+        index_name = genome_dir / "STAR_index" / config["genome_filename"],
     input:
         expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
     output:
