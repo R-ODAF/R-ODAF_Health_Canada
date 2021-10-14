@@ -59,7 +59,7 @@ shell("cp -rf config {log_dir}")
 rule all:
     input:
         expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
-        qc_dir / "multiqc_report.html",
+        qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
     log: log_dir / "temposeq.log"
@@ -156,8 +156,16 @@ rule multiqc:
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
         expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES)
     output:
-        qc_dir / "multiqc_report.html"
+        qc_dir / "MultiQC_Report.html"
     log: log_dir / "multiqc.log"
-    run:
-        shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {main_dir}")
-        shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
+    shell:
+        '''
+        multiqc \
+        --cl_config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+        --cl_config "sample_names_replace_exact: True" \
+        --filename MultiQC_Report.html \
+        --interactive \
+        --sample-names {metadata_file} \
+        -fz {processed_dir}
+        mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
+        '''
