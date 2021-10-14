@@ -29,7 +29,7 @@ temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
 if config["seqtype"] == "rnaseq":
     SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
 else:
-    SAMPLES = pd.read_csv(metadata_file)['sample_id'].tolist()
+    SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
 
 print("samples: " + str(SAMPLES))
 
@@ -80,12 +80,13 @@ rule all_temposeq:
 rule temposeq:
     params:
         threads = config["threads"],
-        index_name = genome_dir / "STAR_index" / config["genome_filename"],
+        index_name = genome_dir / config["genome_filename"],
     input:
         expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
     output:
         processed_dir / "count_table.csv",
-        processed_dir / "mapped_unmapped.csv"
+        processed_dir / "mapped_unmapped.csv",
+        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES) 
     shell:
         '''
         Rscript {temposeq_script} {params.index_name} {trim_dir} {params.threads}
@@ -374,11 +375,12 @@ if config["seqtype"] =="temposeq":
         message: "running multiqc for temposeq data"
         input:
             expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+            expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
         output:
             qc_dir / "multiqc_report.html"
         log: log_dir / "multiqc.log"
         run:
-            shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {raw_dir} {trim_dir}")
+            shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {main_dir}")
             shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
 else:
     rule multiqc:
