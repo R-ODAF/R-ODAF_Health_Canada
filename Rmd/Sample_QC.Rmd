@@ -1,7 +1,7 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "OPE TempO-Seq"        # Change depending on your project name
+  project_name: "Test"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
@@ -11,7 +11,7 @@ params:
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
   groups:
     value:
-      one: ["Description", "Dose", "Treatment"]
+      one: ["dose", "chemical"]
       two: ["I7_Index_ID", "I5_Index_ID"] 
       three: ["row", "column"]
       #4: ["batch"]
@@ -109,7 +109,6 @@ solvent_control <- params$solvent_control
 paths <- list()
 paths$root <- here::here()
 paths$data <- paste0(paths$root, "/data")
-paths$output <- paste0(paths$data, "/output")
 paths$processed <- paste0(paths$data, "/processed")
 paths$metadata <- paste0(paths$data, "/metadata")
 paths$reports <- paste0(paths$root, "/reports")
@@ -127,8 +126,8 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 # A. File with read counts
 if (Platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$output,"count_table.csv")
-    MappedUnmapped <- file.path(paths$output,"mapped_unmapped.csv")
+    SampleDataFile <- file.path(paths$processed,"count_table.csv")
+    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.csv")
     sampledata_sep <- ","
     collapse_reps <- function(filepath){
       df <- read.table(file = filepath,
@@ -146,31 +145,31 @@ if (Platform == "TempO-Seq") {
     if (params$collapse_replicates == T) {
       sampleData <- collapse_reps(SampleDataFile)
       write.table(sampleData,
-                  file = file.path(paths$processed,"count_table.csv"),
+                  file = file.path(paths$processed,"count_table_collapsed.csv"),
                   sep = ",",
                   quote = F,
                   row.names = F)
-      MappedUnmapped <- collapse_reps(MappedUnmapped)
-      write.table(MappedUnmapped,
-                  file = file.path(paths$processed,"mapped_unmapped.csv"),
+      mu <- collapse_reps(MappedUnmapped)
+      write.table(mu,
+                  file = file.path(paths$processed,"mapped_unmapped_collapsed.csv"),
                   sep = ",",
                   quote = F,
                   row.names = F)
-      }
-    
-    sampleData <- read.table(file.path(paths$processed,"count_table.csv"),
+    } else {
+      sampleData <- read.table(file.path(paths$processed,"count_table.csv"),
                              sep = sampledata_sep,
                              stringsAsFactors = FALSE,
                              header = TRUE,
                              quote = "\"",
                              row.names = 1,
                              check.names = FALSE)
-    mu <- read.table(file.path(paths$processed,"mapped_unmapped.csv"),
+      mu <- read.table(file.path(paths$processed,"mapped_unmapped.csv"),
                      sep = ",",
                      header = T,
                      row.names = 1,
                      stringsAsFactors = F,
-                     check.names = F)
+                     check.names = F)  
+      }
     mu <- as.data.frame(t(mu))
     mu$pct_mapped <- mu$mapped/(mu$mapped + mu$unmapped)
   } else {
@@ -182,8 +181,8 @@ if (Platform == "TempO-Seq") {
                              quote = "\"",
                              row.names = 1,
                              check.names = FALSE)
-    multiQCFile <- file.path(paths$qc, "multiqc_data.zip")
-    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep="\t") 
+    multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep = "\t") 
     mu <- data.frame(Sample = multiqc_general_stats$Sample, FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
   }
 
