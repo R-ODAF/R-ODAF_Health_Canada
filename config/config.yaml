@@ -1,13 +1,13 @@
 #### Main parameters
 
 # filename for genome
-genome_filename:  Mus_musculus.GRCm39.fa
+genome_filename: humansurrogate2_0.fa
 
 # filename for gene annotations
-annotation_filename:  Mus_musculus.GRCm39.gtf
+annotation_filename: humansurrogate2_0.gtf
 
 # used for labeling genome index files
-genome_name: "GRCm39" 
+genome_name: "S1500_2.0"
 
 # one of 'rnaseq' or 'temposeq'
 seqtype: temposeq
@@ -16,9 +16,10 @@ seqtype: temposeq
 mode: se
 
 # number of threads to use, for multi-threaded programs
-threads: 8
+threads: 40
 
 ##### QC parameters
+<<<<<<< Updated upstream
 
 QC:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
@@ -47,3 +48,5 @@ QC:
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
 
+=======
+>>>>>>> Stashed changes
