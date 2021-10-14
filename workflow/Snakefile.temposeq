@@ -81,6 +81,7 @@ rule temposeq:
         mv mapped_unmapped.csv {processed_dir}
         mv TempOSeq_log.txt {log_dir}
         mv _STARtmp/fastqs/*Aligned.sortedByCoord.out.bam _STARtmp/fastqs/*Aligned.sortedByCoord.out.bam.bai _STARtmp/fastqs/*Log.final.out _STARtmp/fastqs/*Log.out _STARtmp/fastqs/*Log.progress.out _STARtmp/fastqs/*SJ.out.tab _STARtmp/fastqs/*_STARtmp {align_dir}
+        rm -r _STARtmp
         '''
 
 ##################################
@@ -153,7 +154,7 @@ rule multiqc:
     message: "running multiqc for temposeq data"
     input:
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
-        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES)
     output:
         qc_dir / "multiqc_report.html"
     log: log_dir / "multiqc.log"
