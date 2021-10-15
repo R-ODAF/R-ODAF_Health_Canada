@@ -18,10 +18,10 @@ mode: se
 # number of threads to use, for multi-threaded programs
 threads: 40
 
-##### QC parameters
+# ##### QC parameters
 
 QC:
-  projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
+  projectdir: null # Use  when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
   project_name: "Halappanavar CuO"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
@@ -31,12 +31,11 @@ QC:
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
   groups:
-    value:
-      one: ["Description", "Dose", "Treatment"]
-      two: ["I7_Index_ID", "I5_Index_ID"] 
-      three: ["row", "column"]
+    one: ["Description", "Dose", "Treatment"]
+    two: ["I7_Index_ID", "I5_Index_ID"] 
+    three: ["row", "column"]
       #4: ["batch"]
-      #As many groups as desired...
+      #As many groups as desired...up to a maximum of 6
   batch_var: null          # "batch"
   dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "Treatment"
@@ -46,4 +45,5 @@ QC:
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
+
 
