@@ -19,7 +19,6 @@ mode: se
 threads: 40
 
 ##### QC parameters
-<<<<<<< Updated upstream
 
 QC:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
@@ -48,5 +47,3 @@ QC:
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
 
-=======
->>>>>>> Stashed changes
