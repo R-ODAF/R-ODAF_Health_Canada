@@ -324,7 +324,7 @@ dev.off()
 
 In the code below, a `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
 
-```{r filtering_dendrogram, eval=FALSE}
+```{r filtering_dendrogram}
 ############################################################################
 # Filtering
 ############################################################################
