@@ -75,9 +75,8 @@ paths$wikipathways <- params$wikipathways_directory
 paths$root <- params$projectdir
 paths$data <- paste0(paths$root, "/data")
 paths$raw <- paste0(paths$data, "/raw")
-paths$output <- paste0(paths$data, "/output")
 paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$root, "/metadata")
+paths$metadata <- paste0(paths$data, "/metadata")
 paths$reports <- paste0(paths$root, "/reports")
 if (is.na(params$group_facet)) {
   paths$DEG_output <- paste0(paths$root, "/DEG_output")

@@ -20,6 +20,93 @@ properties:
     type: integer
     default: 1
     description: Number of threads to use, for multi-threaded programs (default 1)
+  qc:
+    projectdir:
+      type: string
+      description: e.g "~/path/to/project" Use when loading. Can also hard code if for some reason you need that
+    project_name:
+      type: string
+      description: Change depending on your project name
+    clust_method:
+      type: string
+      description: For clustering. Options are "spearman" or "pearson"
+    tree_height_cutoff:
+      type: number
+      description: For clustering
+    dendro_color_by:
+      type: string
+      description: Specify how you would like to color the dendrograms
+    nmr_threshold:
+      type: integer
+      description: 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+    align_threshold:
+      type: number
+      description: 0.5 (50%) alignment rate for TempO-Seq Experiments
+    gini_cutoff:
+      type: number
+      description: Samples with Gini coefficients > cutoff are removed from the analysis.
+    sampledata_sep:
+      type: string
+      description: Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+    groups:
+      type: object
+      properties:
+        one:
+          type: array
+          items:
+            type:
+              string
+        two:
+          type: array
+          items:
+            type:
+              string
+        three:
+          type: array
+          items:
+            type:
+              string
+        four:
+          type: array
+          items:
+            type:
+              string
+        five:
+          type: array
+          items:
+            type:
+              string
+        six:
+          type: array
+          items:
+            type:
+              string
+    batch_var:
+      type: string
+      description: If there is are multiple batches in the experiment; otherwise use NULL
+    dose:
+      type: string
+      description: If there is a dose in the experiment; otherwise use NULL
+    treatment_var:
+      type: string
+      description: Treatment variable
+    Platform:
+      type: string
+      description: TempO-Seq Or RNA-Seq
+    collapse_replicates: 
+      type: boolean
+      description: Set to true if you have replicate flow cells that need to be summed into a single value, false otherwise
+    technical_control:
+      type: string
+      description: Column names for metadata, if applicable
+    reference_rna:
+      type: string
+      description: Column names for metadata, if applicable
+    solvent_control:
+      type: string
+      description: Column names for metadata, if applicable
+
+
 
 required:
   - genome_filename
