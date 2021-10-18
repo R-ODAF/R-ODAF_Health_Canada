@@ -1,0 +1,171 @@
+import re
+import pandas as pd
+from glob import glob
+import pathlib
+from snakemake.utils import validate
+
+# load and validate config stuff
+configfile: "config/config.yaml"
+validate(config, "../schemas/config.schema.yaml") # file path has to be relative for some reason, arg.
+
+envvars:
+    "prefix",
+    "genomedir"
+
+# set up directories
+main_dir = Path(os.environ["prefix"])
+
+genome_dir = Path(os.environ["genomedir"])
+
+data_dir = main_dir / "data"
+raw_dir = data_dir / "raw" # should already exist
+metadata_dir = data_dir / "metadata" # should already exist
+metadata_file = metadata_dir / "metadata.txt" # should aready exist
+#TODO set up a check to make sure this stuff exists
+
+temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
+
+
+SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
+
+print("samples: " + str(SAMPLES))
+
+# set up output dirs
+
+processed_dir = data_dir / "processed"
+processed_dir.mkdir(parents=True, exist_ok=True)
+
+trim_dir = processed_dir / "trimmed"
+align_dir = processed_dir / "aligned"
+trim_dir.mkdir(parents=True, exist_ok=True)
+align_dir.mkdir(parents=True, exist_ok=True)
+
+analysis_dir = main_dir / "analysis"
+analysis_dir.mkdir(parents=True, exist_ok=True)
+
+qc_dir = analysis_dir / "QC"
+qc_dir.mkdir(parents=True, exist_ok=True)
+
+log_dir = main_dir / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+
+print("using genome: " + str(genome_dir))
+
+shell("cp -rf workflow {log_dir}")
+shell("cp -rf config {log_dir}")
+
+# run whole pipeline
+
+rule all:
+    input:
+        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        qc_dir / "MultiQC_Report.html",
+        processed_dir / "count_table.csv",
+        processed_dir / "mapped_unmapped.csv"
+    log: log_dir / "temposeq.log"
+
+rule temposeq:
+    params:
+        threads = config["threads"],
+        index_name = genome_dir / config["genome_filename"],
+    input:
+        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+    output:
+        processed_dir / "count_table.csv",
+        processed_dir / "mapped_unmapped.csv",
+        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES) 
+    shell:
+        '''
+        Rscript {temposeq_script} {params.index_name} {trim_dir} {params.threads}
+        mv count_table.csv {processed_dir}
+        mv mapped_unmapped.csv {processed_dir}
+        mv TempOSeq_log.txt {log_dir}
+        mv _STARtmp/fastqs/*Aligned.sortedByCoord.out.bam _STARtmp/fastqs/*Aligned.sortedByCoord.out.bam.bai _STARtmp/fastqs/*Log.final.out _STARtmp/fastqs/*Log.out _STARtmp/fastqs/*Log.progress.out _STARtmp/fastqs/*SJ.out.tab _STARtmp/fastqs/*_STARtmp {align_dir}
+        rm -r _STARtmp
+        '''
+
+##################################
+### Trimming raw reads : Fastp ###
+##################################
+
+################################
+#INFORMATION ON TRIMMING PROCESS
+#--cut_front --cut_front_window_size 1 --cut_front_mean_quality 3 == Trimmomatic  "LEADING:3"
+#--cut_tail --cut_tail_window_size 1 --cut_tail_mean_quality 3 == Trimmomatic  "TRAILING:3"
+#--cut_right --cut_right_window_size 4 --cut_right_mean_quality 15 == Trimmomatic  "SLIDINGWINDOW:4:15"
+
+#### If additional trimming is needed (see multiQCreport): 
+# add to R1: --trim_front1 {amount_bases} and/or --trim_tail1 {amount_bases}
+# add to R2: --trim_front2 {amount_bases} and/or --trim_tail2 {amount_bases}
+
+
+rule fastp_all:
+    input:
+        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+    log: log_dir / "bbduk_all.log"
+
+
+rule fastp:
+    input:
+        R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
+    output:
+        R1 = trim_dir / "{sample}.trimmed.fastq.gz",
+        json = trim_dir / "{sample}_fastp.json",
+        html = trim_dir / "{sample}_fastp.html",
+    log:
+        filter_stats = log_dir / "bbduk.{sample}.log"
+    params:
+        front_size = 1,
+        front_quality = 3,
+        tail_size = 1,
+        tail_quality = 3,
+        right_size = 4,
+        right_quality = 15,
+        length_required = 36,
+        threads = config["threads"],
+    shell:
+        '''
+        fastp \
+        --in1 {input.R1} \
+        --out1 {output.R1} \
+        --json {output.json} \
+        --html {output.html} \
+        --cut_front \
+        --cut_front_window_size {params.front_size} \
+        --cut_front_mean_quality {params.front_quality} \
+        --cut_tail \
+        --cut_tail_window_size {params.tail_size} \
+        --cut_tail_mean_quality {params.tail_quality} \
+        --cut_right \
+        --cut_right_window_size {params.right_size} \
+        --cut_right_mean_quality {params.right_quality} \
+        --length_required {params.length_required} \
+        --thread {params.threads} \
+        '''
+
+
+
+###############
+### MultiQC ###
+###############
+
+
+rule multiqc:
+    message: "running multiqc for temposeq data"
+    input:
+        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES)
+    output:
+        qc_dir / "MultiQC_Report.html"
+    log: log_dir / "multiqc.log"
+    shell:
+        '''
+        multiqc \
+        --cl_config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+        --cl_config "sample_names_replace_exact: True" \
+        --filename MultiQC_Report.html \
+        --interactive \
+        --sample-names {metadata_file} \
+        -fz {processed_dir}
+        mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
+        '''

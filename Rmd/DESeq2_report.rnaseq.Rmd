@@ -75,9 +75,8 @@ paths$wikipathways <- params$wikipathways_directory
 paths$root <- params$projectdir
 paths$data <- paste0(paths$root, "/data")
 paths$raw <- paste0(paths$data, "/raw")
-paths$output <- paste0(paths$data, "/output")
 paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$root, "/metadata")
+paths$metadata <- paste0(paths$data, "/metadata")
 paths$reports <- paste0(paths$root, "/reports")
 if (is.na(params$group_facet)) {
   paths$DEG_output <- paste0(paths$root, "/DEG_output")
@@ -1563,8 +1562,8 @@ This plot shows how samples are clustered based on their euclidean distance usin
 
 ```{r 'sampleDist_degs', fig.width = 10, fig.height = 10}
 ## Limit to DEGS if any found
-degs_matrix <- assay(rld_degs)
-if (length(degs_matrix) > 0) {
+
+if (length(rld_degs_names) > 0) {
   ## Obtain the sample euclidean distances
   sampleDistsDEGs <- stats::dist(t(assay(rld_degs)))
   sampleDistsDEGs <- dendextend::sort_dist_mat(sampleDistsDEGs)
@@ -1650,6 +1649,7 @@ get_clean_names <- function(vector_of_names) {
     #dplyr::mutate(combined = paste0(!!ensym(species_gene_symbol), collapse = ", ")) %>%
     dplyr::mutate(combined = coalesce(!!ensym(species_gene_symbol), !!ensym(biomart_filter))) %>%
     dplyr::select(-!!ensym(species_gene_symbol)) %>%
+    slice(1) %>% # This is bit of a hack - ran into problems with TempO-Seq probes that map to multiple genes.
     dplyr::distinct() %>%
     dplyr::pull(combined)
   return(hm_names)

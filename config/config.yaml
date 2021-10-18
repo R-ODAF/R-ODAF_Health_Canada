@@ -1,17 +1,49 @@
+#### Main parameters
+
 # filename for genome
-genome_filename:  Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+genome_filename: humansurrogate2_0.fa
 
 # filename for gene annotations
-annotation_filename:  Mus_musculus.GRCm39.104.gtf
+annotation_filename: humansurrogate2_0.gtf
 
 # used for labeling genome index files
-genome_name: "GRCm39" 
+genome_name: "S1500_2.0"
 
 # one of 'rnaseq' or 'temposeq'
-seqtype: rnaseq
+seqtype: temposeq
 
 # one of 'se' (single end) or 'pe' (paired end)
 mode: se
 
 # number of threads to use, for multi-threaded programs
-threads: 8
+threads: 40
+
+# ##### QC parameters
+
+QC:
+  projectdir: null # Use  when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_name: "Halappanavar CuO"        # Change depending on your project name
+  clust_method: "spearman" # For clustering
+  tree_height_cutoff: 0.1  # For clustering
+  dendro_color_by: "Treatment" # Specify how you would like to color the dendrograms
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
+  gini_cutoff: 0.95
+  sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+  groups:
+    one: ["Description", "Dose", "Treatment"]
+    two: ["I7_Index_ID", "I5_Index_ID"] 
+    three: ["row", "column"]
+      #4: ["batch"]
+      #As many groups as desired...up to a maximum of 6
+  batch_var: null          # "batch"
+  dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "Treatment"
+  Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
+  # Column names for metadata, if applicable
+  technical_control: "technical_control"
+  reference_rna: "reference_rna"
+  solvent_control: "solvent_control"
+
+

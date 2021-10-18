@@ -19,11 +19,11 @@ genome_dir = Path(os.environ["genomedir"])
 
 data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist
-metadata_dir = main_dir / "metadata" # should already exist
+metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
-# set up conditions and samples
+
 SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
 
 print("samples: " + str(SAMPLES))
@@ -63,6 +63,7 @@ rule all:
         processed_dir / "genes.data.tsv",
         processed_dir / "isoforms.data.tsv" 
     log: log_dir / "all.log"
+
 
 ##################################
 ### Trimming raw reads : Fastp ###
@@ -336,7 +337,12 @@ rule counts_matrix:
         sed -i 's/"//g' {output.isoforms}
         '''
 
-# multiqc
+
+
+
+###############
+### MultiQC ###
+###############
 
 rule multiqc:
     message: "running multiqc"
@@ -351,4 +357,3 @@ rule multiqc:
     run:
         shell("multiqc --cl_config \"extra_fn_clean_exts: {{ '_fastp.json' }}\" -fz {raw_dir} {trim_dir} {align_dir} {quant_dir}")
         shell("mv multiqc_report.html multiqc_data.zip {qc_dir}")
-

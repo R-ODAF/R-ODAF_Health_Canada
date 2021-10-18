@@ -48,7 +48,7 @@ run.alignment.analysis.fn <- function(fasta, queryDirectory, num_clusters){
                             recursive = F,
                             full.names = T,
                             all.files = F,
-                            pattern = "fastq|fq",
+                            pattern = "fastq|fq|fastq.gz|fq.gz",
                             ignore.case = T)
   write.table(fastq_paths,
               file = "fastq_list.txt",
@@ -209,7 +209,8 @@ num_clusters   <- as.numeric(args[3])
 
 ###############################################################################
 ## Run program 
-tryCatch({suppressWarnings(run.alignment.analysis.fn(fasta, queryDirectory, num_clusters))},
-         error=function(err){
-           sink()
-         })
+# tryCatch({suppressWarnings(run.alignment.analysis.fn(fasta, queryDirectory, num_clusters))},
+#          error=function(err){
+#            sink()
+#          })
+run.alignment.analysis.fn(fasta, queryDirectory, num_clusters)

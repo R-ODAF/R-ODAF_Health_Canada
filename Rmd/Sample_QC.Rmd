@@ -1,7 +1,7 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "OPE TempO-Seq"        # Change depending on your project name
+  project_name: "Test"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
@@ -9,14 +9,14 @@ params:
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
-  groups:                  # These should be "interesting" groups for your analysis. Group together for exploring covariation.
+  groups:
     value:
-      1: ["chemical", "dose", "group"]
-      2: ["I7_Index_ID", "I5_Index_ID"] 
-      3: ["row", "column"]
-      4: ["batch"]
+      one: ["dose", "chemical"]
+      two: ["I7_Index_ID", "I5_Index_ID"] 
+      three: ["row", "column"]
+      #4: ["batch"]
     #As many groups as desired...
-  batch_var: "batch"          # "batch"
+  batch_var: null          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "chemical"
   Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
@@ -109,9 +109,8 @@ solvent_control <- params$solvent_control
 paths <- list()
 paths$root <- here::here()
 paths$data <- paste0(paths$root, "/data")
-paths$output <- paste0(paths$data, "/output")
 paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$root, "/metadata")
+paths$metadata <- paste0(paths$data, "/metadata")
 paths$reports <- paste0(paths$root, "/reports")
 paths$qc <- paste0(paths$root, "/analysis/QC")
 
@@ -127,8 +126,8 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 # A. File with read counts
 if (Platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$output,"count_table.csv")
-    MappedUnmapped <- file.path(paths$output,"mapped_unmapped.csv")
+    SampleDataFile <- file.path(paths$processed,"count_table.csv")
+    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.csv")
     sampledata_sep <- ","
     collapse_reps <- function(filepath){
       df <- read.table(file = filepath,
@@ -146,31 +145,31 @@ if (Platform == "TempO-Seq") {
     if (params$collapse_replicates == T) {
       sampleData <- collapse_reps(SampleDataFile)
       write.table(sampleData,
-                  file = file.path(paths$processed,"count_table.csv"),
+                  file = file.path(paths$processed,"count_table_collapsed.csv"),
                   sep = ",",
                   quote = F,
                   row.names = F)
-      MappedUnmapped <- collapse_reps(MappedUnmapped)
-      write.table(MappedUnmapped,
-                  file = file.path(paths$processed,"mapped_unmapped.csv"),
+      mu <- collapse_reps(MappedUnmapped)
+      write.table(mu,
+                  file = file.path(paths$processed,"mapped_unmapped_collapsed.csv"),
                   sep = ",",
                   quote = F,
                   row.names = F)
-      }
-    
-    sampleData <- read.table(file.path(paths$processed,"count_table.csv"),
+    } else {
+      sampleData <- read.table(file.path(paths$processed,"count_table.csv"),
                              sep = sampledata_sep,
                              stringsAsFactors = FALSE,
                              header = TRUE,
                              quote = "\"",
                              row.names = 1,
                              check.names = FALSE)
-    mu <- read.table(file.path(paths$processed,"mapped_unmapped.csv"),
+      mu <- read.table(file.path(paths$processed,"mapped_unmapped.csv"),
                      sep = ",",
                      header = T,
                      row.names = 1,
                      stringsAsFactors = F,
-                     check.names = F)
+                     check.names = F)  
+      }
     mu <- as.data.frame(t(mu))
     mu$pct_mapped <- mu$mapped/(mu$mapped + mu$unmapped)
   } else {
@@ -182,8 +181,8 @@ if (Platform == "TempO-Seq") {
                              quote = "\"",
                              row.names = 1,
                              check.names = FALSE)
-    multiQCFile <- file.path(paths$qc, "multiqc_data.zip")
-    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep="\t") 
+    multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep = "\t") 
     mu <- data.frame(Sample = multiqc_general_stats$Sample, FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
   }
 
@@ -1013,16 +1012,22 @@ This examines correlations between the QC metrics calculated and any factors in 
 
 Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
 
-```{r possible_covariates, fig.height = 12, fig.width = 12}
+```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.null(batch_var)}
 
 ### Come back to this. How on earth can we automate this or make it generic!?
 ### Add in n vectors... a list of vectors to loop over?
 ### list(a,b,c) where a is ("row","column") ?
 ### Common columns - vector of NMR_data, Ncov5_data, Nsig80_data, Gini_data
 
+if(!is.null(batch_var)){
 QAQC_metadata_subset <- QAQC_annotated %>%
-  dplyr::select(unlist(groups),
+  dplyr::select(unlist(groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+} else {
+    QAQC_metadata_subset <- QAQC_annotated %>%
+    dplyr::select(unlist(groups),
+                  NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+}
 
 QAQC_metadata_subset %>%
     summarise_each(levels(as.factor(.))) %>% tally()
@@ -1080,89 +1085,86 @@ if (length(groups) > 1 & !is.null(batch_var)) {
 ## Plate position effects
 
 ```{r plate_pos, eval = any(grepl("column", colnames(QAQC_annotated), ignore.case = T))}
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
+colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))
+rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))
+colname <- names(QAQC_annotated[colnum])
+rowname <- names(QAQC_annotated[rownum])
+plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
+                                         y = factor(!!ensym(rowname),
+                                                    levels = rev(levels(factor(!!ensym(rowname)))))))
+
 #  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
 #  scale_fill_gradient(low = "grey", high = "black") +
+
+plate_plot +
   geom_point(mapping = aes(color = NMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Number of mapped reads") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = FMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Number of mapped reads") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Nsig80_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Nsig80") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Ncov5_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Ncov5") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+plate_plot +
   geom_point(mapping = aes(color = Gini_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Gini") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
-ggplot(QAQC_annotated, aes(x = factor(column),
-                           y = factor(row, levels = rev(levels(factor(row)))))) +
-  geom_tile(mapping = aes(fill = log(dose + 1)), data = QAQC_annotated) +   
+plate_plot +
+  geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
+            data = QAQC_annotated) +   
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Any samples failed") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+
 ```
 
 
