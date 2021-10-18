@@ -1,24 +1,24 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "OPE TempO-Seq"        # Change depending on your project name
+  project_name: "Halappanavar CuO"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
-  dendro_color_by: "group" # Specify how you would like to color the dendrograms
+  dendro_color_by: "Treatment" # Specify how you would like to color the dendrograms
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
-  groups:                  # These should be "interesting" groups for your analysis. Group together for exploring covariation.
+  groups:
     value:
-      1: ["chemical", "dose", "group"]
-      2: ["I7_Index_ID", "I5_Index_ID"] 
-      3: ["row", "column"]
-      4: ["batch"]
-    #As many groups as desired...
-  batch_var: "batch"          # "batch"
-  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "chemical"
+      one: ["Description", "Dose", "Treatment"]
+      two: ["I7_Index_ID", "I5_Index_ID"] 
+      three: ["row", "column"]
+      #4: ["batch"]
+      #As many groups as desired...
+  batch_var: null          # "batch"
+  dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "Treatment"
   Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
@@ -324,7 +324,7 @@ dev.off()
 
 In the code below, a `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
 
-```{r filtering_dendrogram}
+```{r filtering_dendrogram, eval=FALSE}
 ############################################################################
 # Filtering
 ############################################################################
@@ -1013,16 +1013,22 @@ This examines correlations between the QC metrics calculated and any factors in 
 
 Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
 
-```{r possible_covariates, fig.height = 12, fig.width = 12}
+```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.null(batch_var)}
 
 ### Come back to this. How on earth can we automate this or make it generic!?
 ### Add in n vectors... a list of vectors to loop over?
 ### list(a,b,c) where a is ("row","column") ?
 ### Common columns - vector of NMR_data, Ncov5_data, Nsig80_data, Gini_data
 
-QAQC_metadata_subset <- QAQC_annotated %>%
-  dplyr::select(unlist(groups), !!ensym(batch_var),
-                NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+if(!is.null(batch_var)){
+  QAQC_metadata_subset <- QAQC_annotated %>%
+    dplyr::select(unlist(groups), !!ensym(batch_var),
+                  NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+} else {
+    QAQC_metadata_subset <- QAQC_annotated %>%
+    dplyr::select(unlist(groups),
+                  NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+}
 
 QAQC_metadata_subset %>%
     summarise_each(levels(as.factor(.))) %>% tally()
@@ -1090,60 +1096,61 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 #  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
 #  scale_fill_gradient(low = "grey", high = "black") +
+
 plate_plot +
   geom_point(mapping = aes(color = NMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Number of mapped reads") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
 plate_plot +
   geom_point(mapping = aes(color = FMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Number of mapped reads") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
 plate_plot +
   geom_point(mapping = aes(color = Nsig80_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Nsig80") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
 plate_plot +
   geom_point(mapping = aes(color = Ncov5_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Ncov5") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
 plate_plot +
   geom_point(mapping = aes(color = Gini_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~",batch_var)) +
   ggtitle("Gini") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
 
 plate_plot +
   geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
@@ -1152,12 +1159,13 @@ plate_plot +
   geom_point(mapping = aes(color = Any), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  facet_wrap(paste0("~", batch_var)) +
   ggtitle("Any samples failed") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank()) +
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+
 ```
 
 
