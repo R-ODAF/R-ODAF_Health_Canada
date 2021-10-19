@@ -61,8 +61,9 @@ paths.txt
 *contrasts.txt
 ./metadata*
 ./data*
-/metadata/metadata.txt
-/metadata/contrasts.txt
+/data/metadata/metadata.txt
+/data/metadata/contrasts.txt
+/data/metadata/metadata.QC_applied.txt
 /data/processed/genes.data.tsv
 /data/processed
 /logs/
