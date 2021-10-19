@@ -19,7 +19,7 @@ params:
   batch_var: null          # "batch"
   dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "Treatment"
-  Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
   technical_control: "technical_control"
@@ -35,7 +35,7 @@ output:
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
 title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$Platform)`"
+subtitle: "`r paste(params$platform)`"
 author: "Matthew J. Meier"
 ---
 
@@ -94,7 +94,7 @@ groups <- unname(groups) # Include b/c of how things are addressed throughout.
 batch_var <- params$batch_var
 dose <- params$dose
 treatment_var <- params$treatment_var
-Platform <- params$Platform
+Platform <- params$platform
 # Column names for metadata, if applicable
 technical_control <- params$technical_control
 reference_rna <- params$reference_rna
