@@ -4,7 +4,7 @@ library(tidyverse)
 require(yaml)
 
 config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.qc.yml"),
+                                    "config/config.yml"),
                           eval.expr = T)
 
 projectdir <- config$QC$projectdir
