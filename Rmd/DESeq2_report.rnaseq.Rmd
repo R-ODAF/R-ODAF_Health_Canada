@@ -26,6 +26,8 @@ params:
   nHeatmap: 50 # Number of most variable genes for heatmap
   nHeatmapDEGs: 50 # Number of DEGs for heatmap
   sampledata_sep: "," # Changed later in this script according to RNASeq vs TempOSeq!
+title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
+subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
 output:
   html_document:
     toc: true
@@ -35,8 +37,6 @@ output:
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
-title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
 author: "Your Name"
 ---
 
