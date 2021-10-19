@@ -74,4 +74,4 @@ DESeq2:
   nHeatmap: 50                   # Number of most variable genes for heatmap
   nHeatmapDEGs: 50               # Number of DEGs for heatmap
   sampledata_sep: ","           # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
----
+
