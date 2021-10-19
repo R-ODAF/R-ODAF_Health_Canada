@@ -4,7 +4,7 @@ library(tidyverse)
 require(yaml)
 
 config <- yaml::read_yaml(file.path(here::here(),
-                                    "Rmd/config.yml"),
+                                    "config/config.deseq.yml"),
                           eval.expr = T)
 
 skip_extra <- c("DMSO", "DMSO 24 h", "DMSO 96 h") # Remove DMSO controls as a facet
@@ -14,7 +14,7 @@ inputFile <- file.path(config$params$projectdir, "Rmd", "DESeq2_report.rnaseq.Rm
 
 # Identify where metadata can be found
 SampleKeyFile <- file.path(config$params$projectdir,
-                           "metadata/metadata.QC_applied.txt")
+                           "data/metadata/metadata.QC_applied.txt")
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
