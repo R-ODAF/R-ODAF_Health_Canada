@@ -220,6 +220,9 @@ all(names(sampleData) == d$original_names)
 d <- d[d$original_names %in% names(sampleData),]
 DESeqDesign <- d
 all(names(sampleData) == d$original_names)
+# Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
+sampleData <- sampleData[,d$original_names]
+mu <- mu[d$original_names,]
 ```
 
 # Sample Filtering Code
