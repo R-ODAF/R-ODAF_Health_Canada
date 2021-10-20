@@ -1490,7 +1490,7 @@ This plot shows the first two principal components that explain the variability 
 
 ```{r 'PCA_DEGs'}
 rld_degs_names <- significantResults[[biomart_filter]]
-if (length(rld_degs_names) > 0) {
+if (length(rld_degs_names) > 1) {
   rld_degs <- rld[row.names(assay(rld)) %in% significantResults[[biomart_filter]],] 
   # d[ d[[THECOLUMN]] == someValue , ]
   ## Perform PCA analysis and make plot
@@ -1502,7 +1502,7 @@ if (length(rld_degs_names) > 0) {
   ## Get percent of variance explained
   percentVarDEGs <- round(100 * attr(PCAplotDEGs, "percentVar"))
 } else {
-  print("No DEGs found.")
+  print("Insufficient DEGs found.")
   percentVarDEGs <- 0
 }
 
