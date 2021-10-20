@@ -1670,9 +1670,8 @@ get_clean_names <- function(vector_of_names) {
 
 mat <- assay(rld)[row.names(assay(rld)) %in%
                                           significantResults[[biomart_filter]],]
-mat <- mat - rowMeans(mat)
-
-if (length(mat) > 0) {
+if (length(mat) > 1) {
+  mat <- mat - rowMeans(mat)
   pheatmap(mat,
            annotation_col = heatmap_df,
            show_rownames = FALSE,
