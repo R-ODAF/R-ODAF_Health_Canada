@@ -600,7 +600,7 @@ Samples less than `r align_threshold` aligned reads removed.
 if (Platform == "TempO-Seq") {
   QAQC$FMR <- mu$pct_mapped
 } else {
-  QAQC <- QAQC %>% left_join(mu, by="Sample")
+  QAQC <- QAQC %>% left_join(mu, by = "Sample")
 }
   failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
   
