@@ -4,12 +4,12 @@ library(tidyverse)
 require(yaml)
 
 config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yml"),
+                                    "config/config.yaml"),
                           eval.expr = T)
-
 projectdir <- config$QC$projectdir
-if(is.null(projectdir)){
+if (is.null(projectdir)) {
   projectdir <- here::here()
+  config$QC$projectdir <- projectdir
 }
 
 # Input file - Rmd
@@ -17,7 +17,7 @@ inputFile <- file.path(projectdir, "Rmd", "Sample_QC.Rmd")
 
 message("Writing QC report for all samples in the experiment.")
 # Output file - HTML
-filename <- paste0("Study-wide_Sample_QC",
+filename <- paste0("Study-wide_Sample_QC_",
                    config$QC$platform, "_",
                    config$QC$project_name, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'),

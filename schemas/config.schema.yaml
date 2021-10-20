@@ -90,7 +90,7 @@ properties:
     treatment_var:
       type: string
       description: Treatment variable
-    Platform:
+    platform:
       type: string
       description: TempO-Seq Or RNA-Seq
     collapse_replicates: 
@@ -105,8 +105,82 @@ properties:
     solvent_control:
       type: string
       description: Column names for metadata, if applicable
-
-
+  DESeq2:
+    projectdir:
+      type: string
+      description: e.g "~/path/to/project" Use when loading. Can also hard code if for some reason you need that
+    project_name:
+      type: string
+      description: Change depending on your project name    species: "human"                 # one of human, mouse, rat, hamster
+    design:
+      type: string
+      description: e.g., "group", single experimental group of interest; entries in this column must match the contrast names.
+    intgroup:
+      type: string
+      description: e.g., ["group"], experimental group of interest plus covariates; can be more than one
+    nuisance:
+      type:string
+      description: e.g., "Batch", use to remove batch effects for PCA/Heatmaps visualiziations
+    flag:
+      type: boolean
+      descrption: Runs all analysis by default when set to TRUE
+    platform:
+      type: string
+      description: One of RNA-Seq or TempO-Seq
+    group_facet:
+      type: string
+      description: e.g., "chemical", If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+    group_filter:
+      type: string
+      description: Which group (within the column chosen for group facet) will this report be done on?
+    sortcol:
+      type: string
+      descrption: e.g., "dose", Optionally, a column by which to sort the contrasts
+    strict_contrasts:
+      type: boolean
+      description: If TRUE, use both columns (exp, cont) of contrasts file to limit what is included in the report. Default should usually be FALSE.
+    exclude_samples:
+      type: string
+      description: Optionally, a vector of sample names to exclude from the analysis
+    exclude_groups:
+      type: string 
+      description: Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by the "design" parameter.
+    include_only_column:
+      type: string
+      description: Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+    include_only_group:
+      type: string
+      description: Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+    use_cached_RData:
+      type: boolean
+      description: If possible, load the saved RData for dds object and gene IDs
+    cpus:
+      type: integer
+      description: Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+    run_pathway_analysis:
+      type: boolean
+      description: Optionally disable pathway analysis if not available for your organism
+    wikipathways_directory:
+      type: string
+      description: e.g., "~/shared/dbs/wikipathways", where your WikiPathways GMT files are found
+    biospyder_dbs:
+      type: string
+      description: e.g., "~/shared/dbs/biospyder/", where your biospyder manifest files are found
+    nBestFeatures:
+      type: integer
+      description: The number of best features to make plots of their counts
+    nBest:
+      type: integer
+      description: Number of features to include in table and limiting PCA/clustering analysis
+    nHeatmap:
+      type: integer
+      description: Number of most variable genes for heatmap
+    nHeatmapDEGs:
+      type: integer
+      description: Number of DEGs for heatmap
+    sampledata_sep:
+      type: string
+      description: e.g., "," Comma for TempO-Seq, Maybe tabs ("\t") for RNASeq, customize!
 
 required:
   - genome_filename
