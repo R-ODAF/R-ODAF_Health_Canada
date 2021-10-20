@@ -1670,7 +1670,7 @@ get_clean_names <- function(vector_of_names) {
 
 mat <- assay(rld)[row.names(assay(rld)) %in%
                                           significantResults[[biomart_filter]],]
-if (length(mat) > 1) {
+if (ncol(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
   pheatmap(mat,
            annotation_col = heatmap_df,
@@ -1687,8 +1687,8 @@ if (length(mat) > 1) {
 
 ```{r 'heatmap_top_degs', fig.height = 10, fig.width = 10, collapse = TRUE}
 mat_top <- assay(rld)[row.names(assay(rld)) %in% allResultsOrdered_logFC_filter[1:nHeatmapDEGs,][[biomart_filter]],]
-mat_top <- mat_top - rowMeans(mat_top)
-if (length(mat_top) > 0) {
+if (ncol(as.matrix(mat_top)) > 1) {
+  mat_top <- mat_top - rowMeans(mat_top)
   genes_for_heatmap <- get_clean_names(row.names(mat_top))
   pheatmap(mat_top,
            annotation_col = heatmap_df,
@@ -2305,7 +2305,7 @@ if (!is.null(enrich_go_cc)) {
 } else { print("No significantly enriched terms using criteria selected") }
 ```
 
-```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 0 }
+```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 }
 ```
 
 # Methods Summary
