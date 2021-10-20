@@ -25,6 +25,8 @@ params:
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
+title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
+subtitle: "`r paste(params$platform)`"
 output:
   html_document:
     toc: true
@@ -34,8 +36,6 @@ output:
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
-title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$platform)`"
 author: "Matthew J. Meier"
 ---
 
