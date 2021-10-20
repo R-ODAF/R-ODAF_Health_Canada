@@ -1489,7 +1489,7 @@ This plot shows the first two principal components that explain the variability 
 ## DEGs only (`r length(unique(significantResults[[biomart_filter]]))` genes)
 
 ```{r 'PCA_DEGs'}
-rld_degs_names <- significantResults[[biomart_filter]]
+rld_degs_names <- significantResults[[biomart_filter]] %>% unique()
 if (length(rld_degs_names) > 1) {
   rld_degs <- rld[row.names(assay(rld)) %in% significantResults[[biomart_filter]],] 
   # d[ d[[THECOLUMN]] == someValue , ]
@@ -1669,8 +1669,9 @@ get_clean_names <- function(vector_of_names) {
 ```{r 'heatmap_all_DEGs', collapse = TRUE, fig.height = 10}
 
 mat <- assay(rld)[row.names(assay(rld)) %in%
-                                          significantResults[[biomart_filter]],]
-if (ncol(as.matrix(mat)) > 1) {
+                                          significantResults[[biomart_filter]],
+                  , drop = F] # Otherwise will return numeric for 1 row matrix
+if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
   pheatmap(mat,
            annotation_col = heatmap_df,
@@ -1686,8 +1687,9 @@ if (ncol(as.matrix(mat)) > 1) {
 ## Top `r nHeatmapDEGs` differentially abundant genes
 
 ```{r 'heatmap_top_degs', fig.height = 10, fig.width = 10, collapse = TRUE}
-mat_top <- assay(rld)[row.names(assay(rld)) %in% allResultsOrdered_logFC_filter[1:nHeatmapDEGs,][[biomart_filter]],]
-if (ncol(as.matrix(mat_top)) > 1) {
+mat_top <- assay(rld)[row.names(assay(rld)) %in% allResultsOrdered_logFC_filter[1:nHeatmapDEGs,][[biomart_filter]],
+                      , drop = F]
+if (nrow(as.matrix(mat_top)) > 1) {
   mat_top <- mat_top - rowMeans(mat_top)
   genes_for_heatmap <- get_clean_names(row.names(mat_top))
   pheatmap(mat_top,
@@ -2083,7 +2085,7 @@ head(ensemblDEGs)
 DEGs <- dplyr::left_join(data.frame(genes = ensemblDEGs), id_table_entrez, by = c("genes" = biomart_filter))
 head(DEGs)
 entrezDEGs <- as.character(DEGs$entrezgene_id)
-entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)]
+entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)] %>% unique()
 
 #### DEFINE INPUTS
 myDEGs <- entrezDEGs
@@ -2094,8 +2096,6 @@ background <- dplyr::left_join(data.frame(genes = row.names(assay(dds))),
   dplyr::filter(!is.na(entrezgene_id)) %>%
   dplyr::pull(entrezgene_id)
 background <- as.character(background)
-
-entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)]
 
 ##### TO DO: Add multiple panels for each contrast.
 ##### Use "all" argument to only run each once..?
@@ -2302,7 +2302,7 @@ if (!is.null(enrich_go_cc)) {
     print(plot3)
     print(plot4)
   }
-} else { print("No significantly enriched terms using criteria selected") }
+} else {print("No significantly enriched terms using criteria selected")}
 ```
 
 ```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 }
