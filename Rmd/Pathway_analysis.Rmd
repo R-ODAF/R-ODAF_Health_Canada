@@ -114,7 +114,7 @@ for (i in seq_along(levels(significantResults$contrast))) {
                                                                        " ",
                                                                        "_"),
                                                        ".txt")))
-  if (dim(kk@result)[1] > 0) {
+  if (dim(kk@result)[1] > 1) {
     plotListGSEA[[i]] <- ridgeplot(kk)
     plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(gsea_sorted, geneSetID = c(seq_along(gsea_sorted$ID)))
   } else {
