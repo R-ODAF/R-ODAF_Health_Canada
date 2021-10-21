@@ -8,14 +8,10 @@ from snakemake.utils import validate
 configfile: "config/config.yaml"
 validate(config, "../schemas/config.schema.yaml") # file path has to be relative for some reason, arg.
 
-envvars:
-    "prefix",
-    "genomedir"
-
 # set up directories
-main_dir = Path(os.environ["prefix"])
+main_dir = Path(config["prefix"])
 
-genome_dir = Path(os.environ["genomedir"])
+genome_dir = Path(config["genomedir"])
 
 data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist

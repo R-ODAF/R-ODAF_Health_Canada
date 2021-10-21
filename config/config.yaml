@@ -1,5 +1,9 @@
 #### Main parameters
 
+prefix:
+
+genomedir:
+
 # filename for genome
 genome_filename: humansurrogate2_0.fa
 
