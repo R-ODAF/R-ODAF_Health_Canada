@@ -20,8 +20,14 @@ source(here::here("scripts","DESeq_functions.R"))
 # SETUP
 ##############################################################################################
 
-config <- yaml::read_yaml(here::here("config","config.new.yaml"), eval.expr = T)
-params <- config$params
+config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
+params <- config$deseq
+
+projectdir <- params$projectdir
+if(is.null(projectdir)){
+  projectdir <- here::here()
+  params$projectdir <- projectdir
+}
 
 paths <- set_up_paths(params)
 get_analysis_id <- get_analysis_id(params)
@@ -50,7 +56,7 @@ if (params$platform == "RNA-Seq") {
   params$alpha <- pAdjValue <- 0.05 
   params$linear_fc_filter <- 1.5
   
-  bs <- load_biospyder(biospyder_dbs, temposeq_manifest)
+  bs <- load_biospyder(params$biospyder_dbs, species_data$temposeq_manifest)
   params$biospyder_ID <- bs$biospyder_ID
   params$biomart_filter <- bs$biomart_filter
   params$biospyder_filter <- bs$biospyder_filter
@@ -98,10 +104,10 @@ if (length(intgroup) > 1){
     # now redo the contrasts
     contrasts <- contrasts %>%
         left_join(DESeqDesign, by=c("V1"=params$design)) %>%
-        dplyr::select(V1, V1.new = dose_timepoint, V2) %>%
+        dplyr::select(V1, V1.new = new_group_name, V2) %>%
         unique() %>%
         left_join(DESeqDesign, by=c("V2"=params$design)) %>%
-        dplyr::select(V1, V1.new, V2, V2.new=dose_timepoint) %>%
+        dplyr::select(V1, V1.new, V2, V2.new=new_group_name) %>%
         unique() %>%
         dplyr::select(V1=V1.new, V2=V2.new)
     design_to_use <- new_group_name
@@ -129,6 +135,8 @@ if(!is.na(params$group_facet)){
             pull(params$group_facet) %>% 
             unique()
     }
+} else {
+    facets <- NA
 }
 
 stopifnot((is.na(params$group_facet) || length(facets) > 0))
@@ -148,7 +156,7 @@ if(is.na(params$group_facet)){
     resList <- DESeq_results$resList
     ddsList[['all']] <- dds
     overallResList[['all']] <- DESeq_results$resList
-    designList[['all']] <- DESeqDesign_subset
+    designList[['all']] <- DESeqDesign
     # rldList[['all']] <- rld
 } else {
     for (current_filter in facets) {

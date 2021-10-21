@@ -25,7 +25,7 @@ load_species <- function(species){
     species_data$ensembl_species <- "mmusculus_gene_ensembl"
     species_data$species_gene_symbol <- "mgi_symbol"
     species_data$kegg_organism <- "mmu"
-    species_data$temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.xlsx" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
+    species_data$temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.txt" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
     species_data$loaded <- TRUE
   } else if (species == "rat") {
     # Rat: 
@@ -82,6 +82,17 @@ load_biospyder <- function(biospyder_dbs, temposeq_manifest){
     biospyder_ID = "Reference.Transcript"
     biomart_filter = "Probe.name"
     biospyder_filter = "refseq_mrna"
+  } else if (colnames(biospyder)[1] == "PROBE_ID") {
+    # This should be an "or" statement instead... these manifests are so inconsistent.
+    # Same general idea as the first case, but slight differences in the Excel file
+    # Had to alter PROBE_NAME manually to include the number as XYZ_1
+    biospyder_ID = "ENSEMBL_GENE_ID"
+    biomart_filter <- "PROBE_NAME"
+    biospyder_filter = "ensembl_gene_id"
+  } else if (colnames(biospyder)[1] == "Probe.Name" && colnames(biospyder)[2] == "Gene.Symbol") {
+    biospyder_ID = "Gene.Symbol"
+    biomart_filter <- "Gene.Symbol"
+    biospyder_filter = "ensembl_gene_id"
   }
   # Fill in the blanks for TempO-Seq Manifest...
   # Set NULL values to NA
