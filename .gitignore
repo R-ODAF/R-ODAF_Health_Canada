@@ -69,3 +69,6 @@ paths.txt
 /logs/
 run.sh
 preprocessing.txt
+config/config.yaml
+config/config.new.yaml
+config/config.qc.yaml
