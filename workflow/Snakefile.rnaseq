@@ -6,7 +6,6 @@ from snakemake.utils import validate
 
 # load and validate config stuff
 configfile: "config/config.yaml"
-validate(config, "../schemas/config.schema.yaml") # file path has to be relative for some reason, arg.
 
 # set up directories
 main_dir = Path(config["prefix"])
