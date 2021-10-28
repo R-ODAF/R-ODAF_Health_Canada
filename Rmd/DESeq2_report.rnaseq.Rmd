@@ -1197,9 +1197,14 @@ allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange
 allResultsOrdered_logFC_filter <- dplyr::filter(allResultsOrdered_logFC_filter, padj < alpha)
 res.df <- allResultsOrdered_logFC_filter
 
-degTable <- significantResults %>%
+# Need to ensure that contrasts with no DEGs are reported.
+degTable <- as.data.frame(levels(allResults$contrast))
+colnames(degTable) <- "contrast"
+degTable_n <- significantResults %>%
   dplyr::group_by(contrast) %>%
   dplyr::count()
+degTable <- degTable %>%
+  left_join(degTable_n, by = "contrast", na_matches = "never")
 
 # lengths <- lapply(resList, nrow)
 # longest <- which.max(lengths)
