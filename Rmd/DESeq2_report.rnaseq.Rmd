@@ -1954,94 +1954,6 @@ DT::datatable(res.df.dt,
 
 ```
 
-# Gene-level plots for top `r nBestFeatures` features
-
-This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r nBestFeatures` features are shown, ranked by their absolute fold change values. The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
-
-```{r 'plotCounts'}
-# Would be valuable to have this broken down by contrast too.
-plotCounts_gg <- function(i, dds, intgroup) {
-    plotdata <- plotCounts(dds,
-                       gene = i,
-                       intgroup = intgroup,
-                       returnData = TRUE)
-    plot_title <- paste(id_table[[biomart_filter]][id_table[[biomart_filter]] == i],
-                        id_table[[species_gene_symbol]][id_table[[biomart_filter]] == i])
-    if (ncol(plotdata) > 2) {
-      colorCol = 3
-    } else {colorCol = 2}
-    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
-      geom_point(position = position_jitterdodge()) +
-      ylab('Normalized count') +
-      xlab('Group') +
-      ggtitle(plot_title) +
-      coord_trans(y = "log10") +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      labs(color = colnames(plotdata)[colorCol])
-}
-
-genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
-
-for (i in head(unique(genesToPlot[[biomart_filter]]), nBestFeatures)) {
-  print(plotCounts_gg(i, dds = dds, intgroup = params$design))
-}
-
-```
-
-# Plots of genes of interest
-
-This section shows genes of interest sorted by those with highest fold-change within each contrast.
-
-```{r 'plot_genes_of_interest', fig.width = 10, fig.height = 6, eval = nrow(allResultsOrdered_logFC_filter) > 0}
-
-#numResults = 20
-numResults <- nBestFeatures
-
-allResultsOrdered_logFC_filter %>%
-  group_by(contrast) %>%
-  top_n(numResults, wt = abs(log2FoldChange)) %>%
-  ungroup() %>%
-  mutate(contrast = as.factor(contrast),
-         symbol = reorder_within(!!ensym(species_gene_symbol), log2FoldChange, contrast)) %>%
-  ggplot(aes(x = log2FoldChange,
-             y = symbol,
-             color = contrast,
-             size = -log(padj))) +
-  geom_point(show.legend = TRUE) +
-  facet_wrap(~contrast,
-             scales = "free_y",
-             ncol = 4,
-             labeller = labeller(contrast = label_wrap_gen(10))) +
-  scale_y_reordered()  +
-  geom_vline(xintercept = 0,
-             linetype = "dashed",
-             color = "black",
-             size = 1) +
-  ggtitle(paste0("Top ",
-                 numResults,
-                 " genes ranked by fold change (adjusted p-value <",
-                 alpha,
-                 "), grouped by treatment"))
-```
-
-# Volcano plot
-
-This section shows a volcano plot for each contrast.  
-
-Note that scales are set manually for this plot: therefore, there may be data points outside the range shown (see warnings).  
-
-Data reported as significant are shown as red points.
-
-```{r 'volcano-plot', fig.width = 12, fig.height = 6, warning = TRUE, collapse = TRUE}
-ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
-  geom_point(size = 0.5, alpha = 0.3) +
-  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
-  facet_wrap(~contrast, ncol = 4) + # , scales = "free"
-  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
-  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
-  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) + # 
-  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) # 
-```
 
 ```{r 'bmdexpress_input', collapse = TRUE}
 
@@ -2112,6 +2024,201 @@ if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   }
 }
 ```
+
+
+# Gene-level plots for top `r nBestFeatures` features
+
+This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r nBestFeatures` features are shown, ranked by their absolute fold change values. The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
+
+```{r 'plotCounts'}
+# Would be valuable to have this broken down by contrast too.
+plotCounts_gg <- function(i, dds, intgroup) {
+    plotdata <- plotCounts(dds,
+                       gene = i,
+                       intgroup = intgroup,
+                       returnData = TRUE)
+    plot_title <- paste(id_table[[biomart_filter]][id_table[[biomart_filter]] == i],
+                        id_table[[species_gene_symbol]][id_table[[biomart_filter]] == i])
+    if (ncol(plotdata) > 2) {
+      colorCol = 3
+    } else {colorCol = 2}
+    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
+      geom_point(position = position_jitterdodge()) +
+      ylab('Normalized count') +
+      xlab('Group') +
+      ggtitle(plot_title) +
+      coord_trans(y = "log10") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      labs(color = colnames(plotdata)[colorCol])
+}
+
+genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
+
+for (i in head(unique(genesToPlot[[biomart_filter]]), nBestFeatures)) {
+  print(plotCounts_gg(i, dds = dds, intgroup = params$design))
+}
+
+# Make a table of counts
+counts_by_group <- as.data.frame(counts(dds, normalized = TRUE))
+counts_by_group <- as.data.frame(counts_by_group)
+# counts_by_group <- log2(counts_by_group + 1) # Optional
+# Add gene name
+counts_by_group$gene <- row.names(counts_by_group)
+# Clean up table, make into long format for plotting
+counts_by_group <- counts_by_group %>%
+  pivot_longer(!gene,
+               names_to = "Sample",
+               values_to = "Normalized Counts")
+
+# Annotate table with experimental group of interest (params$design)
+counts_by_group <- counts_by_group %>%
+  left_join(DESeqDesign %>% dplyr::select(c(!!sym(params$design),original_names)),
+            by = c("Sample" = "original_names"))
+
+# Filter by absolute fold change to include a reasonable number of genes
+genesToSelect <- allResults %>%
+  arrange(-abs(log2FoldChange)) %>%
+  head(1000) # Seems to be a reasonable maximum...
+
+# Order by alphabet to help readability in dropdown menu
+genesAlphabetized <- genesToSelect %>%
+  dplyr::arrange(-abs(log2FoldChange)) %>%
+  dplyr::arrange(PROBE_NAME)
+
+# Get the data 
+counts_by_group <- counts_by_group %>%
+  dplyr::filter(gene %in% genesAlphabetized[[biomart_filter]])
+
+# Create "shared" data object - this is for enabling live filtering
+counts_by_group_shared <- SharedData$new(counts_by_group)
+
+# Make an initial filter using the top gene
+top_gene = genesToSelect[[biomart_filter]][1]
+i = as.character(which(counts_by_group$gene == top_gene))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(counts_by_group_shared,
+               "transceiver",
+               init = i,
+               channel = "filter",
+               reset = rownames(counts_by_group))
+
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(2,NA),
+  list(
+    filter_select("gene_to_filter",
+                  "Gene",
+                  counts_by_group_shared,
+                  ~gene,
+                  unique(genesAlphabetized[[biomart_filter]]),
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = counts_by_group_shared,
+            x = ~group,
+            y = ~`Normalized Counts`,
+            type = "box",
+            boxpoints = "all",
+            jitter = 0.6,
+            pointpos = 0,
+            text = ~Sample,
+            boxmean = T),
+    tx)
+)
+
+# This works interactively but is NOT compatible with RMarkdown, unfortunately.
+# plotCounts_plotly <- function(i, dds, intgroup) {
+#     plotdata <- plotCounts(dds,
+#                        gene = i,
+#                        intgroup = intgroup,
+#                        returnData = TRUE)
+#     plot_title <- paste(id_table[[biomart_filter]][id_table[[biomart_filter]] == i],
+#                         id_table[[species_gene_symbol]][id_table[[biomart_filter]] == i])
+#     if (ncol(plotdata) > 2) {
+#       colorCol = 3
+#     } else {colorCol = 2}
+#     plot_ly(data = plotdata,
+#             x = ~group,
+#             y = ~count,
+#             type = "box",
+#             boxpoints = "all",
+#             jitter = 0.6,
+#             pointpos = 0)
+# }
+# 
+# manipulate_plotCounts <- function(genes) {
+#   plotCounts_plotly(genes, dds, params$design)
+# }
+# 
+# geneplot_widget <- manipulateWidget(
+#   manipulate_plotCounts(genes),
+#   genes = mwSelectize(unique(genesAlphabetized[[biomart_filter]]),
+#                    label = "Top 1000 Genes by Fold Change (including those filtered out)",
+#                    list(maxItems = 20000), # This doesn't expand past an apparently undocumented number... That is, the dropdown won't display all the items.
+#                    .display = T)
+# )
+# 
+# # Ok, this is not great because it would only save a single plot to the HTML file.
+# # Not quite what I need.
+# htmlwidgets::saveWidget(geneplot_widget, file = "test.html")
+
+```
+
+# Plots of genes of interest
+
+This section shows genes of interest sorted by those with highest fold-change within each contrast.
+
+```{r 'plot_genes_of_interest', fig.width = 10, fig.height = 6, eval = nrow(allResultsOrdered_logFC_filter) > 0}
+
+#numResults = 20
+numResults <- nBestFeatures
+
+allResultsOrdered_logFC_filter %>%
+  group_by(contrast) %>%
+  top_n(numResults, wt = abs(log2FoldChange)) %>%
+  ungroup() %>%
+  mutate(contrast = as.factor(contrast),
+         symbol = reorder_within(!!ensym(species_gene_symbol), log2FoldChange, contrast)) %>%
+  ggplot(aes(x = log2FoldChange,
+             y = symbol,
+             color = contrast,
+             size = -log(padj))) +
+  geom_point(show.legend = TRUE) +
+  facet_wrap(~contrast,
+             scales = "free_y",
+             ncol = 4,
+             labeller = labeller(contrast = label_wrap_gen(10))) +
+  scale_y_reordered()  +
+  geom_vline(xintercept = 0,
+             linetype = "dashed",
+             color = "black",
+             size = 1) +
+  ggtitle(paste0("Top ",
+                 numResults,
+                 " genes ranked by fold change (adjusted p-value <",
+                 alpha,
+                 "), grouped by treatment"))
+```
+
+# Volcano plot
+
+This section shows a volcano plot for each contrast.  
+
+Note that scales are set manually for this plot: therefore, there may be data points outside the range shown (see warnings).  
+
+Data reported as significant are shown as red points.
+
+```{r 'volcano-plot', fig.width = 12, fig.height = 6, warning = TRUE, collapse = TRUE}
+ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(size = 0.5, alpha = 0.3) +
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  facet_wrap(~contrast, ncol = 4) + # , scales = "free"
+  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
+  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
+  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) + # 
+  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) # 
+```
+
 
 # GO Enrichment Analysis {.tabset .tabset-fade}
 
