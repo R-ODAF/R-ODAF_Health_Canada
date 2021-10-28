@@ -850,6 +850,7 @@ The code above (not shown by default) loads in plotting functions specific to th
 cooks   <- F # Sometimes may need consideration
 resList <- list()
 resListAll <- list()
+filterList <- list()
 Counts  <- counts(dds, normalized = TRUE)
 CPMdds  <- cpm(counts(dds, normalized = TRUE))
 
@@ -862,6 +863,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	DE_Design <- matrix(data = NA, ncol = 2)
 	DE_Design <- as.matrix(DESeqDesign[DESeqDesign[, DESIGN] %in% c(condition1,
 	                                                               condition2),])
+	# To fix a problem below, we could re-order DE_Design to match the DESeq object
+	# But it's a subset of the data... so that would be difficult.
 	samples   <- sampleData[, DE_Design[, "original_names"]]
 	colnames(samples) <- NULL
 	
@@ -881,14 +884,19 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   	for (gene in 1:nrow(dds)) {
   		CountsPass <- NULL
   			for (group in 1:length(SampPerGroup)) { 
-  				sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[, DESIGN])
-  				Check <- sum(CPMdds[gene,sampleCols] >= MinCount) >= 0.75 * SampPerGroup[group]
+  			  # This line gets "sampleCols" from the DE_Design table.
+  				sampleCols <- grep(names(SampPerGroup)[group], DE_Design[, DESIGN])
+  				# The line below assumes that the columns in CPMdds are ordered the same as the DE_Design table.
+  				# That is not necessarily true. Instead, first get the explicit row names as a vector.
+  				sampleNamesGroup <- rownames(DE_Design[sampleCols,])
+  				Check <- sum(CPMdds[gene, sampleNamesGroup] >= MinCount) >= 0.75 * SampPerGroup[group]
   				CountsPass <- c(CountsPass, Check)
   		}
-  	if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }	else {Filter[gene,1] <- 0 }
+  	if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 } else {Filter[gene, 1] <- 0 }
   	}
-
-  compte <- Counts[Filter[,1] == 1,]
+  # Create counts matrix for which relevance filtering passed
+  # Then remove rows from the filter table that don't include those genes
+  compte <- Counts[Filter[, 1] == 1,] 
   Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
 
   print(paste0("Relevance filtering removed ", nrow(dds) - nrow(Filter),
@@ -907,6 +915,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	                       cooksCutoff = cooks) # If Cooks cutoff disabled - manually inspect.
 	res <- lfcShrink(dds = dds[rownames(compte),],
 	                 contrast = currentContrast,
+	                 BPPARAM = bpparam,
 	                 res = res,
 	                 type = "ashr")
 	resListAll[[x]] <- res
@@ -918,9 +927,10 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	# Create output tables
 	norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
-	DEsamples <<- subset(res, res$padj < pAdjValue)
+	DEsamples <<- subset(res, res$pvalue < 0.01) # CHANGE BACK!
+	#DEsamples <<- subset(res, res$padj < pAdjValue)
 	if (nrow(DEsamples) == 0) {
-	  message("No significant results were found for this contrast. Moving on...")
+	  print("No significant results were found for this contrast. Moving on...")
 	  next
 	  }
 	DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
@@ -936,24 +946,31 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 		sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DE_Design[,DESIGN])
 		sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DE_Design[,DESIGN])
 		
-	  Check <- median(as.numeric(DECounts[gene, sampleColsg1])) > quantile(DECounts[gene, sampleColsg2], 0.75)[[1]]
+		# Same problem as above, use names explictly
+		sampleNames_g1 <- rownames(DE_Design[sampleColsg1,])
+		sampleNames_g2 <- rownames(DE_Design[sampleColsg2,])
+		
+	  Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
 		quantilePass <- c(quantilePass, Check)
 		
-		Check <- median(as.numeric(DECounts[gene, sampleColsg2])) > quantile(DECounts[gene, sampleColsg1], 0.75)[[1]]
+		Check <- median(as.numeric(DECounts[gene, sampleNames_g2])) > quantile(DECounts[gene, sampleNames_g1], 0.75)[[1]]
 		quantilePass <- c(quantilePass, Check)
 			
-		if (sum(quantilePass) > 0) {
+		if (sum(quantilePass) > 0 ) {
 		  Filter[gene, 2] <- 1
-		}	else {
+		# }	else if (Platform == "TempO-Seq") { # This is a hack... TempOSeq data is messy, so we are ignoring this filter altogether.
+		#   Filter[gene, 2] <- 1
+		} else {
 		  Filter[gene, 2] <- 0
 		}
 
 		# Check for spikes 
 		spikePass <- NULL
 		for (group in 1:length(SampPerGroup)) {
-				sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[ ,DESIGN])
-			if (max(DECounts[gene,sampleCols]) == 0) {Check <- FALSE} else {
-				Check <- (max(DECounts[gene, sampleCols]) / sum(DECounts[gene, sampleCols])) >= 1.4 * (SampPerGroup[group])^(-0.66)
+				sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[ ,DESIGN])
+				sampleNamesSpike <- rownames(DE_Design[sampleColsSpike, ])
+			if (max(DECounts[gene, sampleColsSpike]) == 0) {Check <- FALSE} else {
+				Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >= 1.4 * (SampPerGroup[group])^(-0.66)
 				spikePass <- c(spikePass, Check)
 			}
 		}
@@ -974,7 +991,9 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
               " DEGs were selected, after ", nrow(DECounts_no_quant),
               " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
               " gene(s) with a spike"))
-
+  
+  filterList[[x]] <- Filter # Useful to explore later...
+  
  # Save the normalized counts and the list of DEGs
 	write.table(norm_data,
 	            file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
@@ -1022,6 +1041,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	}
 }
 # If there are no significant results - remove the empty contrast from the list:
+# Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
 resList <- resList[!sapply(resList, is.null)]
 resListAll <- resListAll[!sapply(resListAll, is.null)]
 ```
