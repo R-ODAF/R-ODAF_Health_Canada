@@ -137,6 +137,9 @@ library('plotly')
 library('dendextend')
 library('gtools')
 library('ggridges')
+library('crosstalk')
+library('crosstool')
+#library('manipulateWidget')
 #library('RMariaDB')
 
 # Bioinformatics-specific
@@ -591,7 +594,7 @@ head(colnames(sampleData)) # Output should match
 # Intgroups need to be factors for DESeq2
 DESeqDesign[intgroup] <- lapply(DESeqDesign[intgroup], factor)
 if (!is.na(params$design)) {
-  if(!is.na(params$sortcol)){
+  if (!is.na(params$sortcol)) {
     design_factor_reordered <- factor(DESeqDesign[[params$design]],
                                       levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[params$sortcol]])]),
                                       ordered = FALSE)
@@ -623,6 +626,7 @@ if (file.exists(file.path(paths$RData, "dds.RData")) & is.na(params$group_facet)
       dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
                                     colData   = as.data.frame(DESeqDesign),
                                     design    = current_design)
+      # This orders the DESeq object the same as sample metadata...
       dds <- dds[, DESeqDesign$original_names]
       dds <- dds[rowSums(counts(dds)) > 1]
       bpparam <- MulticoreParam(params$cpus)
@@ -1494,14 +1498,19 @@ These files should be provided to you as a separate zip file.
 ## All `r nrow(assay(rld))` genes, before filtering
 
 ```{r 'PCA'}
-## Perform PCA analysis and make plot
-plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(ncol = 3))
-## Get percent of variance explained
+## Perform PCA analysis
 data_pca <- plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld)), returnData = TRUE)
+## Get percent of variance explained
 percentVar <- round(100 * attr(data_pca, "percentVar"))
-
+## Plot
+plot_ly(data = data_pca,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVar[1] ,"% variance")))
 ```
 
 This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
@@ -1512,15 +1521,23 @@ This plot shows the first two principal components that explain the variability 
 rld_degs_names <- significantResults[[biomart_filter]] %>% unique()
 if (length(rld_degs_names) > 1) {
   rld_degs <- rld[row.names(assay(rld)) %in% significantResults[[biomart_filter]],] 
-  # d[ d[[THECOLUMN]] == someValue , ]
+  # df[df[[THECOLUMN]] == someValue, ] # quick reference because I forget a lot
   ## Perform PCA analysis and make plot
-  print(plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs)) +
-          theme(legend.position = "bottom") +
-          guides(color = guide_legend(ncol = 3)))
-  PCAplotDEGs <- plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs), returnData = TRUE)
+  PCAplotDEGs <- plotPCA(rld_degs,
+                         intgroup = params$design,
+                         ntop = nrow(rld_degs),
+                         returnData = TRUE)
 
   ## Get percent of variance explained
   percentVarDEGs <- round(100 * attr(PCAplotDEGs, "percentVar"))
+  plot_ly(data = PCAplotDEGs,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVarDEGs[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVarDEGs[1] ,"% variance")))
 } else {
   print("Insufficient DEGs found.")
   percentVarDEGs <- 0
@@ -1541,13 +1558,17 @@ select = order(rv, decreasing = TRUE)[1:nBest]
 rld_top <- rld[select,]
 
 ## Perform PCA analysis and make plot
-plotPCA(rld_top, intgroup = params$design, ntop = nrow(rld_top)) + 
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(ncol = 3))
-
 ## Get percent of variance explained
 data_pcaTop <- plotPCA(rld_top, intgroup = params$design, returnData = TRUE, ntop = nrow(rld_top))
 percentVarTop <- round(100 * attr(data_pcaTop, "percentVar"))
+plot_ly(data = data_pcaTop,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVarTop[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVarTop[1] ,"% variance")))
 ```
 
 This plot shows the principal components analysis limited to all DEGs. In this case, the first and second principal component explain `r percentVarTop[1]` and `r percentVarTop[2]` percent of the variance respectively.
@@ -1590,7 +1611,7 @@ This plot shows how samples are clustered based on their euclidean distance usin
 ```{r 'sampleDist_degs', fig.width = 10, fig.height = 10}
 ## Limit to DEGS if any found
 
-if (length(rld_degs_names) > 0) {
+if (length(rld_degs_names) > 1) {
   ## Obtain the sample euclidean distances
   sampleDistsDEGs <- stats::dist(t(assay(rld_degs)))
   sampleDistsDEGs <- dendextend::sort_dist_mat(sampleDistsDEGs)
