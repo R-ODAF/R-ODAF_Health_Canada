@@ -931,8 +931,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	# Create output tables
 	norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
-	DEsamples <<- subset(res, res$pvalue < 0.01) # CHANGE BACK!
-	#DEsamples <<- subset(res, res$padj < pAdjValue)
+	# DEsamples <<- subset(res, res$pvalue < 0.01) # Only use in cases of desperation
+	DEsamples <<- subset(res, res$padj < pAdjValue)
 	if (nrow(DEsamples) == 0) {
 	  print("No significant results were found for this contrast. Moving on...")
 	  next
