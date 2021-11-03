@@ -290,7 +290,7 @@ sampleData <- sampleData[,flag_order]
 ############################################################################
 libsize <- apply(sampleData, 2, sum)
 cpm <- sampleData
-for(k in 1:length(libsize)){
+for (k in 1:length(libsize)) {
   cpm[,k] <- log2((10^6)*(sampleData[,k] + 0.5)/(libsize[k] + 1))
 }
 
@@ -340,14 +340,16 @@ n <- table(tree_groups)
 n <- sort(n, decreasing = T)
 n <- n[2:dim(n)]
 
-print("Samples Flagged:")
-
 if (length(n > 0)) {
   flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
   write.table(d[flag_cluster,],
               file.path(paths$processed, "outliers_cluster_analysis.txt"),
               sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-  d[flag_cluster,] %>% dplyr::select(original_names, dendro_color_by)
+  d[flag_cluster,] %>%
+    dplyr::select(original_names, dendro_color_by) %>%
+    kable(caption = "Samples flagged as outliers by clustering distance") %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+    scroll_box(width = "100%", height = "480px")
 }
 ```
 
@@ -361,15 +363,15 @@ This section obtains sample names for technical controls, experimental samples, 
 ############################################################################
 
 tech_ctrl_names <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(technical_control)==T) %>%
+  dplyr::filter(!!ensym(technical_control) == T) %>%
   dplyr::pull(original_names)
 
 sample_names <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(technical_control)==F) %>%
+  dplyr::filter(!!ensym(technical_control) == F) %>%
   dplyr::pull(original_names)
 
 ref_samples <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(reference_rna)==T) %>%
+  dplyr::filter(!!ensym(reference_rna) == T) %>%
   dplyr::pull(original_names)
 
 ```
@@ -385,7 +387,7 @@ Colored by `r dendro_color_by`.
 dendro_before_tech_ctrls <- 1 - cor(as.matrix(cpm %>% dplyr::select(all_of(tech_ctrl_names))),
                                            method = "spearman")
 
-if(length(dendro_before_tech_ctrls) > 2) {
+if (length(dendro_before_tech_ctrls) > 2) {
   DESeqDesignTechCtrls <- DESeqDesign %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_before_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_before_tech_ctrls), method = "average"))
@@ -409,11 +411,12 @@ if(length(dendro_before_tech_ctrls) > 2) {
            family = "Courier")
   
   par(cex = 0.4, mar = c(25, 4, 4, 2))
-  plot(dendro_before_tech_ctrls %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-       main = "log2 CPM",
-       horiz = F)
+  print(plot(dendro_before_tech_ctrls %>%
+               dendextend::set("labels", labels_to_use) %>%
+               dendextend::set("labels_cex", 0.3),
+             main = "log2 CPM",
+             horiz = F)
+  )
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
   dev.off()
 }
