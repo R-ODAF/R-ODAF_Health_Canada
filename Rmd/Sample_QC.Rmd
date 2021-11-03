@@ -976,8 +976,9 @@ This plot shows the various QC metrics that may result in sample removal, along 
 
 If the "UpSet" plot makes you upset, please skip to the much more intuitive "vtree".
 
+### UpSet Plot
 
-```{r upset-vtree}
+```{r upset}
 if (dim(QAQC_failed_logical)[1] > 1) {
   upset(QAQC_failed_logical)
 }
@@ -992,6 +993,12 @@ QAQC_annotated$Any <- apply(QAQC_annotated,
                             MARGIN = 1,
                             FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
 
+```
+
+### Vtree Summary
+
+```{r vtree}
+
 vtree(QAQC_annotated,
       "Any dendrogram NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
       summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
@@ -1004,7 +1011,6 @@ vtree(QAQC_annotated,
       pngknit = FALSE)
 
 outliers <- QAQC_failed$Sample
-outliers
 
 outlier_metadata <- DESeqDesign[DESeqDesign$original_names %in% outliers,]
 metadata_outliers_removed <- DESeqDesign[!DESeqDesign$original_names %in% outliers,] %>%
