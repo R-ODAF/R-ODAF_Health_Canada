@@ -749,9 +749,6 @@ pheatmap(ref_correlations_all,
          border_color = NA,
          annotation_col = correlation_df_all_heatmap)
 
-# Heatmap(ref_correlations_all,
-#          top_annotation = correlation_df_all_heatmap)
-
 ```
 
 
@@ -785,35 +782,43 @@ pheatmap(ref_correlations_samples,
 
 ```
 
-These plots show correlations within each experimental grouping.
+## Within Group Correlations {.tabset}
 
-```{r, fig.width = 11, fig.height = 10}
-### To double check a group of interest...
+These plots show correlations within each experimental grouping.  
+
+Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
+
+
+```{r group-correlation-setup}
 facets <- unique(DESeqDesignExpSamples[,treatment_var])
 cor_list <- list()
-for(i in seq_along(facets)) {
+```
+
+```{r, fig.width = 11, fig.height = 10, results='asis'}
+### To view correlations for groups of interest...
+
+for (i in seq_along(facets)) {
+  cat("###", facets[i], "  \n\n")
   samples_in_facet <- DESeqDesignExpSamples[DESeqDesignExpSamples[treatment_var] == facets[i],
                                             "original_names"]
   if (length(samples_in_facet) < 2) { next }
   cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
   pca_subset <- rrcov::PcaGrid(t(cpm_subset))
   #biplot <- rrcov::biplot(pca_subset)
-  cellWise::outlierMap(pca_subset)
-  
   correlations <- cor(cpm_subset, method = "pearson")
   correlation_df <- DESeqDesign %>%
     filter(original_names %in% colnames(correlations))
   
   row.names(correlation_df) <- correlation_df$original_names
   correlation_df <- correlation_df[colnames(correlations),]
-  
   correlation_df <- as.data.frame(correlation_df[unlist(groups[[1]][1])])
-  
   group_heatmap <- pheatmap(correlations,
                             annotation_col = correlation_df,
                             display_numbers = T,
                             cutree_cols = 2,
                             cutree_rows = 2)
+  
+  cellWise::outlierMap(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
   correlations$original_names <- row.names(correlations)
@@ -822,6 +827,7 @@ for(i in seq_along(facets)) {
     dplyr::select(mean, original_names) %>%
     mutate(facet = facets[i])
   cor_list[[i]] <- cor_distribution
+  cat('  \n\n')
 }
 ```
 
@@ -829,9 +835,11 @@ for(i in seq_along(facets)) {
 
 ### Mean of per-sample correlations with every other sample in the study
 
-In other words, for each sample, what is its mean correlation with every other sample?
+In other words, for each sample, what is its mean correlation with **every other sample in the study**?
 
-```{r,  fig.width = 11, fig.height = 10}
+Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
+
+```{r,  fig.width = 9, fig.height = 10}
 cor_df1 <- as.data.frame(ref_correlations_samples)
 cor_df1$original_names <- row.names(cor_df1)
 cor_df2 <- DESeqDesignExpSamples[c(treatment_var,"original_names")]
@@ -839,24 +847,27 @@ cor_df2 <- DESeqDesignExpSamples[c(treatment_var,"original_names")]
 cor_distribution_all <- left_join(cor_df1, cor_df2) %>%
     mutate(mean = rowMeans(across(where(is.numeric)))) %>%
     dplyr::select(mean, original_names, treatment_var)
-ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter()
-ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter() + ylim(c(0.9,1))
+cor_plot <- ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
+  geom_boxplot(outlier.shape = NA, outlier.color = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot)
+# Ok, there's a bug that prevents outliers from being hidden, but whatever.
+# https://github.com/plotly/plotly.R/issues/1114
 ```
 
 ### Mean of per-sample correlations with every other sample in its corresponding group
 
-In other words, for each sample, what is its mean correlation with every other sample **within in its epxerimental grouping**?
+In other words, for each sample, what is its mean correlation with every sample **within in its epxerimental grouping**?
 
-```{r,  fig.width = 11, fig.height = 10}
+```{r,  fig.width = 9, fig.height = 10}
 # MEANS BY CHEMICAL
 cor_means_by_chem <- data.table::rbindlist(cor_list)
-ggplot(cor_means_by_chem, aes(facet, mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter()
-ggplot(cor_means_by_chem, aes(facet, mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter() + ylim(c(0.9,1))
-
+cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot_2)
 ```
 
 
