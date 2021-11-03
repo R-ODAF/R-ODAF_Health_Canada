@@ -931,7 +931,6 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	# Create output tables
 	norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
-	# DEsamples <<- subset(res, res$pvalue < 0.01) # Only use in cases of desperation
 	DEsamples <<- subset(res, res$padj < pAdjValue)
 	if (nrow(DEsamples) == 0) {
 	  print("No significant results were found for this contrast. Moving on...")
@@ -962,8 +961,6 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 			
 		if (sum(quantilePass) > 0 ) {
 		  Filter[gene, 2] <- 1
-		# }	else if (Platform == "TempO-Seq") { # This is a hack... TempOSeq data is messy, so we are ignoring this filter altogether.
-		#   Filter[gene, 2] <- 1
 		} else {
 		  Filter[gene, 2] <- 0
 		}
