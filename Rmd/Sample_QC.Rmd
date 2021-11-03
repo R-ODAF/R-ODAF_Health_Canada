@@ -1021,6 +1021,7 @@ metadata_outliers_removed <- DESeqDesign[!DESeqDesign$original_names %in% outlie
 
 ```
 
+
 ## Potential covariates
 
 This examines correlations between the QC metrics calculated and any factors in the experimental design.  
