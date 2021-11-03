@@ -49,7 +49,8 @@ The purpose of this report is to provide objective metrics to assess sample qual
 This script will automatically output a new sample metadata table that includes only the samples passing the metrics here; that sample metadata will be used as input to subsequent analysis steps, thereby excluding any samples from analysis that do not meet these standards. 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+theme_set(theme_bw())
 ```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
