@@ -2458,7 +2458,7 @@ if (!is.null(enrich_go_cc)) {
 } else {print("No significantly enriched terms using criteria selected")}
 ```
 
-```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 }
+```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 & nrow(significantResults) > 0}
 ```
 
 # Methods Summary
