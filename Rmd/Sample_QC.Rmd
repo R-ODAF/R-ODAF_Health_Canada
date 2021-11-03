@@ -508,9 +508,155 @@ dev.off()
 
 ```
 
-## Additional QC metrics
+## Additional QC metrics {.tabset}
 
-### Outlier Tests
+Click on the tabs below to view samples removed by each metric.
+
+### Number of mapped reads
+
+Samples with less than `r nmr_threshold` aligned reads removed.
+
+```{r num_mapped_reads}
+######################################################################################
+# Additional QC Metrics
+######################################################################################
+# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
+######################################################################################
+# Reject < 300000 or Threshold = 10% of target depth
+# Removes various types of failed samples
+
+QAQC <- data.frame(Sample = names(sampleData), NMR = apply(sampleData, 2, sum))
+failed_read_threshold <- QAQC[QAQC$NMR < nmr_threshold,]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged with too few mapped reads") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Fraction of mapped reads
+
+Samples less than `r align_threshold` aligned reads removed.
+
+```{r fraction_mapped_reads}
+if (Platform == "TempO-Seq") {
+  QAQC$FMR <- mu$pct_mapped
+} else {
+  QAQC <- QAQC %>% left_join(mu, by = "Sample")
+}
+  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
+  
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as failing alignment threshold") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of active probes
+
+The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
+
+```{r ncov5}
+######################################################################################
+# Ncov5 The number of probes with at least 5 uniquely mapped reads.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+n_genes <- nrow(sampleData)
+QAQC$Ncov5 <- apply(sampleData, 2, function(x) length(x[x > 4]))/n_genes
+percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
+failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers with few active probes") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of probes capturing 80% of signal
+
+The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
+
+```{r nsig80}
+######################################################################################
+# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+# (include test samples, vehicle controls, and reference chemical treatments)
+
+### Using some of the EPA code:
+countStats <- function(
+  counts, 
+  nsig = getOption("httrStatNsig", default = 0.8)
+) {
+  # Load required pkgs
+	require(foreach)
+  # Store results in a vector
+	st <- vector()
+	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
+	counts_nz <- counts[counts > 0]
+	# Sort in decreasing order
+	counts_nz <- sort(counts_nz, decreasing = T)
+	# Compute cumulative sum of counts starting from highest count probe
+	cumCounts <- cumsum(counts_nz)
+	# Convert cumulative sums to cumulative proportions
+	cumProp <- cumCounts / sum(counts_nz)
+	# Compute the minimum number of probes to capture X% of total reads
+	if (length(nsig) > 0) {
+		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
+		names(ns) <- paste0("n_sig",nsig*100)
+		st <- append(st, ns)
+	}
+	return(st)
+}
+
+QAQC$Nsig80 <- apply(sampleData, 2, countStats)
+
+probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
+failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers for the proportion of probes contributing to the data") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Gini coefficient
+
+The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r gini_cutoff` are removed from the analysis.
+
+```{r gini}
+######################################################################################
+# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
+# raw counts for all probes including those with 0 aligned reads
+######################################################################################
+# Reject > 0.95
+QAQC$Gini <- apply(sampleData, 2, function(x) gini(x))
+failed_gini <- QAQC[QAQC$Gini > gini_cutoff,]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_gini$Sample) %>%
+  dplyr::select(original_names, dendro_color_by ) %>%
+  kable(caption = "Samples flagged as failing the Gini coefficient") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Outlier Tests (NOT USED)
 
 #### OutPyR
 
@@ -575,152 +721,6 @@ detach("package:OUTRIDER", unload = TRUE)
 ```
 
 
-### Number of mapped reads
-
-Samples less than `r nmr_threshold` aligned reads removed.
-
-```{r num_mapped_reads}
-######################################################################################
-# Additional QC Metrics
-######################################################################################
-# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
-######################################################################################
-# Reject < 300000 or Threshold = 10% of target depth
-# Removes various types of failed samples
-
-QAQC <- data.frame(Sample = names(sampleData), NMR = apply(sampleData, 2, sum))
-failed_read_threshold <- QAQC[QAQC$NMR < nmr_threshold,]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-
-```
-
-### Fraction of mapped reads
-
-Samples less than `r align_threshold` aligned reads removed.
-
-```{r fraction_mapped_reads}
-if (Platform == "TempO-Seq") {
-  QAQC$FMR <- mu$pct_mapped
-} else {
-  QAQC <- QAQC %>% left_join(mu, by = "Sample")
-}
-  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
-  
-  # Samples failing
-  print("Samples Flagged:")
-  d %>%
-    dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
-    dplyr::select(original_names, dendro_color_by)
-
-
-```
-
-### Number of active probes
-
-The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
-
-```{r ncov5}
-######################################################################################
-# Ncov5 The number of probes with at least 5 uniquely mapped reads.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-n_genes <- nrow(sampleData)
-QAQC$Ncov5 <- apply(sampleData, 2, function(x) length(x[x > 4]))/n_genes
-percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
-failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-```
-
-### Number of probes capturing 80% of signal
-
-The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
-
-```{r nsig80}
-######################################################################################
-# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-# (include test samples, vehicle controls, and reference chemical treatments)
-
-### Using some of the EPA code for now:
-countStats <- function(
-  counts, 
-  nsig = getOption("httrStatNsig", default = 0.8)
-) {
-  # Load required pkgs
-	require(foreach)
-  # Store results in a vector
-	st <- vector()
-	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
-	counts_nz <- counts[counts > 0]
-	# Sort in decreasing order
-	counts_nz <- sort(counts_nz, decreasing = T)
-	# Compute cumulative sum of counts starting from highest count probe
-	cumCounts <- cumsum(counts_nz)
-	# Convert cumulative sums to cumulative proportions
-	cumProp <- cumCounts / sum(counts_nz)
-	# Compute the minimum number of probes to capture X% of total reads
-	if(length(nsig) > 0) {
-		ns <- foreach(prop = nsig, .combine='c') %do% {min(which(cumProp > prop))}
-		names(ns) <- paste0("n_sig",nsig*100)
-		st <- append(st, ns)
-	}
-	return(st)
-}
-
-# ref <- apply(sampleData/QAQC$NMR, 2, median)
-# sig80 <- quantile(ref, prob = 0.8)
-# 
-# QAQC$Nsig80 <- 0
-# 
-# for(k in 1:nrow(QAQC)){
-#   flag80pct <- sampleData[,k] > sig80 * QAQC$NMR[k]
-#   QAQC$Nsig80[k] <- length(sampleData[flag80pct, 1])/n_samples
-# }
-# 
-
-QAQC$Nsig80 <- apply(sampleData, 2, countStats)
-
-probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
-failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-
-```
-
-### Gini coefficient
-
-The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r gini_cutoff` are removed from the analysis.
-
-```{r gini}
-######################################################################################
-# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
-# raw counts for all probes including those with 0 aligned reads
-######################################################################################
-# Reject > 0.95
-QAQC$Gini <- apply(sampleData, 2, function(x) gini(x))
-failed_gini <- QAQC[QAQC$Gini > gini_cutoff,]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_gini$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-```
 
 # Correlations
 
