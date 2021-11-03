@@ -1109,11 +1109,20 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
                                          name = original_names,
                                          treat = !!ensym(treatment_var),
                                          dose = !!ensym(dose))) +
-  coord_fixed()  +
   theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  theme(panel.spacing = unit(2, "lines"))
+        axis.title = element_blank(),
+        #axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.spacing = unit(2, "lines")) +
+  scale_x_discrete(position = "top") +
+  coord_fixed()  +
+  {if (!is.null(batch_var))  facet_wrap(paste0("~",batch_var))}
+#  {if (!is.null(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
+# The facet_rep_wrap function doesn't actually seem to produce the intended effect.
+# Probably broken by something in ggplot.
+# Need a better way to add row and column labels. Free axes in ggplot don't
+# currently support showing on all facets: https://github.com/tidyverse/ggplot2/issues/4064
+# There is a PR in ggplot to fix this: https://github.com/tidyverse/ggplot2/pull/4467
 
 ```
 
@@ -1122,9 +1131,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 ```{r}
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Number of mapped reads") +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Number of mapped reads"))  %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 ```
 
@@ -1133,9 +1140,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 ```{r}
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Fraction of mapped reads") +
-    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Fraction of mapped reads")) %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 ```
 
@@ -1144,9 +1149,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 ```{r}
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Nsig80") +
-    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Nsig80")) %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 ```
 
@@ -1155,9 +1158,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 ```{r}
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Ncov5") +
-    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Ncov5")) %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 ```
 
@@ -1166,9 +1167,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 ```{r}
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Gini") +
-    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Gini")) %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 ```
 
@@ -1180,9 +1179,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
             data = QAQC_annotated) +   
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  ggtitle("Any samples failed") +
-    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggtitle("Any samples failed")) %>%
   ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 
 ```
