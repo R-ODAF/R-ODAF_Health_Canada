@@ -898,22 +898,6 @@ heatmap_colors <- circlize::colorRamp2(c(0.7, 1), c("blue", "red"))
 
 annotation_col <- HeatmapAnnotation(df = correlation_df)
 
-# Heatmap(ref_correlations,
-#         name = "Correlation",
-#         clustering_distance_rows = "pearson",
-#         clustering_distance_columns = "pearson",
-#         row_km = 2,
-#         column_km = 2,
-#         cell_fun = function(j, i, x, y, width, height, fill) {
-#           grid.text(sprintf("%.2f", ref_correlations[i, j]), x, y, gp = gpar(fontsize = 10))
-#           },
-#         top_annotation = annotation_col,
-#         col = heatmap_colors
-#         )
-
-# ref_correlations
-
-
 ```
 
 
@@ -926,7 +910,7 @@ annotation_col <- HeatmapAnnotation(df = correlation_df)
 # Add Dendrogram Clustering Pass/Fail to QAQC
 ################################################################################
 QAQC$dendrogram <- "PASS"
-if(exists("flag_cluster")) {
+if (exists("flag_cluster")) {
   QAQC$dendrogram[which(QAQC$Sample %in% d$original_names[flag_cluster])] <- "FAIL"
 }
 
@@ -1035,12 +1019,7 @@ Please note that in these pairwise plots, some relationships are meaningless (e.
 
 ```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.null(batch_var)}
 
-### Come back to this. How on earth can we automate this or make it generic!?
-### Add in n vectors... a list of vectors to loop over?
-### list(a,b,c) where a is ("row","column") ?
-### Common columns - vector of NMR_data, Ncov5_data, Nsig80_data, Gini_data
-
-if(!is.null(batch_var)){
+if (!is.null(batch_var)) {
 QAQC_metadata_subset <- QAQC_annotated %>%
   dplyr::select(unlist(groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
