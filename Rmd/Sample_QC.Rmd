@@ -1220,7 +1220,7 @@ QAQC_failed_kable <- outlier_metadata %>%
 
 ```{r table_by_groups}
 knitr::kable(QAQC_annotated %>%
-               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>%
+               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>% # Could be better to somehow use groups[[1]], but not sure how to get it working as expected
                tally() %>% dplyr::arrange(Any),
              caption = "Groups Summary") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
