@@ -1082,7 +1082,10 @@ if (length(groups) > 1 & !is.null(batch_var)) {
 ```
 
 
-## Plate position effects
+## Plate position effects {.tabset}
+
+Click on the tabs below to view the plate layout for the experiment (if any was provided) and the corresponding quality metrics according to position.
+
 
 ```{r plate_pos, eval = any(grepl("column", colnames(QAQC_annotated), ignore.case = T))}
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))
@@ -1091,13 +1094,18 @@ colname <- names(QAQC_annotated[colnum])
 rowname <- names(QAQC_annotated[rownum])
 plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
                                          y = factor(!!ensym(rowname),
-                                                    levels = rev(levels(factor(!!ensym(rowname)))))))
+                                                    levels = rev(levels(factor(!!ensym(rowname))))),
+                                         name = original_names,
+                                         treat = !!ensym(treatment_var),
+                                         dose = !!ensym(dose)))
 
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = NMR_data), data = QAQC_annotated, size = 3) +
+### Number of Mapped Reads
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
   ggtitle("Number of mapped reads") +
@@ -1105,21 +1113,31 @@ plate_plot +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = FMR_data), data = QAQC_annotated, size = 3) +
+### Fraction of Mapped Reads
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
-  ggtitle("Number of mapped reads") +
+  ggtitle("Fraction of mapped reads") +
   theme_bw() +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = Nsig80_data), data = QAQC_annotated, size = 3) +
+### Nsig80
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
   ggtitle("Nsig80") +
@@ -1127,10 +1145,15 @@ plate_plot +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = Ncov5_data), data = QAQC_annotated, size = 3) +
+### Ncov5
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
   ggtitle("Ncov5") +
@@ -1138,10 +1161,15 @@ plate_plot +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = Gini_data), data = QAQC_annotated, size = 3) +
+### Gini
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
   ggtitle("Gini") +
@@ -1149,13 +1177,18 @@ plate_plot +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
+### Any samples which failed
+
+```{r}
+(plate_plot +
   geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
             data = QAQC_annotated) +   
   scale_fill_gradient(low = "grey", high = "black") +
-  geom_point(mapping = aes(color = Any), data = QAQC_annotated, size = 3) +
+  geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
     scale_x_discrete(position = "top") +
   coord_fixed() +
   ggtitle("Any samples failed") +
@@ -1163,7 +1196,8 @@ plate_plot +
   theme(legend.position = "right",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+    {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 
 ```
 
@@ -1171,7 +1205,6 @@ plate_plot +
 ## Metadata of samples identified as outliers
 
 ```{r table_metadata}
-
 knitr::kable(outlier_metadata,
              caption = "Samples Removed") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
