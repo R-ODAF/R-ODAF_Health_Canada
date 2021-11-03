@@ -887,7 +887,10 @@ correlation_df <- DESeqDesign %>%
 row.names(correlation_df) <- correlation_df$original_names
 correlation_df <- correlation_df[colnames(ref_correlations),]
 
-correlation_df <- as.data.frame(correlation_df[,unlist(groups[[1]])], drop = FALSE)
+# This by default includes all the variables in the first "group" parameter
+# For example, if you have multiple chemicals and multiple doses
+# Those will likely be in your groups[[1]] variable
+correlation_df <- correlation_df[,unlist(groups[[1]]), drop = F]
 
 pheatmap(ref_correlations,
          annotation_col = correlation_df,
