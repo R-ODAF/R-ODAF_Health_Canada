@@ -859,7 +859,7 @@ ggplotly(cor_plot)
 
 ### Mean of per-sample correlations with every other sample in its corresponding group
 
-In other words, for each sample, what is its mean correlation with every sample **within in its epxerimental grouping**?
+In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
 
 ```{r,  fig.width = 9, fig.height = 10}
 # MEANS BY CHEMICAL
