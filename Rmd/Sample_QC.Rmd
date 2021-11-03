@@ -1459,66 +1459,31 @@ dev.off()
 ### Batch
 
 ```{r plot_batch_effects, eval = !is.null(batch_var)}
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Gini_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Gini") +
-  theme(legend.position = "bottom")
+plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
+  facet_grid(paste0("~",batch_var), scales = "free_x", labeller = labeller(.cols = label_wrap_gen(10))) +
+  theme(legend.position = "bottom", axis.text = element_blank())
 
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = NMR_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Number of Mapped Reads") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = FMR_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Fraction of Mapped Reads") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Ncov5_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Proportion of active probes (% probes with >5 mapped reads)") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Nsig80_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Proportion of probes required to account for 80% of signal") +
-  theme(legend.position = "bottom")
+plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 
 ```
 
 ### Dose effects
 
 ```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T))}
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Gini_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Gini")
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = factor(!!ensym(dose)))) +
+  facet_wrap(paste0("~",treatment_var), scales = "free") +
+  theme(axis.text = element_blank()) +
+  labs(color = dose)
 
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = NMR_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Number of Mapped Reads")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = FMR_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Fraction of Mapped Reads")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Ncov5_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Nsig80_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Proportion of probes required to account for 80% of signal")
-
+plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 ```
 
 
