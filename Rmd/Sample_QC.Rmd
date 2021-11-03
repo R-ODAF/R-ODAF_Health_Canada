@@ -1213,19 +1213,27 @@ knitr::kable(outlier_metadata,
 QAQC_failed_kable <- outlier_metadata %>%
   dplyr::select(original_names, !!ensym(treatment_var), !!ensym(dendro_color_by)) %>%
   left_join(QAQC_failed, by = (c("original_names" = "Sample")))
-
 ```
+
+## Sample groups summary - numbers of outliers in each group
+
+```{r table_by_groups}
+knitr::kable(QAQC_annotated %>%
+               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>%
+               tally() %>% dplyr::arrange(Any),
+             caption = "Groups Summary") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
+```
+
 
 ## Pass/fail table for samples identified as outliers
 
 ```{r table_pass_fail}
-
 knitr::kable(QAQC_failed_kable,
              caption = "Which samples were removed and why?") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
   scroll_box(width = "100%", height = "480px")
-
-
 ```
 
 
@@ -1254,7 +1262,6 @@ QAQC_annotated %>%
 ## Write tables to disk
 
 ```{r write_output}
-
 outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
                                                QAQC_pass_fail,
                                                by = c("original_names" = "Sample"))
@@ -1288,7 +1295,7 @@ CairoPDF(file = file.path(paths$processed, "dendrogram_postfiltering_all.pdf"),
          height = 8.5,
          family = "Courier")
 
-dendro_after_all_samples <- 1-cor(as.matrix(cpm %>% dplyr::select(-all_of(outliers))),
+dendro_after_all_samples <- 1 - cor(as.matrix(cpm %>% dplyr::select(-all_of(outliers))),
                                   method = "spearman")
 dendro_after_all_samples <- sort_hclust(hclust(as.dist(dendro_after_all_samples), method = "average"))
 
@@ -1320,11 +1327,11 @@ dev.off()
 ############################################################################
 # Technical Controls, Postfiltering
 ############################################################################
-dendro_after_tech_ctrls <- 1-cor(as.matrix(cpm %>%
+dendro_after_tech_ctrls <- 1 - cor(as.matrix(cpm %>%
                                             dplyr::select(all_of(tech_ctrl_names)) %>%
                                             dplyr::select(-all_of(outliers[outliers %in% tech_ctrl_names]))),
                                 method = "spearman")
-if(length(dendro_after_tech_ctrls) > 2) {
+if (length(dendro_after_tech_ctrls) > 2) {
   DESeqDesignTechCtrls <- DESeqDesign %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_after_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_after_tech_ctrls), method = "average"))
