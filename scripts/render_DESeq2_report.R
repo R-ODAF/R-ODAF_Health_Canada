@@ -22,6 +22,19 @@ inputFile <- file.path(config$DESeq2$projectdir, "Rmd", "DESeq2_report.rnaseq.Rm
 SampleKeyFile <- file.path(config$DESeq2$projectdir,
                            "data/metadata/metadata.QC_applied.txt")
 
+# replace nulls in params with NA
+params = list()
+for (name in names(config$DESeq2)) {
+  param <- config$DESeq2[[name]]
+  if(is.null(param)){
+    params[[name]] <- NA
+  } else {
+    params[[name]] <- param
+  }
+}
+
+print(params)
+
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
                           stringsAsFactors = FALSE,
@@ -32,53 +45,54 @@ DESeqDesign <- read.delim(SampleKeyFile,
 DESeqDesign$original_names <- rownames(DESeqDesign)
 
 # Run DESeq2 and make reports
-if (is.na(config$DESeq2$group_facet)) {
+if (is.na(params$group_facet)) {
   message("Writing a single report for whole experiment.")
   # Output file - HTML
-  filename <- paste0(config$DESeq2$platform, "_",
-                     config$DESeq2$project_name, "_",
+  filename <- paste0(params$platform, "_",
+                     params$project_name, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
-  outFile <- file.path(config$DESeq2$projectdir,
+  outFile <- file.path(params$projectdir,
                        "reports",
                        filename)
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
                     output_file = outFile,
-                    params = config$DESeq2,
+                    params = params,
                     envir = new.env())
-} else if (any(!is.na(config$DESeq2$group_filter))) {
+} else if (any(!is.na(params$group_filter))) {
   message(paste0("The group(s) of interest is (are) ",
-                 paste(config$DESeq2$group_filter, collapse = " and "),".\n",
+                 paste(params$group_filter, collapse = " and "),".\n",
                  "Writing a single report for that (those) groups."))
   # Output file - HTML
-  filename <- paste0(config$DESeq2$platform, "_",
-                     config$DESeq2$project_name, "_",
-                     paste(config$DESeq2$group_filter, collapse = "_"), "_",
+  filename <- paste0(params$platform, "_",
+                     params$project_name, "_",
+                     paste(params$group_filter, collapse = "_"), "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
-  outFile <- file.path(config$DESeq2$projectdir,
+  outFile <- file.path(params$projectdir,
                        "reports",
                        filename)
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
                     output_file = outFile,
-                    params = config$DESeq2,
+                    params = params,
                     envir = new.env())
 } else {
-  # Remove config$DESeq2$exclude_groups
+  # Remove params$exclude_groups
   facets <- DESeqDesign %>%
-    filter(!(!!sym(config$DESeq2$group_facet)) %in%
-             c(config$DESeq2$exclude_groups, skip_extra)) %>%
-    pull(config$DESeq2$group_facet) %>% 
+    filter(!(!!sym(params$group_facet)) %in%
+             c(params$exclude_groups, skip_extra)) %>%
+    pull(params$group_facet) %>% 
     unique()
   message(paste0("Making multiple reports based on ",
-                 config$DESeq2$group_facet ,"..."))
-  for (i in facets[6:length(facets)]) {
+                 params$group_facet ,"..."))
+  print(facets)
+  for (i in facets[2:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
-    config$DESeq2$group_filter <- i
-    filename <- paste0(config$DESeq2$platform, "_",
-                       config$DESeq2$project_name, "_",
+    params$group_filter <- i
+    filename <- paste0(params$platform, "_",
+                       params$project_name, "_",
                        i, "_",
                        format(Sys.time(),'%d-%m-%Y.%H.%M'),
                        ".html")
@@ -88,7 +102,7 @@ if (is.na(config$DESeq2$group_facet)) {
     rmarkdown::render(input = inputFile,
                       encoding = "UTF-8",
                       output_file = outFile,
-                      params = config$DESeq2,
+                      params = params,
                       envir = new.env())
   }
 }

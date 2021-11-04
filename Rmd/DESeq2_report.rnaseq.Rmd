@@ -1,16 +1,16 @@
 ---
 params:
   projectdir: !r here::here() # Can hard code if for some reason you need that
-  project_name: "Default"     # Change depending on your project name
-  species: "human"                # one of human, mouse, rat, hamster
-  design: "group"             # single experimental group of interest; entries in this column must match the contrast names.
-  intgroup: ["group"]           # experimental group of interest plus covariates; can be more than one
-  nuisance:  !r NA #"Batch" To remove batch effects for PCA/Heatmaps visualiziations
-  flag: TRUE                  # runs all analysis by default when set to TRUE
-  platform: "RNA-Seq"         # RNA-Seq or TempO-Seq
-  group_facet: "timepoint" #!r NA  # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "0 hr"# !r NA # Optional. Only look at a particular group within a facet.
-  sortcol: "dose"
+  project_name: "Halappanavar CuO"        # Change depending on your project name
+  species: "mouse"                 # one of human, mouse, rat, hamster
+  design: "Treatment_dose_description"
+  intgroup: ["Treatment_dose_description"]            # experimental group of interest plus covariates; can be more than one
+  nuisance: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
+  flag: TRUE                     # runs all analysis by default when set to TRUE
+  platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
+  group_facet: Treatment  # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  Nano # Optional. Only look at a particular group within a facet.
+  sortcol: Dose
   strict_contrasts: F # If TRUE, use BOTH columns (exp, cont) of contrasts file to limit what is included in the report. Use with caution!
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
@@ -18,7 +18,7 @@ params:
   include_only_group:  !r NA # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
   use_cached_RData: FALSE # If possible, load the saved RData for dds object and gene IDs
   cpus: 12 # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
-  run_pathway_analysis: FALSE # Optionally disable pathway analysis if not available for your organism
+  run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
   nBestFeatures: 20 # The number of best features to make plots of their counts
@@ -178,7 +178,7 @@ if (species == "human") {
     ensembl_species <- "mmusculus_gene_ensembl"
     species_gene_symbol <- "mgi_symbol"
     kegg_organism <- "mmu"
-    temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.xlsx" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
+    temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.txt" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
 } else {
   if (species == "rat") {
     # Rat: 
@@ -284,6 +284,7 @@ The code above (not shown by default) specifies user preferences and data locati
 
 ```{r 'load_data', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
 # Load input files
+message(paste("loading data from ", SampleDataFile))
 sampleData <- read.delim(SampleDataFile,
                          sep = sampledata_sep,
                          stringsAsFactors = FALSE,
@@ -291,7 +292,7 @@ sampleData <- read.delim(SampleDataFile,
                          quote = "\"",
                          row.names = 1,
                          check.names = FALSE)
-
+message(paste("loading metadata from ", SampleKeyFile))
 DESeqDesign <- read.delim(SampleKeyFile,
                           stringsAsFactors = FALSE,
                           sep = "\t",
@@ -387,7 +388,9 @@ if (Platform == "RNA-Seq") {
   MinCount <- 0.5
   alpha <- pAdjValue <- 0.05 
   linear_fc_filter <- 1.5
-  biospyder <- read.delim(file.path(params$biospyder_dbs, temposeq_manifest), # Assay manifest...
+  manifest_file <- file.path(params$biospyder_dbs, temposeq_manifest)
+  message(paste("loading byiospyder manifest from",manifest_file))
+  biospyder <- read.delim(manifest_file, # Assay manifest...
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,
@@ -408,7 +411,12 @@ if (Platform == "RNA-Seq") {
     biospyder_ID = "ENSEMBL_GENE_ID"
     biomart_filter <- "PROBE_NAME"
     biospyder_filter = "ensembl_gene_id"
+  } else if (colnames(biospyder)[1] == "Probe.Name") { # mouse S1500, note that spaces arent allowed in R colnames
+    biospyder_ID = "Gene.Symbol"
+    biomart_filter <- "Probe.Name"
+    biospyder_filter = "external_gene_name"
   }
+
   # Fill in the blanks for TempO-Seq Manifest...
   # Set NULL values to NA
   biospyder[ biospyder == "NULL" ] <- NA
@@ -561,7 +569,7 @@ knitr::kable(contrasts,
 ##########
 # DESeq2 #
 ##########
-print(NORM_TYPE) # Name of experiment
+message(NORM_TYPE) # Name of experiment
 
 # First data clean-up: replace NA & remove samples with total readcount < threshold
 initialSampleDataCount <- ncol(sampleData)
@@ -652,6 +660,8 @@ head(assay(dds))
 head(rowRanges(dds))
 str(counts(dds))
 
+
+
 # Make regularized log object for later plotting
 # rld <- tryCatch(rlog(dds), error = function(e) { rlog(dds, fitType = 'mean') })
 # Use vst for hundreds of samples!
@@ -700,6 +710,9 @@ This table shows the final list of samples that were used in the data analysis (
 # Conditionally sort by dose if that column name is present
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
+  if(length(doseCol)>1){
+    doseCol <- doseCol[1]
+  }
   knitr::kable(DESeqDesign %>%
                  group_by(!!sym(params$design)) %>%
                  arrange(!!sym(colnames(DESeqDesign)[doseCol])),
@@ -880,10 +893,14 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   	
   	for (gene in 1:nrow(dds)) {
   		CountsPass <- NULL
-  			for (group in 1:length(SampPerGroup)) { 
-  				sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[, DESIGN])
-  				Check <- sum(CPMdds[gene,sampleCols] >= MinCount) >= 0.75 * SampPerGroup[group]
-  				CountsPass <- c(CountsPass, Check)
+        for (group in 1:length(SampPerGroup)) {
+            # This line gets "sampleCols" from the DE_Design table.
+            sampleCols <- grep(names(SampPerGroup)[group], DE_Design[, DESIGN])
+            # The line below assumes that the columns in CPMdds are ordered the same as the DE_Design table.
+            # That is not necessarily true. Instead, first get the explicit row names as a vector.
+            sampleNamesGroup <- rownames(DE_Design[sampleCols,])
+            Check <- sum(CPMdds[gene, sampleNamesGroup] >= MinCount) >= 0.75 * SampPerGroup[group]
+            CountsPass <- c(CountsPass, Check)
   		}
   	if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }	else {Filter[gene,1] <- 0 }
   	}
@@ -1056,7 +1073,7 @@ genes <- unlist(genes) %>% unique()
 #   } else {
 
 if (Platform == "TempO-Seq") {
-  genes <- biospyder[biospyder[[biomart_filter]] %in% genes,] %>% pull(!!ensym(biospyder_ID))
+  genes <- biospyder[toupper(biospyder[[biomart_filter]]) %in% genes,] %>% pull(!!ensym(biospyder_ID))
   id_table_entrez <- getBM(filters = biospyder_filter,
                         attributes = c(biospyder_filter,
                                       species_gene_symbol,
@@ -1070,6 +1087,7 @@ if (Platform == "TempO-Seq") {
   id_table_entrez <- id_table_entrez %>%
     dplyr::left_join(biospyder,
                      by = setNames(biospyder_ID, biospyder_filter) )
+  id_table_entrez$Probe.Name <- toupper(id_table_entrez$Probe.Name) #hackity hack hack for mouse S1500
   # Note that the setNames() function above actually reverses the arguments...
   id_table <- id_table_entrez[, c(biomart_filter,
                                   "ensembl_gene_id",
@@ -1197,9 +1215,6 @@ for (i in 1:length(resList)) {
   q <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", DESIGN, "\ "),
             replacement =  "",
             x = resList[[i]]@elementMetadata[[2]][2])
-  message(n)
-  message(p)
-  message(q)
   toJoin <- as.data.frame(resList[[i]])
   setDT(toJoin, keep.rownames = T)[]
   setnames(toJoin, 1, biomart_filter)
@@ -1924,8 +1939,8 @@ plotCounts_gg <- function(i, dds, intgroup) {
                        gene = i,
                        intgroup = intgroup,
                        returnData = TRUE)
-    plot_title <- paste(id_table[[biomart_filter]][id_table[[biomart_filter]] == i],
-                        id_table[[species_gene_symbol]][id_table[[biomart_filter]] == i])
+    plot_title <- paste(id_table[[biomart_filter]][grep(i,id_table[[biomart_filter]])],
+                        id_table[[species_gene_symbol]][grep(i  ,id_table[[biomart_filter]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}
