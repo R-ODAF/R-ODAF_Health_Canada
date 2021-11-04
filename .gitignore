@@ -67,6 +67,9 @@ paths.txt
 /data/processed/genes.data.tsv
 /data/processed
 /logs/
+*metadata.QC_applied.txt
+TODO.txt
+data/metadata/metadata.QC_applied.txt
 run.sh
 preprocessing.txt
 config/config.yaml

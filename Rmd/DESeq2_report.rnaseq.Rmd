@@ -137,6 +137,9 @@ library('plotly')
 library('dendextend')
 library('gtools')
 library('ggridges')
+library('crosstalk')
+library('crosstool')
+#library('manipulateWidget')
 #library('RMariaDB')
 
 # Bioinformatics-specific
@@ -599,7 +602,7 @@ head(colnames(sampleData)) # Output should match
 # Intgroups need to be factors for DESeq2
 DESeqDesign[intgroup] <- lapply(DESeqDesign[intgroup], factor)
 if (!is.na(params$design)) {
-  if(!is.na(params$sortcol)){
+  if (!is.na(params$sortcol)) {
     design_factor_reordered <- factor(DESeqDesign[[params$design]],
                                       levels = unique(DESeqDesign[[params$design]][mixedorder(DESeqDesign[[params$sortcol]])]),
                                       ordered = FALSE)
@@ -631,6 +634,7 @@ if (file.exists(file.path(paths$RData, "dds.RData")) & is.na(params$group_facet)
       dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
                                     colData   = as.data.frame(DESeqDesign),
                                     design    = current_design)
+      # This orders the DESeq object the same as sample metadata...
       dds <- dds[, DESeqDesign$original_names]
       dds <- dds[rowSums(counts(dds)) > 1]
       bpparam <- MulticoreParam(params$cpus)
@@ -863,6 +867,7 @@ The code above (not shown by default) loads in plotting functions specific to th
 cooks   <- F # Sometimes may need consideration
 resList <- list()
 resListAll <- list()
+filterList <- list()
 Counts  <- counts(dds, normalized = TRUE)
 CPMdds  <- cpm(counts(dds, normalized = TRUE))
 
@@ -875,6 +880,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	DE_Design <- matrix(data = NA, ncol = 2)
 	DE_Design <- as.matrix(DESeqDesign[DESeqDesign[, DESIGN] %in% c(condition1,
 	                                                               condition2),])
+	# To fix a problem below, we could re-order DE_Design to match the DESeq object
+	# But it's a subset of the data... so that would be difficult.
 	samples   <- sampleData[, DE_Design[, "original_names"]]
 	colnames(samples) <- NULL
 	
@@ -893,19 +900,20 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   	
   	for (gene in 1:nrow(dds)) {
   		CountsPass <- NULL
-        for (group in 1:length(SampPerGroup)) {
-            # This line gets "sampleCols" from the DE_Design table.
-            sampleCols <- grep(names(SampPerGroup)[group], DE_Design[, DESIGN])
-            # The line below assumes that the columns in CPMdds are ordered the same as the DE_Design table.
-            # That is not necessarily true. Instead, first get the explicit row names as a vector.
-            sampleNamesGroup <- rownames(DE_Design[sampleCols,])
-            Check <- sum(CPMdds[gene, sampleNamesGroup] >= MinCount) >= 0.75 * SampPerGroup[group]
-            CountsPass <- c(CountsPass, Check)
+  			for (group in 1:length(SampPerGroup)) { 
+  			  # This line gets "sampleCols" from the DE_Design table.
+  				sampleCols <- grep(names(SampPerGroup)[group], DE_Design[, DESIGN])
+  				# The line below assumes that the columns in CPMdds are ordered the same as the DE_Design table.
+  				# That is not necessarily true. Instead, first get the explicit row names as a vector.
+  				sampleNamesGroup <- rownames(DE_Design[sampleCols,])
+  				Check <- sum(CPMdds[gene, sampleNamesGroup] >= MinCount) >= 0.75 * SampPerGroup[group]
+  				CountsPass <- c(CountsPass, Check)
   		}
-  	if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }	else {Filter[gene,1] <- 0 }
+  	if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 } else {Filter[gene, 1] <- 0 }
   	}
-
-  compte <- Counts[Filter[,1] == 1,]
+  # Create counts matrix for which relevance filtering passed
+  # Then remove rows from the filter table that don't include those genes
+  compte <- Counts[Filter[, 1] == 1,] 
   Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
 
   print(paste0("Relevance filtering removed ", nrow(dds) - nrow(Filter),
@@ -924,6 +932,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	                       cooksCutoff = cooks) # If Cooks cutoff disabled - manually inspect.
 	res <- lfcShrink(dds = dds[rownames(compte),],
 	                 contrast = currentContrast,
+	                 BPPARAM = bpparam,
 	                 res = res,
 	                 type = "ashr")
 	resListAll[[x]] <- res
@@ -937,7 +946,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
 	DEsamples <<- subset(res, res$padj < pAdjValue)
 	if (nrow(DEsamples) == 0) {
-	  message("No significant results were found for this contrast. Moving on...")
+	  print("No significant results were found for this contrast. Moving on...")
 	  next
 	  }
 	DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
@@ -953,24 +962,29 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 		sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DE_Design[,DESIGN])
 		sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DE_Design[,DESIGN])
 		
-	  Check <- median(as.numeric(DECounts[gene, sampleColsg1])) > quantile(DECounts[gene, sampleColsg2], 0.75)[[1]]
+		# Same problem as above, use names explictly
+		sampleNames_g1 <- rownames(DE_Design[sampleColsg1,])
+		sampleNames_g2 <- rownames(DE_Design[sampleColsg2,])
+		
+	  Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
 		quantilePass <- c(quantilePass, Check)
 		
-		Check <- median(as.numeric(DECounts[gene, sampleColsg2])) > quantile(DECounts[gene, sampleColsg1], 0.75)[[1]]
+		Check <- median(as.numeric(DECounts[gene, sampleNames_g2])) > quantile(DECounts[gene, sampleNames_g1], 0.75)[[1]]
 		quantilePass <- c(quantilePass, Check)
 			
-		if (sum(quantilePass) > 0) {
+		if (sum(quantilePass) > 0 ) {
 		  Filter[gene, 2] <- 1
-		}	else {
+		} else {
 		  Filter[gene, 2] <- 0
 		}
 
 		# Check for spikes 
 		spikePass <- NULL
 		for (group in 1:length(SampPerGroup)) {
-				sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[ ,DESIGN])
-			if (max(DECounts[gene,sampleCols]) == 0) {Check <- FALSE} else {
-				Check <- (max(DECounts[gene, sampleCols]) / sum(DECounts[gene, sampleCols])) >= 1.4 * (SampPerGroup[group])^(-0.66)
+				sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[ ,DESIGN])
+				sampleNamesSpike <- rownames(DE_Design[sampleColsSpike, ])
+			if (max(DECounts[gene, sampleColsSpike]) == 0) {Check <- FALSE} else {
+				Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >= 1.4 * (SampPerGroup[group])^(-0.66)
 				spikePass <- c(spikePass, Check)
 			}
 		}
@@ -991,7 +1005,9 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
               " DEGs were selected, after ", nrow(DECounts_no_quant),
               " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
               " gene(s) with a spike"))
-
+  
+  filterList[[x]] <- Filter # Useful to explore later...
+  
  # Save the normalized counts and the list of DEGs
 	write.table(norm_data,
 	            file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
@@ -1039,6 +1055,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	}
 }
 # If there are no significant results - remove the empty contrast from the list:
+# Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
 resList <- resList[!sapply(resList, is.null)]
 resListAll <- resListAll[!sapply(resListAll, is.null)]
 ```
@@ -1191,9 +1208,14 @@ allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange
 allResultsOrdered_logFC_filter <- dplyr::filter(allResultsOrdered_logFC_filter, padj < alpha)
 res.df <- allResultsOrdered_logFC_filter
 
-degTable <- significantResults %>%
+# Need to ensure that contrasts with no DEGs are reported.
+degTable <- as.data.frame(levels(allResults$contrast))
+colnames(degTable) <- "contrast"
+degTable_n <- significantResults %>%
   dplyr::group_by(contrast) %>%
   dplyr::count()
+degTable <- degTable %>%
+  left_join(degTable_n, by = "contrast", na_matches = "never")
 
 # lengths <- lapply(resList, nrow)
 # longest <- which.max(lengths)
@@ -1489,14 +1511,19 @@ These files should be provided to you as a separate zip file.
 ## All `r nrow(assay(rld))` genes, before filtering
 
 ```{r 'PCA'}
-## Perform PCA analysis and make plot
-plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(ncol = 3))
-## Get percent of variance explained
+## Perform PCA analysis
 data_pca <- plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld)), returnData = TRUE)
+## Get percent of variance explained
 percentVar <- round(100 * attr(data_pca, "percentVar"))
-
+## Plot
+plot_ly(data = data_pca,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVar[1] ,"% variance")))
 ```
 
 This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
@@ -1507,15 +1534,23 @@ This plot shows the first two principal components that explain the variability 
 rld_degs_names <- significantResults[[biomart_filter]] %>% unique()
 if (length(rld_degs_names) > 1) {
   rld_degs <- rld[row.names(assay(rld)) %in% significantResults[[biomart_filter]],] 
-  # d[ d[[THECOLUMN]] == someValue , ]
+  # df[df[[THECOLUMN]] == someValue, ] # quick reference because I forget a lot
   ## Perform PCA analysis and make plot
-  print(plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs)) +
-          theme(legend.position = "bottom") +
-          guides(color = guide_legend(ncol = 3)))
-  PCAplotDEGs <- plotPCA(rld_degs, intgroup = params$design, ntop = nrow(rld_degs), returnData = TRUE)
+  PCAplotDEGs <- plotPCA(rld_degs,
+                         intgroup = params$design,
+                         ntop = nrow(rld_degs),
+                         returnData = TRUE)
 
   ## Get percent of variance explained
   percentVarDEGs <- round(100 * attr(PCAplotDEGs, "percentVar"))
+  plot_ly(data = PCAplotDEGs,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVarDEGs[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVarDEGs[1] ,"% variance")))
 } else {
   print("Insufficient DEGs found.")
   percentVarDEGs <- 0
@@ -1536,13 +1571,17 @@ select = order(rv, decreasing = TRUE)[1:nBest]
 rld_top <- rld[select,]
 
 ## Perform PCA analysis and make plot
-plotPCA(rld_top, intgroup = params$design, ntop = nrow(rld_top)) + 
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(ncol = 3))
-
 ## Get percent of variance explained
 data_pcaTop <- plotPCA(rld_top, intgroup = params$design, returnData = TRUE, ntop = nrow(rld_top))
 percentVarTop <- round(100 * attr(data_pcaTop, "percentVar"))
+plot_ly(data = data_pcaTop,
+        x = ~PC1,
+        y = ~PC2,
+        color = ~group,
+        text = ~name,
+        type = "scatter") %>%
+  layout(xaxis = list(title = paste0("PC1: ", percentVarTop[1] ,"% variance")),
+         yaxis = list(title = paste0("PC2: ", percentVarTop[1] ,"% variance")))
 ```
 
 This plot shows the principal components analysis limited to all DEGs. In this case, the first and second principal component explain `r percentVarTop[1]` and `r percentVarTop[2]` percent of the variance respectively.
@@ -1585,7 +1624,7 @@ This plot shows how samples are clustered based on their euclidean distance usin
 ```{r 'sampleDist_degs', fig.width = 10, fig.height = 10}
 ## Limit to DEGS if any found
 
-if (length(rld_degs_names) > 0) {
+if (length(rld_degs_names) > 1) {
   ## Obtain the sample euclidean distances
   sampleDistsDEGs <- stats::dist(t(assay(rld_degs)))
   sampleDistsDEGs <- dendextend::sort_dist_mat(sampleDistsDEGs)
@@ -1928,94 +1967,6 @@ DT::datatable(res.df.dt,
 
 ```
 
-# Gene-level plots for top `r nBestFeatures` features
-
-This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r nBestFeatures` features are shown, ranked by their absolute fold change values. The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
-
-```{r 'plotCounts'}
-# Would be valuable to have this broken down by contrast too.
-plotCounts_gg <- function(i, dds, intgroup) {
-    plotdata <- plotCounts(dds,
-                       gene = i,
-                       intgroup = intgroup,
-                       returnData = TRUE)
-    plot_title <- paste(id_table[[biomart_filter]][grep(i,id_table[[biomart_filter]])],
-                        id_table[[species_gene_symbol]][grep(i  ,id_table[[biomart_filter]])])
-    if (ncol(plotdata) > 2) {
-      colorCol = 3
-    } else {colorCol = 2}
-    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
-      geom_point(position = position_jitterdodge()) +
-      ylab('Normalized count') +
-      xlab('Group') +
-      ggtitle(plot_title) +
-      coord_trans(y = "log10") +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      labs(color = colnames(plotdata)[colorCol])
-}
-
-genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
-
-for (i in head(unique(genesToPlot[[biomart_filter]]), nBestFeatures)) {
-  print(plotCounts_gg(i, dds = dds, intgroup = params$design))
-}
-
-```
-
-# Plots of genes of interest
-
-This section shows genes of interest sorted by those with highest fold-change within each contrast.
-
-```{r 'plot_genes_of_interest', fig.width = 10, fig.height = 6, eval = nrow(allResultsOrdered_logFC_filter) > 0}
-
-#numResults = 20
-numResults <- nBestFeatures
-
-allResultsOrdered_logFC_filter %>%
-  group_by(contrast) %>%
-  top_n(numResults, wt = abs(log2FoldChange)) %>%
-  ungroup() %>%
-  mutate(contrast = as.factor(contrast),
-         symbol = reorder_within(!!ensym(species_gene_symbol), log2FoldChange, contrast)) %>%
-  ggplot(aes(x = log2FoldChange,
-             y = symbol,
-             color = contrast,
-             size = -log(padj))) +
-  geom_point(show.legend = TRUE) +
-  facet_wrap(~contrast,
-             scales = "free_y",
-             ncol = 4,
-             labeller = labeller(contrast = label_wrap_gen(10))) +
-  scale_y_reordered()  +
-  geom_vline(xintercept = 0,
-             linetype = "dashed",
-             color = "black",
-             size = 1) +
-  ggtitle(paste0("Top ",
-                 numResults,
-                 " genes ranked by fold change (adjusted p-value <",
-                 alpha,
-                 "), grouped by treatment"))
-```
-
-# Volcano plot
-
-This section shows a volcano plot for each contrast.  
-
-Note that scales are set manually for this plot: therefore, there may be data points outside the range shown (see warnings).  
-
-Data reported as significant are shown as red points.
-
-```{r 'volcano-plot', fig.width = 12, fig.height = 6, warning = TRUE, collapse = TRUE}
-ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
-  geom_point(size = 0.5, alpha = 0.3) +
-  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
-  facet_wrap(~contrast, ncol = 4) + # , scales = "free"
-  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
-  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
-  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) + # 
-  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) # 
-```
 
 ```{r 'bmdexpress_input', collapse = TRUE}
 
@@ -2086,6 +2037,201 @@ if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   }
 }
 ```
+
+
+# Gene-level plots for top `r nBestFeatures` features
+
+This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r nBestFeatures` features are shown, ranked by their absolute fold change values. The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
+
+```{r 'plotCounts'}
+# Would be valuable to have this broken down by contrast too.
+plotCounts_gg <- function(i, dds, intgroup) {
+    plotdata <- plotCounts(dds,
+                       gene = i,
+                       intgroup = intgroup,
+                       returnData = TRUE)
+    plot_title <- paste(id_table[[biomart_filter]][grep(i,id_table[[biomart_filter]])],
+                        id_table[[species_gene_symbol]][grep(i  ,id_table[[biomart_filter]])])
+    if (ncol(plotdata) > 2) {
+      colorCol = 3
+    } else {colorCol = 2}
+    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
+      geom_point(position = position_jitterdodge()) +
+      ylab('Normalized count') +
+      xlab('Group') +
+      ggtitle(plot_title) +
+      coord_trans(y = "log10") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      labs(color = colnames(plotdata)[colorCol])
+}
+
+genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
+
+for (i in head(unique(genesToPlot[[biomart_filter]]), nBestFeatures)) {
+  print(plotCounts_gg(i, dds = dds, intgroup = params$design))
+}
+
+# Make a table of counts
+counts_by_group <- as.data.frame(counts(dds, normalized = TRUE))
+counts_by_group <- as.data.frame(counts_by_group)
+# counts_by_group <- log2(counts_by_group + 1) # Optional
+# Add gene name
+counts_by_group$gene <- row.names(counts_by_group)
+# Clean up table, make into long format for plotting
+counts_by_group <- counts_by_group %>%
+  pivot_longer(!gene,
+               names_to = "Sample",
+               values_to = "Normalized Counts")
+
+# Annotate table with experimental group of interest (params$design)
+counts_by_group <- counts_by_group %>%
+  left_join(DESeqDesign %>% dplyr::select(c(!!sym(params$design),original_names)),
+            by = c("Sample" = "original_names"))
+
+# Filter by absolute fold change to include a reasonable number of genes
+genesToSelect <- allResults %>%
+  arrange(-abs(log2FoldChange)) %>%
+  head(1000) # Seems to be a reasonable maximum...
+
+# Order by alphabet to help readability in dropdown menu
+genesAlphabetized <- genesToSelect %>%
+  dplyr::arrange(-abs(log2FoldChange)) %>%
+  dplyr::arrange(PROBE_NAME)
+
+# Get the data 
+counts_by_group <- counts_by_group %>%
+  dplyr::filter(gene %in% genesAlphabetized[[biomart_filter]])
+
+# Create "shared" data object - this is for enabling live filtering
+counts_by_group_shared <- SharedData$new(counts_by_group)
+
+# Make an initial filter using the top gene
+top_gene = genesToSelect[[biomart_filter]][1]
+i = as.character(which(counts_by_group$gene == top_gene))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(counts_by_group_shared,
+               "transceiver",
+               init = i,
+               channel = "filter",
+               reset = rownames(counts_by_group))
+
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(2,NA),
+  list(
+    filter_select("gene_to_filter",
+                  "Gene",
+                  counts_by_group_shared,
+                  ~gene,
+                  unique(genesAlphabetized[[biomart_filter]]),
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = counts_by_group_shared,
+            x = ~group,
+            y = ~`Normalized Counts`,
+            type = "box",
+            boxpoints = "all",
+            jitter = 0.6,
+            pointpos = 0,
+            text = ~Sample,
+            boxmean = T),
+    tx)
+)
+
+# This works interactively but is NOT compatible with RMarkdown, unfortunately.
+# plotCounts_plotly <- function(i, dds, intgroup) {
+#     plotdata <- plotCounts(dds,
+#                        gene = i,
+#                        intgroup = intgroup,
+#                        returnData = TRUE)
+#     plot_title <- paste(id_table[[biomart_filter]][id_table[[biomart_filter]] == i],
+#                         id_table[[species_gene_symbol]][id_table[[biomart_filter]] == i])
+#     if (ncol(plotdata) > 2) {
+#       colorCol = 3
+#     } else {colorCol = 2}
+#     plot_ly(data = plotdata,
+#             x = ~group,
+#             y = ~count,
+#             type = "box",
+#             boxpoints = "all",
+#             jitter = 0.6,
+#             pointpos = 0)
+# }
+# 
+# manipulate_plotCounts <- function(genes) {
+#   plotCounts_plotly(genes, dds, params$design)
+# }
+# 
+# geneplot_widget <- manipulateWidget(
+#   manipulate_plotCounts(genes),
+#   genes = mwSelectize(unique(genesAlphabetized[[biomart_filter]]),
+#                    label = "Top 1000 Genes by Fold Change (including those filtered out)",
+#                    list(maxItems = 20000), # This doesn't expand past an apparently undocumented number... That is, the dropdown won't display all the items.
+#                    .display = T)
+# )
+# 
+# # Ok, this is not great because it would only save a single plot to the HTML file.
+# # Not quite what I need.
+# htmlwidgets::saveWidget(geneplot_widget, file = "test.html")
+
+```
+
+# Plots of genes of interest
+
+This section shows genes of interest sorted by those with highest fold-change within each contrast.
+
+```{r 'plot_genes_of_interest', fig.width = 10, fig.height = 6, eval = nrow(allResultsOrdered_logFC_filter) > 0}
+
+#numResults = 20
+numResults <- nBestFeatures
+
+allResultsOrdered_logFC_filter %>%
+  group_by(contrast) %>%
+  top_n(numResults, wt = abs(log2FoldChange)) %>%
+  ungroup() %>%
+  mutate(contrast = as.factor(contrast),
+         symbol = reorder_within(!!ensym(species_gene_symbol), log2FoldChange, contrast)) %>%
+  ggplot(aes(x = log2FoldChange,
+             y = symbol,
+             color = contrast,
+             size = -log(padj))) +
+  geom_point(show.legend = TRUE) +
+  facet_wrap(~contrast,
+             scales = "free_y",
+             ncol = 4,
+             labeller = labeller(contrast = label_wrap_gen(10))) +
+  scale_y_reordered()  +
+  geom_vline(xintercept = 0,
+             linetype = "dashed",
+             color = "black",
+             size = 1) +
+  ggtitle(paste0("Top ",
+                 numResults,
+                 " genes ranked by fold change (adjusted p-value <",
+                 alpha,
+                 "), grouped by treatment"))
+```
+
+# Volcano plot
+
+This section shows a volcano plot for each contrast.  
+
+Note that scales are set manually for this plot: therefore, there may be data points outside the range shown (see warnings).  
+
+Data reported as significant are shown as red points.
+
+```{r 'volcano-plot', fig.width = 12, fig.height = 6, warning = TRUE, collapse = TRUE}
+ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(size = 0.5, alpha = 0.3) +
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  facet_wrap(~contrast, ncol = 4) + # , scales = "free"
+  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
+  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
+  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) + # 
+  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) # 
+```
+
 
 # GO Enrichment Analysis {.tabset .tabset-fade}
 
@@ -2320,7 +2466,7 @@ if (!is.null(enrich_go_cc)) {
 } else {print("No significantly enriched terms using criteria selected")}
 ```
 
-```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 }
+```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 & nrow(significantResults) > 0}
 ```
 
 # Methods Summary
