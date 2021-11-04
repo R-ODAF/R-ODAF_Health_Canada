@@ -1,0 +1,79 @@
+#### Main parameters
+
+# main project directory
+prefix: /your/folder/here
+
+# directory where genone information can be found (the files below should be in this directory)
+genomedir: /home/shared/genomes
+# filename for genome
+genome_filename: humansurrogate2_0.fa
+# filename for gene annotations
+annotation_filename: humansurrogate2_0.gtf
+# used for labeling genome index files
+genome_name: "S1500_2.0"
+
+# one of 'rnaseq' or 'temposeq'
+seqtype: temposeq
+# one of 'se' (single end) or 'pe' (paired end)
+mode: se
+
+# number of threads to use, for multi-threaded programs
+threads: 40
+
+###### QC parameters
+
+QC:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_name: "Bisphenols"        # Change depending on your project name
+  clust_method: "spearman" # For clustering
+  tree_height_cutoff: 0.1  # For clustering
+  dendro_color_by: "group" # Specify how you would like to color the dendrograms
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
+  gini_cutoff: 0.95
+  sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+  groups:
+    one: ["chemical", "dose"]
+    two: ["I7_Index_ID", "I5_Index_ID"] 
+    three: ["row", "column"]
+      #4: ["batch"]
+      #As many groups as desired...up to a maximum of 6
+  batch_var: "batch"          # "batch"
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "chemical"
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
+  # Column names for metadata, if applicable
+  technical_control: "technical_control"
+  reference_rna: "reference_rna"
+  solvent_control: "solvent_control"
+
+###### DESeq2 parameters
+DESeq2:
+  projectdir: !r here::here()  # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_name: "Bisphenols"        # Change depending on your project name
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  nuisance: batch                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
+  flag: TRUE                     # runs all analysis by default when set to TRUE
+  platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
+  group_facet: "chemical"       #!expr NA # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  !expr NA        # !expr NA # Which group will this report be done on?
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
+  exclude_samples: !expr NA      # Optionally, a vector of sample names to exclude from the analysis
+  exclude_groups: !expr NA       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  include_only_column:  !expr NA # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+  include_only_group:  !expr NA  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+  use_cached_RData: FALSE        # If possible, load the saved RData for dds object and gene IDs
+  cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
+  wikipathways_directory: "~/shared/dbs/wikipathways"
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  nBestFeatures: 20              # The number of best features to make plots of their counts
+  nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
+  nHeatmap: 50                   # Number of most variable genes for heatmap
+  nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  sampledata_sep: ","           # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+

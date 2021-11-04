@@ -1,7 +1,7 @@
 ---
-params:
+QC:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "PPAR agonists"        # Change depending on your project name
+  project_name: "Bisphenols Repeat 3 Preliminary"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
@@ -10,12 +10,12 @@ params:
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
   groups:                  # These should be "interesting" groups for your analysis. Group together for exploring covariation.
-    1: ["chemical", "dose", "Time"]
+    1: ["dose","chemical","subgroup"]
     2: ["I7_Index_ID", "I5_Index_ID"] 
     3: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
-  batch_var: "Time"          # "batch"
+  batch_var: "batch"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "chemical"
   Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq

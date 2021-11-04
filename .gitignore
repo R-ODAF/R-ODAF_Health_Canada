@@ -59,10 +59,11 @@ reports
 paths.txt
 *metadata.txt
 *contrasts.txt
-./metadata*
-./data*
-/metadata/metadata.txt
-/metadata/contrasts.txt
+./data/raw
+./data/processed
+/data/metadata/metadata.txt
+/data/metadata/contrasts.txt
+/data/metadata/metadata.QC_applied.txt
 /data/processed/genes.data.tsv
 /data/processed
 /logs/
@@ -71,7 +72,6 @@ TODO.txt
 data/metadata/metadata.QC_applied.txt
 run.sh
 preprocessing.txt
-data/metadata/metadata.QC_applied.txt
-*metadata.QC_applied.txt
-TODO.txt
-data/metadata/metadata.QC_applied.txt
+config/config.yaml
+config/config.new.yaml
+config/config.qc.yaml

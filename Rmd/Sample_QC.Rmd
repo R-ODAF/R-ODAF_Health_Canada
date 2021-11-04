@@ -19,12 +19,14 @@ params:
   batch_var: null          # "batch"
   dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "Treatment"
-  Platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
+title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
+subtitle: "`r paste(params$platform)`"
 output:
   html_document:
     toc: true
@@ -34,8 +36,6 @@ output:
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
-title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$Platform)`"
 author: "Matthew J. Meier"
 ---
 
@@ -48,6 +48,10 @@ The purpose of this report is to provide objective metrics to assess sample qual
 
 This script will automatically output a new sample metadata table that includes only the samples passing the metrics here; that sample metadata will be used as input to subsequent analysis steps, thereby excluding any samples from analysis that do not meet these standards. 
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+theme_set(theme_bw())
+```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
 ############################################################################
@@ -55,6 +59,7 @@ This script will automatically output a new sample metadata table that includes 
 ############################################################################
 library(edgeR)
 library(ggplot2)
+library(plotly)
 library(data.table)
 library(cluster)
 library(Cairo)
@@ -94,7 +99,7 @@ groups <- unname(groups) # Include b/c of how things are addressed throughout.
 batch_var <- params$batch_var
 dose <- params$dose
 treatment_var <- params$treatment_var
-Platform <- params$Platform
+Platform <- params$platform
 # Column names for metadata, if applicable
 technical_control <- params$technical_control
 reference_rna <- params$reference_rna
@@ -220,6 +225,9 @@ all(names(sampleData) == d$original_names)
 d <- d[d$original_names %in% names(sampleData),]
 DESeqDesign <- d
 all(names(sampleData) == d$original_names)
+# Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
+sampleData <- sampleData[,d$original_names]
+mu <- mu[d$original_names,]
 ```
 
 # Sample Filtering Code
@@ -283,7 +291,7 @@ sampleData <- sampleData[,flag_order]
 ############################################################################
 libsize <- apply(sampleData, 2, sum)
 cpm <- sampleData
-for(k in 1:length(libsize)){
+for (k in 1:length(libsize)) {
   cpm[,k] <- log2((10^6)*(sampleData[,k] + 0.5)/(libsize[k] + 1))
 }
 
@@ -333,14 +341,16 @@ n <- table(tree_groups)
 n <- sort(n, decreasing = T)
 n <- n[2:dim(n)]
 
-print("Samples Flagged:")
-
 if (length(n > 0)) {
   flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
   write.table(d[flag_cluster,],
               file.path(paths$processed, "outliers_cluster_analysis.txt"),
               sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-  d[flag_cluster,] %>% dplyr::select(original_names, dendro_color_by)
+  d[flag_cluster,] %>%
+    dplyr::select(original_names, dendro_color_by) %>%
+    kable(caption = "Samples flagged as outliers by clustering distance") %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+    scroll_box(width = "100%", height = "480px")
 }
 ```
 
@@ -354,15 +364,15 @@ This section obtains sample names for technical controls, experimental samples, 
 ############################################################################
 
 tech_ctrl_names <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(technical_control)==T) %>%
+  dplyr::filter(!!ensym(technical_control) == T) %>%
   dplyr::pull(original_names)
 
 sample_names <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(technical_control)==F) %>%
+  dplyr::filter(!!ensym(technical_control) == F) %>%
   dplyr::pull(original_names)
 
 ref_samples <- DESeqDesign %>% 
-  dplyr::filter(!!ensym(reference_rna)==T) %>%
+  dplyr::filter(!!ensym(reference_rna) == T) %>%
   dplyr::pull(original_names)
 
 ```
@@ -378,7 +388,7 @@ Colored by `r dendro_color_by`.
 dendro_before_tech_ctrls <- 1 - cor(as.matrix(cpm %>% dplyr::select(all_of(tech_ctrl_names))),
                                            method = "spearman")
 
-if(length(dendro_before_tech_ctrls) > 2) {
+if (length(dendro_before_tech_ctrls) > 2) {
   DESeqDesignTechCtrls <- DESeqDesign %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_before_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_before_tech_ctrls), method = "average"))
@@ -402,11 +412,12 @@ if(length(dendro_before_tech_ctrls) > 2) {
            family = "Courier")
   
   par(cex = 0.4, mar = c(25, 4, 4, 2))
-  plot(dendro_before_tech_ctrls %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-       main = "log2 CPM",
-       horiz = F)
+  print(plot(dendro_before_tech_ctrls %>%
+               dendextend::set("labels", labels_to_use) %>%
+               dendextend::set("labels_cex", 0.3),
+             main = "log2 CPM",
+             horiz = F)
+  )
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
   dev.off()
 }
@@ -498,9 +509,155 @@ dev.off()
 
 ```
 
-## Additional QC metrics
+## Additional QC metrics {.tabset}
 
-### Outlier Tests
+Click on the tabs below to view samples removed by each metric.
+
+### Number of mapped reads
+
+Samples with less than `r nmr_threshold` aligned reads removed.
+
+```{r num_mapped_reads}
+######################################################################################
+# Additional QC Metrics
+######################################################################################
+# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
+######################################################################################
+# Reject < 300000 or Threshold = 10% of target depth
+# Removes various types of failed samples
+
+QAQC <- data.frame(Sample = names(sampleData), NMR = apply(sampleData, 2, sum))
+failed_read_threshold <- QAQC[QAQC$NMR < nmr_threshold,]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged with too few mapped reads") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Fraction of mapped reads
+
+Samples less than `r align_threshold` aligned reads removed.
+
+```{r fraction_mapped_reads}
+if (Platform == "TempO-Seq") {
+  QAQC$FMR <- mu$pct_mapped
+} else {
+  QAQC <- QAQC %>% left_join(mu, by = "Sample")
+}
+  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
+  
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as failing alignment threshold") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of active probes
+
+The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
+
+```{r ncov5}
+######################################################################################
+# Ncov5 The number of probes with at least 5 uniquely mapped reads.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+n_genes <- nrow(sampleData)
+QAQC$Ncov5 <- apply(sampleData, 2, function(x) length(x[x > 4]))/n_genes
+percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
+failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers with few active probes") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of probes capturing 80% of signal
+
+The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
+
+```{r nsig80}
+######################################################################################
+# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+# (include test samples, vehicle controls, and reference chemical treatments)
+
+### Using some of the EPA code:
+countStats <- function(
+  counts, 
+  nsig = getOption("httrStatNsig", default = 0.8)
+) {
+  # Load required pkgs
+	require(foreach)
+  # Store results in a vector
+	st <- vector()
+	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
+	counts_nz <- counts[counts > 0]
+	# Sort in decreasing order
+	counts_nz <- sort(counts_nz, decreasing = T)
+	# Compute cumulative sum of counts starting from highest count probe
+	cumCounts <- cumsum(counts_nz)
+	# Convert cumulative sums to cumulative proportions
+	cumProp <- cumCounts / sum(counts_nz)
+	# Compute the minimum number of probes to capture X% of total reads
+	if (length(nsig) > 0) {
+		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
+		names(ns) <- paste0("n_sig",nsig*100)
+		st <- append(st, ns)
+	}
+	return(st)
+}
+
+QAQC$Nsig80 <- apply(sampleData, 2, countStats)
+
+probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
+failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
+  dplyr::select(original_names, dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers for the proportion of probes contributing to the data") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Gini coefficient
+
+The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r gini_cutoff` are removed from the analysis.
+
+```{r gini}
+######################################################################################
+# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
+# raw counts for all probes including those with 0 aligned reads
+######################################################################################
+# Reject > 0.95
+QAQC$Gini <- apply(sampleData, 2, function(x) gini(x))
+failed_gini <- QAQC[QAQC$Gini > gini_cutoff,]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_gini$Sample) %>%
+  dplyr::select(original_names, dendro_color_by ) %>%
+  kable(caption = "Samples flagged as failing the Gini coefficient") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Outlier Tests (NOT USED)
 
 #### OutPyR
 
@@ -565,152 +722,6 @@ detach("package:OUTRIDER", unload = TRUE)
 ```
 
 
-### Number of mapped reads
-
-Samples less than `r nmr_threshold` aligned reads removed.
-
-```{r num_mapped_reads}
-######################################################################################
-# Additional QC Metrics
-######################################################################################
-# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
-######################################################################################
-# Reject < 300000 or Threshold = 10% of target depth
-# Removes various types of failed samples
-
-QAQC <- data.frame(Sample = names(sampleData), NMR = apply(sampleData, 2, sum))
-failed_read_threshold <- QAQC[QAQC$NMR < nmr_threshold,]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-
-```
-
-### Fraction of mapped reads
-
-Samples less than `r align_threshold` aligned reads removed.
-
-```{r fraction_mapped_reads}
-if (Platform == "TempO-Seq") {
-  QAQC$FMR <- mu$pct_mapped
-} else {
-  QAQC <- QAQC %>% left_join(mu, by="Sample")
-}
-  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
-  
-  # Samples failing
-  print("Samples Flagged:")
-  d %>%
-    dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
-    dplyr::select(original_names, dendro_color_by)
-
-
-```
-
-### Number of active probes
-
-The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
-
-```{r ncov5}
-######################################################################################
-# Ncov5 The number of probes with at least 5 uniquely mapped reads.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-n_genes <- nrow(sampleData)
-QAQC$Ncov5 <- apply(sampleData, 2, function(x) length(x[x > 4]))/n_genes
-percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
-failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-```
-
-### Number of probes capturing 80% of signal
-
-The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
-
-```{r nsig80}
-######################################################################################
-# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-# (include test samples, vehicle controls, and reference chemical treatments)
-
-### Using some of the EPA code for now:
-countStats <- function(
-  counts, 
-  nsig = getOption("httrStatNsig", default = 0.8)
-) {
-  # Load required pkgs
-	require(foreach)
-  # Store results in a vector
-	st <- vector()
-	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
-	counts_nz <- counts[counts > 0]
-	# Sort in decreasing order
-	counts_nz <- sort(counts_nz, decreasing = T)
-	# Compute cumulative sum of counts starting from highest count probe
-	cumCounts <- cumsum(counts_nz)
-	# Convert cumulative sums to cumulative proportions
-	cumProp <- cumCounts / sum(counts_nz)
-	# Compute the minimum number of probes to capture X% of total reads
-	if(length(nsig) > 0) {
-		ns <- foreach(prop = nsig, .combine='c') %do% {min(which(cumProp > prop))}
-		names(ns) <- paste0("n_sig",nsig*100)
-		st <- append(st, ns)
-	}
-	return(st)
-}
-
-# ref <- apply(sampleData/QAQC$NMR, 2, median)
-# sig80 <- quantile(ref, prob = 0.8)
-# 
-# QAQC$Nsig80 <- 0
-# 
-# for(k in 1:nrow(QAQC)){
-#   flag80pct <- sampleData[,k] > sig80 * QAQC$NMR[k]
-#   QAQC$Nsig80[k] <- length(sampleData[flag80pct, 1])/n_samples
-# }
-# 
-
-QAQC$Nsig80 <- apply(sampleData, 2, countStats)
-
-probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
-failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-
-```
-
-### Gini coefficient
-
-The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r gini_cutoff` are removed from the analysis.
-
-```{r gini}
-######################################################################################
-# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
-# raw counts for all probes including those with 0 aligned reads
-######################################################################################
-# Reject > 0.95
-QAQC$Gini <- apply(sampleData, 2, function(x) gini(x))
-failed_gini <- QAQC[QAQC$Gini > gini_cutoff,]
-
-# Samples failing
-print("Samples Flagged:")
-d %>%
-  dplyr::filter(original_names %in% failed_gini$Sample) %>%
-  dplyr::select(original_names, dendro_color_by)
-```
 
 # Correlations
 
@@ -738,9 +749,6 @@ pheatmap(ref_correlations_all,
          show_colnames = F,
          border_color = NA,
          annotation_col = correlation_df_all_heatmap)
-
-# Heatmap(ref_correlations_all,
-#          top_annotation = correlation_df_all_heatmap)
 
 ```
 
@@ -775,35 +783,43 @@ pheatmap(ref_correlations_samples,
 
 ```
 
-These plots show correlations within each experimental grouping.
+## Within Group Correlations {.tabset}
 
-```{r, fig.width = 11, fig.height = 10}
-### To double check a group of interest...
+These plots show correlations within each experimental grouping.  
+
+Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
+
+
+```{r group-correlation-setup}
 facets <- unique(DESeqDesignExpSamples[,treatment_var])
 cor_list <- list()
-for(i in seq_along(facets)) {
+```
+
+```{r, fig.width = 11, fig.height = 10, results='asis'}
+### To view correlations for groups of interest...
+
+for (i in seq_along(facets)) {
+  cat("###", facets[i], "  \n\n")
   samples_in_facet <- DESeqDesignExpSamples[DESeqDesignExpSamples[treatment_var] == facets[i],
                                             "original_names"]
   if (length(samples_in_facet) < 2) { next }
   cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
   pca_subset <- rrcov::PcaGrid(t(cpm_subset))
   #biplot <- rrcov::biplot(pca_subset)
-  cellWise::outlierMap(pca_subset)
-  
   correlations <- cor(cpm_subset, method = "pearson")
   correlation_df <- DESeqDesign %>%
     filter(original_names %in% colnames(correlations))
   
   row.names(correlation_df) <- correlation_df$original_names
   correlation_df <- correlation_df[colnames(correlations),]
-  
   correlation_df <- as.data.frame(correlation_df[unlist(groups[[1]][1])])
-  
   group_heatmap <- pheatmap(correlations,
                             annotation_col = correlation_df,
                             display_numbers = T,
                             cutree_cols = 2,
                             cutree_rows = 2)
+  
+  cellWise::outlierMap(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
   correlations$original_names <- row.names(correlations)
@@ -812,6 +828,7 @@ for(i in seq_along(facets)) {
     dplyr::select(mean, original_names) %>%
     mutate(facet = facets[i])
   cor_list[[i]] <- cor_distribution
+  cat('  \n\n')
 }
 ```
 
@@ -819,9 +836,11 @@ for(i in seq_along(facets)) {
 
 ### Mean of per-sample correlations with every other sample in the study
 
-In other words, for each sample, what is its mean correlation with every other sample?
+In other words, for each sample, what is its mean correlation with **every other sample in the study**?
 
-```{r,  fig.width = 11, fig.height = 10}
+Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
+
+```{r,  fig.width = 9, fig.height = 10}
 cor_df1 <- as.data.frame(ref_correlations_samples)
 cor_df1$original_names <- row.names(cor_df1)
 cor_df2 <- DESeqDesignExpSamples[c(treatment_var,"original_names")]
@@ -829,24 +848,27 @@ cor_df2 <- DESeqDesignExpSamples[c(treatment_var,"original_names")]
 cor_distribution_all <- left_join(cor_df1, cor_df2) %>%
     mutate(mean = rowMeans(across(where(is.numeric)))) %>%
     dplyr::select(mean, original_names, treatment_var)
-ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter()
-ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter() + ylim(c(0.9,1))
+cor_plot <- ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
+  geom_boxplot(outlier.shape = NA, outlier.color = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot)
+# Ok, there's a bug that prevents outliers from being hidden, but whatever.
+# https://github.com/plotly/plotly.R/issues/1114
 ```
 
 ### Mean of per-sample correlations with every other sample in its corresponding group
 
-In other words, for each sample, what is its mean correlation with every other sample **within in its epxerimental grouping**?
+In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
 
-```{r,  fig.width = 11, fig.height = 10}
+```{r,  fig.width = 9, fig.height = 10}
 # MEANS BY CHEMICAL
 cor_means_by_chem <- data.table::rbindlist(cor_list)
-ggplot(cor_means_by_chem, aes(facet, mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter()
-ggplot(cor_means_by_chem, aes(facet, mean)) +
-  geom_boxplot(outlier.shape = NA) + geom_jitter() + ylim(c(0.9,1))
-
+cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot_2)
 ```
 
 
@@ -865,7 +887,10 @@ correlation_df <- DESeqDesign %>%
 row.names(correlation_df) <- correlation_df$original_names
 correlation_df <- correlation_df[colnames(ref_correlations),]
 
-correlation_df <- as.data.frame(correlation_df[,unlist(groups[[1]])], drop = FALSE)
+# This by default includes all the variables in the first "group" parameter
+# For example, if you have multiple chemicals and multiple doses
+# Those will likely be in your groups[[1]] variable
+correlation_df <- correlation_df[,unlist(groups[[1]]), drop = F]
 
 pheatmap(ref_correlations,
          annotation_col = correlation_df,
@@ -876,22 +901,6 @@ pheatmap(ref_correlations,
 heatmap_colors <- circlize::colorRamp2(c(0.7, 1), c("blue", "red"))
 
 annotation_col <- HeatmapAnnotation(df = correlation_df)
-
-# Heatmap(ref_correlations,
-#         name = "Correlation",
-#         clustering_distance_rows = "pearson",
-#         clustering_distance_columns = "pearson",
-#         row_km = 2,
-#         column_km = 2,
-#         cell_fun = function(j, i, x, y, width, height, fill) {
-#           grid.text(sprintf("%.2f", ref_correlations[i, j]), x, y, gp = gpar(fontsize = 10))
-#           },
-#         top_annotation = annotation_col,
-#         col = heatmap_colors
-#         )
-
-# ref_correlations
-
 
 ```
 
@@ -905,7 +914,7 @@ annotation_col <- HeatmapAnnotation(df = correlation_df)
 # Add Dendrogram Clustering Pass/Fail to QAQC
 ################################################################################
 QAQC$dendrogram <- "PASS"
-if(exists("flag_cluster")) {
+if (exists("flag_cluster")) {
   QAQC$dendrogram[which(QAQC$Sample %in% d$original_names[flag_cluster])] <- "FAIL"
 }
 
@@ -970,8 +979,9 @@ This plot shows the various QC metrics that may result in sample removal, along 
 
 If the "UpSet" plot makes you upset, please skip to the much more intuitive "vtree".
 
+### UpSet Plot
 
-```{r upset-vtree}
+```{r upset}
 if (dim(QAQC_failed_logical)[1] > 1) {
   upset(QAQC_failed_logical)
 }
@@ -986,6 +996,12 @@ QAQC_annotated$Any <- apply(QAQC_annotated,
                             MARGIN = 1,
                             FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
 
+```
+
+### Vtree Summary
+
+```{r vtree}
+
 vtree(QAQC_annotated,
       "Any dendrogram NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
       summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
@@ -998,13 +1014,13 @@ vtree(QAQC_annotated,
       pngknit = FALSE)
 
 outliers <- QAQC_failed$Sample
-outliers
 
 outlier_metadata <- DESeqDesign[DESeqDesign$original_names %in% outliers,]
 metadata_outliers_removed <- DESeqDesign[!DESeqDesign$original_names %in% outliers,] %>%
   filter(!!ensym(technical_control) == F)
 
 ```
+
 
 ## Potential covariates
 
@@ -1014,12 +1030,7 @@ Please note that in these pairwise plots, some relationships are meaningless (e.
 
 ```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.null(batch_var)}
 
-### Come back to this. How on earth can we automate this or make it generic!?
-### Add in n vectors... a list of vectors to loop over?
-### list(a,b,c) where a is ("row","column") ?
-### Common columns - vector of NMR_data, Ncov5_data, Nsig80_data, Gini_data
-
-if(!is.null(batch_var)){
+if (!is.null(batch_var)) {
 QAQC_metadata_subset <- QAQC_annotated %>%
   dplyr::select(unlist(groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
@@ -1082,7 +1093,10 @@ if (length(groups) > 1 & !is.null(batch_var)) {
 ```
 
 
-## Plate position effects
+## Plate position effects {.tabset}
+
+Click on the tabs below to view the plate layout for the experiment (if any was provided) and the corresponding quality metrics according to position.
+
 
 ```{r plate_pos, eval = any(grepl("column", colnames(QAQC_annotated), ignore.case = T))}
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))
@@ -1091,79 +1105,82 @@ colname <- names(QAQC_annotated[colnum])
 rowname <- names(QAQC_annotated[rownum])
 plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
                                          y = factor(!!ensym(rowname),
-                                                    levels = rev(levels(factor(!!ensym(rowname)))))))
-
-#  geom_tile(mapping = aes(fill = log(dose+1)), data = QAQC_annotated) +
-#  scale_fill_gradient(low = "grey", high = "black") +
-
-plate_plot +
-  geom_point(mapping = aes(color = NMR_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Number of mapped reads") +
-  theme_bw() +
+                                                    levels = rev(levels(factor(!!ensym(rowname))))),
+                                         name = original_names,
+                                         treat = !!ensym(treatment_var),
+                                         dose = !!ensym(dose))) +
   theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+        axis.title = element_blank(),
+        #axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.spacing = unit(2, "lines")) +
+  scale_x_discrete(position = "top") +
+  coord_fixed()  +
+  {if (!is.null(batch_var))  facet_wrap(paste0("~",batch_var))}
+#  {if (!is.null(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
+# The facet_rep_wrap function doesn't actually seem to produce the intended effect.
+# Probably broken by something in ggplot.
+# Need a better way to add row and column labels. Free axes in ggplot don't
+# currently support showing on all facets: https://github.com/tidyverse/ggplot2/issues/4064
+# There is a PR in ggplot to fix this: https://github.com/tidyverse/ggplot2/pull/4467
 
-plate_plot +
-  geom_point(mapping = aes(color = FMR_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Number of mapped reads") +
-  theme_bw() +
-  theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = Nsig80_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Nsig80") +
-  theme_bw() +
-  theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+### Number of Mapped Reads
 
-plate_plot +
-  geom_point(mapping = aes(color = Ncov5_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Ncov5") +
-  theme_bw() +
-  theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Number of mapped reads"))  %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
 
-plate_plot +
-  geom_point(mapping = aes(color = Gini_data), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Gini") +
-  theme_bw() +
-  theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+### Fraction of Mapped Reads
 
-plate_plot +
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Fraction of mapped reads")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
+
+### Nsig80
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Nsig80")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
+
+### Ncov5
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Ncov5")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
+
+### Gini
+
+```{r}
+(plate_plot +
+  geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Gini")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+```
+
+### Any samples which failed
+
+```{r}
+(plate_plot +
   geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
             data = QAQC_annotated) +   
   scale_fill_gradient(low = "grey", high = "black") +
-  geom_point(mapping = aes(color = Any), data = QAQC_annotated, size = 3) +
-    scale_x_discrete(position = "top") +
-  coord_fixed() +
-  ggtitle("Any samples failed") +
-  theme_bw() +
-  theme(legend.position = "right",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  {if (!is.null(batch_var)) facet_wrap(paste0("~",batch_var))}
+  geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
+  ggtitle("Any samples failed")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
 
 ```
 
@@ -1171,7 +1188,6 @@ plate_plot +
 ## Metadata of samples identified as outliers
 
 ```{r table_metadata}
-
 knitr::kable(outlier_metadata,
              caption = "Samples Removed") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
@@ -1180,19 +1196,27 @@ knitr::kable(outlier_metadata,
 QAQC_failed_kable <- outlier_metadata %>%
   dplyr::select(original_names, !!ensym(treatment_var), !!ensym(dendro_color_by)) %>%
   left_join(QAQC_failed, by = (c("original_names" = "Sample")))
-
 ```
+
+## Sample groups summary - numbers of outliers in each group
+
+```{r table_by_groups}
+knitr::kable(QAQC_annotated %>%
+               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>% # Could be better to somehow use groups[[1]], but not sure how to get it working as expected
+               tally() %>% dplyr::arrange(Any),
+             caption = "Groups Summary") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
+```
+
 
 ## Pass/fail table for samples identified as outliers
 
 ```{r table_pass_fail}
-
 knitr::kable(QAQC_failed_kable,
              caption = "Which samples were removed and why?") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
   scroll_box(width = "100%", height = "480px")
-
-
 ```
 
 
@@ -1221,7 +1245,6 @@ QAQC_annotated %>%
 ## Write tables to disk
 
 ```{r write_output}
-
 outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
                                                QAQC_pass_fail,
                                                by = c("original_names" = "Sample"))
@@ -1255,7 +1278,7 @@ CairoPDF(file = file.path(paths$processed, "dendrogram_postfiltering_all.pdf"),
          height = 8.5,
          family = "Courier")
 
-dendro_after_all_samples <- 1-cor(as.matrix(cpm %>% dplyr::select(-all_of(outliers))),
+dendro_after_all_samples <- 1 - cor(as.matrix(cpm %>% dplyr::select(-all_of(outliers))),
                                   method = "spearman")
 dendro_after_all_samples <- sort_hclust(hclust(as.dist(dendro_after_all_samples), method = "average"))
 
@@ -1287,11 +1310,11 @@ dev.off()
 ############################################################################
 # Technical Controls, Postfiltering
 ############################################################################
-dendro_after_tech_ctrls <- 1-cor(as.matrix(cpm %>%
+dendro_after_tech_ctrls <- 1 - cor(as.matrix(cpm %>%
                                             dplyr::select(all_of(tech_ctrl_names)) %>%
                                             dplyr::select(-all_of(outliers[outliers %in% tech_ctrl_names]))),
                                 method = "spearman")
-if(length(dendro_after_tech_ctrls) > 2) {
+if (length(dendro_after_tech_ctrls) > 2) {
   DESeqDesignTechCtrls <- DESeqDesign %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_after_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_after_tech_ctrls), method = "average"))
@@ -1418,66 +1441,31 @@ dev.off()
 ### Batch
 
 ```{r plot_batch_effects, eval = !is.null(batch_var)}
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Gini_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Gini") +
-  theme(legend.position = "bottom")
+plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
+  facet_grid(paste0("~",batch_var), scales = "free_x", labeller = labeller(.cols = label_wrap_gen(10))) +
+  theme(legend.position = "bottom", axis.text = element_blank())
 
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = NMR_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Number of Mapped Reads") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = FMR_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Fraction of Mapped Reads") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Ncov5_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Proportion of active probes (% probes with >5 mapped reads)") +
-  theme(legend.position = "bottom")
-
-ggplot(QAQC_annotated, aes(x = batch_var, color = treatment_var)) +
-  geom_boxplot(aes(y = Nsig80_data)) +
-  facet_grid(paste0("~",batch_var), scales = "free_x") +
-  ggtitle("Proportion of probes required to account for 80% of signal") +
-  theme(legend.position = "bottom")
+plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 
 ```
 
 ### Dose effects
 
 ```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T))}
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Gini_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Gini")
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = factor(!!ensym(dose)))) +
+  facet_wrap(paste0("~",treatment_var), scales = "free") +
+  theme(axis.text = element_blank()) +
+  labs(color = dose)
 
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = NMR_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Number of Mapped Reads")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = FMR_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Fraction of Mapped Reads")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Ncov5_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
-
-ggplot(QAQC_annotated, aes(x = treatment_var, color = factor(!!ensym(dose)))) +
-  geom_boxplot(aes(y = Nsig80_data)) +
-  facet_wrap(paste0("~",treatment_var), scales = "free_x") +
-  ggtitle("Proportion of probes required to account for 80% of signal")
-
+plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 ```
 
 
