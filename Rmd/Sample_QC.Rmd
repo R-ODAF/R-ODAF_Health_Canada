@@ -285,7 +285,6 @@ message(paste0("The treatment variable is: ", treatment_var))
 flag_order <- order(d[treatment_var])
 d <- d[flag_order,]
 sampleData <- sampleData[,flag_order]
-
 ############################################################################
 # CPM (used in dendrogram/cluster analysis)
 ############################################################################
