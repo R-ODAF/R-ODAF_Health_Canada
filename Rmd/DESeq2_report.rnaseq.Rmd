@@ -2096,7 +2096,7 @@ genesToSelect <- allResults %>%
 # Order by alphabet to help readability in dropdown menu
 genesAlphabetized <- genesToSelect %>%
   dplyr::arrange(-abs(log2FoldChange)) %>%
-  dplyr::arrange(PROBE_NAME)
+  dplyr::arrange(!!ensym(biomart_filter))
 
 # Get the data 
 counts_by_group <- counts_by_group %>%
