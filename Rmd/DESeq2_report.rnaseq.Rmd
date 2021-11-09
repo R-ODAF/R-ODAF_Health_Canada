@@ -907,7 +907,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   				sampleCols <- grep(names(SampPerGroup)[group], DE_Design[, DESIGN])
   				# The line below assumes that the columns in CPMdds are ordered the same as the DE_Design table.
   				# That is not necessarily true. Instead, first get the explicit row names as a vector.
-  				sampleNamesGroup <- rownames(DE_Design[sampleCols,])
+  				sampleNamesGroup <- DE_Design[sampleCols, "original_names"]
   				Check <- sum(CPMdds[gene, sampleNamesGroup] >= MinCount) >= 0.75 * SampPerGroup[group]
   				CountsPass <- c(CountsPass, Check)
   		}
@@ -965,8 +965,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 		sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DE_Design[,DESIGN])
 		
 		# Same problem as above, use names explictly
-		sampleNames_g1 <- rownames(DE_Design[sampleColsg1,])
-		sampleNames_g2 <- rownames(DE_Design[sampleColsg2,])
+		sampleNames_g1 <- DE_Design[sampleColsg1, "original_names"]
+		sampleNames_g2 <- DE_Design[sampleColsg2, "original_names"]
 		
 	  Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
 		quantilePass <- c(quantilePass, Check)
@@ -984,7 +984,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 		spikePass <- NULL
 		for (group in 1:length(SampPerGroup)) {
 				sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DE_Design[ ,DESIGN])
-				sampleNamesSpike <- rownames(DE_Design[sampleColsSpike, ])
+				sampleNamesSpike <- DE_Design[sampleColsSpike, "original_names"]
 			if (max(DECounts[gene, sampleColsSpike]) == 0) {Check <- FALSE} else {
 				Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >= 1.4 * (SampPerGroup[group])^(-0.66)
 				spikePass <- c(spikePass, Check)
