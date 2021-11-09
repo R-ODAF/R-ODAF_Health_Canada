@@ -327,7 +327,8 @@ if (!is.na(params$group_facet)) {
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
   if (params$strict_contrasts == T) {
-    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter)
+    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
+                                             V1 %in% contrasts_to_filter  )
   }
   DESeqDesign <- DESeqDesign %>% dplyr::filter(!!sym(params$design) %in% (unlist(contrasts) %>% unique()) )
 }
@@ -342,7 +343,8 @@ if (any(!is.na(params$exclude_groups))) {
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
   if (params$strict_contrasts == T) {
-    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter)
+    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
+                                             V1 %in% contrasts_to_filter  )
   }
 }
 if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
