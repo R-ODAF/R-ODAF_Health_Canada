@@ -88,7 +88,7 @@ if (is.na(params$group_facet)) {
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
   print(facets)
-  for (i in facets[2:length(facets)]) {
+  for (i in facets) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
     filename <- paste0(params$platform, "_",
