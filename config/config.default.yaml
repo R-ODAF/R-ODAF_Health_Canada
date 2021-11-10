@@ -50,7 +50,7 @@ QC:
 
 ###### DESeq2 parameters
 DESeq2:
-  projectdir: !r here::here()  # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
   project_name: "Bisphenols"        # Change depending on your project name
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
