@@ -2120,12 +2120,23 @@ bscols(widths = c(2,NA),
     plot_ly(data = counts_by_group_shared,
             x = ~group,
             y = ~`Normalized Counts`,
+            color = ~group,
             type = "box",
             boxpoints = "all",
             jitter = 0.6,
             pointpos = 0,
             text = ~Sample,
-            boxmean = T),
+            boxmean = T) %>%
+      layout(xaxis = list(title = ''), 
+             yaxis = list(title = 'Normalized Counts'),
+             legend = list(title = list(text = '<b> Experimental Group </b>'))) %>%
+      add_annotations(
+        text = "Gene",
+        x = 0.5, y = 1,
+        xref = "paper", yref = "paper",
+        xanchor = "center", yanchor = "bottom",
+        showarrow = FALSE
+      ),
     tx)
 )
 
