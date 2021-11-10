@@ -8,7 +8,7 @@ suppressMessages(library('biomaRt'))
 suppressMessages(library('BiocParallel'))
 
 # assume this is being run from within the R project
-projectdir <- here::here()
+#projectdir <- here::here()
 
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
@@ -21,7 +21,8 @@ source(here::here("scripts","DESeq_functions.R"))
 ##############################################################################################
 
 config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
-params <- config$deseq
+
+params <- replace_nulls_in_config(config$DESeq2)
 
 projectdir <- params$projectdir
 if(is.null(projectdir)){

@@ -1,3 +1,16 @@
+replace_nulls_in_config <- function(params) {
+    params_new = list()
+    for (name in names(params)) {
+    param <- params[[name]]
+    if(is.null(param)){
+        params_new[[name]] <- NA
+    } else {
+        params_new[[name]] <- param
+    }
+    }
+    return(params_new)
+}
+
 load_species <- function(species){
   species_data = list()
   species_data$loaded <- FALSE
