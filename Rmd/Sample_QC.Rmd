@@ -1445,9 +1445,17 @@ dev.off()
 
 ### Batch
 
-```{r plot_batch_effects, eval = !is.null(batch_var)}
+```{r plot_batch_effects, eval = !is.null(batch_var), fig.height = as.numeric(custom_fig_height)/2}
+add_spaces <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string <- gsub(pattern = "-", replacement = " ", string)
+  string <- gsub(pattern = "_", replacement = " ", string)
+  string
+}
 plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
-  facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(.cols = label_wrap_gen(10)), ncol = 4) +
+  facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
+    .cols = add_spaces,
+    .default = label_wrap_gen(20)), ncol = 4) +
   theme(legend.position = "bottom", axis.text = element_blank())
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
@@ -1460,10 +1468,10 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T))}
+```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T)), fig.height = as.numeric(custom_fig_height)/2}
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
-  theme(axis.text = element_blank()) +
+  theme(axis.text = element_blank(), legend.position = "bottom") +
   labs(color = dose)
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
