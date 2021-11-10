@@ -4,21 +4,21 @@ params:
   project_name: "Test"        # Change depending on your project name
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
-  dendro_color_by: "Treatment" # Specify how you would like to color the dendrograms
+  dendro_color_by: "chemical" # Specify how you would like to color the dendrograms
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
   groups:
     value:
-      one: ["Description", "Dose", "Treatment"]
-      two: ["I7_Index_ID", "I5_Index_ID"] 
+      one: ["dose"]
+      two: ["chemical_timepoint"]
       three: ["row", "column"]
-      #4: ["batch"]
+      four: ["temposeq_plate"]
       #As many groups as desired...
-  batch_var: null          # "batch"
-  dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "Treatment"
+  batch_var: "temposeq_plate"          # "batch"
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "chemical"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
@@ -1096,10 +1096,16 @@ if (length(groups) > 1 & !is.null(batch_var)) {
 
 Click on the tabs below to view the plate layout for the experiment (if any was provided) and the corresponding quality metrics according to position.
 
+```{r is-there-plate-info, echo = F, warning = F}
+are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = T))
+```
 
-```{r plate_pos, eval = any(grepl("column", colnames(QAQC_annotated), ignore.case = T))}
-colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))
-rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))
+```{r plate_pos, eval = are_there_plates}
+if (!is.null(batch_var)) {
+  batch_length <- length(unique(QAQC_annotated[,batch_var]))
+}
+colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
+rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
 colname <- names(QAQC_annotated[colnum])
 rowname <- names(QAQC_annotated[rownum])
 plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
@@ -1115,19 +1121,19 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
         panel.spacing = unit(2, "lines")) +
   scale_x_discrete(position = "top") +
   coord_fixed()  +
-  {if (!is.null(batch_var))  facet_wrap(paste0("~",batch_var))}
+  {if (!is.null(batch_var))  facet_wrap(paste0("~",batch_var), ncol = 2)}
 #  {if (!is.null(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
 # The facet_rep_wrap function doesn't actually seem to produce the intended effect.
 # Probably broken by something in ggplot.
 # Need a better way to add row and column labels. Free axes in ggplot don't
 # currently support showing on all facets: https://github.com/tidyverse/ggplot2/issues/4064
 # There is a PR in ggplot to fix this: https://github.com/tidyverse/ggplot2/pull/4467
-
+custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 7)
 ```
 
 ### Number of Mapped Reads
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
@@ -1136,7 +1142,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 ### Fraction of Mapped Reads
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
@@ -1145,7 +1151,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 ### Nsig80
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
@@ -1154,7 +1160,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 ### Ncov5
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
@@ -1163,7 +1169,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 ### Gini
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
@@ -1172,7 +1178,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 ### Any samples which failed
 
-```{r}
+```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
 (plate_plot +
   geom_tile(mapping = aes(fill = log(!!ensym(dose) + 1)),
             data = QAQC_annotated) +   
@@ -1441,7 +1447,7 @@ dev.off()
 
 ```{r plot_batch_effects, eval = !is.null(batch_var)}
 plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
-  facet_grid(paste0("~",batch_var), scales = "free_x", labeller = labeller(.cols = label_wrap_gen(10))) +
+  facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(.cols = label_wrap_gen(10)), ncol = 4) +
   theme(legend.position = "bottom", axis.text = element_blank())
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
