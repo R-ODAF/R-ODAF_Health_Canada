@@ -358,13 +358,22 @@ if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
 }
 
 # reorder contrast list by the specified column
-if(!is.na(params$sortcol)){
+if (!is.na(params$sortcol)) {
   ordered_design <- DESeqDesign[mixedorder(DESeqDesign[,params$sortcol]),] %>%
     dplyr::select(params$design) %>%
     dplyr::pull()
+  if (params$strict_contrasts == F) {
   contrasts <- contrasts %>%
     dplyr::slice(match(ordered_design, V1)) %>%
     unique()
+  } else {
+    if (params$strict_contrasts == T) {
+    contrasts <- contrasts %>%
+      dplyr::filter(V1 %in% ordered_design |
+                    V2 %in% ordered_design) %>%
+      unique()
+    }
+  }
 }
 
 # Once contrasts have been filtered, generate short contrast names for report.
