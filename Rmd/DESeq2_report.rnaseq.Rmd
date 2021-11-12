@@ -1106,7 +1106,7 @@ if (Platform == "TempO-Seq") {
   id_table_entrez <- id_table_entrez %>%
     dplyr::left_join(biospyder,
                      by = setNames(biospyder_ID, biospyder_filter) )
-  id_table_entrez$Probe.Name <- toupper(id_table_entrez$Probe.Name) #hackity hack hack for mouse S1500
+  id_table_entrez[,biomart_filter] <- toupper(id_table_entrez[,biomart_filter]) #hackity hack hack for mouse S1500 - extra hack for cases where probe name isn't the column name
   # Note that the setNames() function above actually reverses the arguments...
   id_table <- id_table_entrez[, c(biomart_filter,
                                   "ensembl_gene_id",
