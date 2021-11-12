@@ -20,8 +20,9 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 
 temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
 
+sample_id_col = config["sample_id"]
 
-SAMPLES = pd.read_table(metadata_file)['sample_id'].tolist()
+SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 
 print("samples: " + str(SAMPLES))
 
