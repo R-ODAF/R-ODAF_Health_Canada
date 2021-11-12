@@ -1430,6 +1430,10 @@ short_contrast_names <- stringr::str_trunc(short_contrast_names,
                                            31,
                                            side = "right",
                                            ellipsis = "")
+# Get rid of illegal characters... I'm sure there will be more some day
+short_contrast_names <- gsub(pattern = ":",
+                             replacement = ".",
+                             x = short_contrast_names)
 
 for (i in 1:length(levels(factor(allResults$contrast)))) {
   print(i)
