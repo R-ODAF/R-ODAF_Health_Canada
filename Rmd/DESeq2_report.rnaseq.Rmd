@@ -2057,7 +2057,7 @@ plotCounts_gg <- function(i, dds, intgroup) {
                        intgroup = intgroup,
                        returnData = TRUE)
     plot_title <- paste(id_table[[biomart_filter]][grep(i,id_table[[biomart_filter]])],
-                        id_table[[species_gene_symbol]][grep(i  ,id_table[[biomart_filter]])])
+                        id_table[[species_gene_symbol]][grep(i, id_table[[biomart_filter]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}
