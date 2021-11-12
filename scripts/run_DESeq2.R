@@ -7,9 +7,6 @@ suppressMessages(library('gtools'))
 suppressMessages(library('biomaRt'))
 suppressMessages(library('BiocParallel'))
 
-# assume this is being run from within the R project
-#projectdir <- here::here()
-
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","file_functions.R"))
@@ -25,7 +22,7 @@ config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
 params <- replace_nulls_in_config(config$DESeq2)
 
 projectdir <- params$projectdir
-if(is.null(projectdir)){
+if(is.na(projectdir)){
   projectdir <- here::here()
   params$projectdir <- projectdir
 }

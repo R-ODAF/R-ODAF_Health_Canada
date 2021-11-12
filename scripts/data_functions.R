@@ -89,11 +89,13 @@ check_data <- function(sd, des, con){
         nrow(des) > 0
         nrow(con) > 0
     })
-  # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
-  stopifnot(all(des$original_names %in% colnames(sd)))
-  # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
-  stopifnot(all(colnames(sd) %in% des$original_names))
-  message("All OK 👍")
+    print(head(des))
+    print(tail(des))
+    # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
+    stopifnot(all(des$original_names %in% colnames(sd)))
+    # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
+    stopifnot(all(colnames(sd) %in% des$original_names))
+    message("All OK 👍")
 }
 
 

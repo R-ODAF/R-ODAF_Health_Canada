@@ -11,6 +11,8 @@
 library(tidyverse)
 require(yaml)
 
+source(here::here("scripts","file_functions.R"))
+
 config <- yaml::read_yaml(file.path(here::here(),
                                     "config/config.yaml"),
                           eval.expr = T)
@@ -24,14 +26,15 @@ if (is.null(projectdir)) {
   params$projectdir <- projectdir
 }
 
-# Replace any other NULL in params with NA
-replace_nulls <- function(x) {ifelse(is.null(x), NA, x)}
-params <- lapply(params, replace_nulls)
+paths <- set_up_paths(config$DESeq2)
+
+# replace nulls in params with NA
+replace_nulls_in_config(config$DESeq2)
 
 skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 
 # Input file - Rmd
-inputFile <- file.path(projectdir, "Rmd", "DESeq2_report.rnaseq.Rmd")
+inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
 
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
@@ -52,7 +55,7 @@ if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 # Run DESeq2 and make reports
-if (is.na(params$group_facet)) {
+if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
   # Output file - HTML
   filename <- paste0(params$platform, "_",
@@ -84,13 +87,13 @@ if (is.na(params$group_facet)) {
 } else {
   # Remove params$exclude_groups
   facets <- DESeqDesign %>%
-    filter(!(!!sym(params$group_facet)) %in%
+    filter(!(!!sym(params$display_group_facet)) %in%
              c(params$exclude_groups, skip_extra)) %>%
-    pull(params$group_facet) %>% 
+    pull(params$display_group_facet) %>% 
     unique()
   facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
-                 params$group_facet ,"..."))
+                 params$display_group_facet ,"..."))
   print(facets)
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
