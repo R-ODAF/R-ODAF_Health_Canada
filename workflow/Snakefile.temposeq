@@ -54,7 +54,7 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
@@ -65,11 +65,11 @@ rule temposeq:
         threads = config["threads"],
         index_name = genome_dir / config["genome_filename"],
     input:
-        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
     output:
         processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv",
-        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES) 
+        expand(str(align_dir / "{sample}.fastq.gzLog.final.out"), sample=SAMPLES) 
     shell:
         '''
         Rscript {temposeq_script} {params.index_name} {trim_dir} {params.threads}
@@ -150,7 +150,7 @@ rule multiqc:
     message: "running multiqc for temposeq data"
     input:
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
-        expand(str(align_dir / "{sample}.trimmed.fastq.gzLog.final.out"), sample=SAMPLES)
+        expand(str(align_dir / "{sample}.fastq.gzLog.final.out"), sample=SAMPLES)
     output:
         qc_dir / "MultiQC_Report.html"
     log: log_dir / "multiqc.log" 
