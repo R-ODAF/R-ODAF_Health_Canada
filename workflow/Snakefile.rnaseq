@@ -53,7 +53,7 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
         qc_dir / "multiqc_report.html",
         processed_dir / "genes.data.tsv",
         processed_dir / "isoforms.data.tsv" 
@@ -77,7 +77,7 @@ rule all:
 
 rule fastp_all:
     input:
-        expand(str(trim_dir / "{sample}.trimmed.fastq.gz"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
     log: log_dir / "bbduk_all.log"
 
 if config["mode"] == "pe":
@@ -86,8 +86,8 @@ if config["mode"] == "pe":
             R1=ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
             R2=ancient(str(raw_dir / "{sample}.R2.fastq.gz")),
         output:
-            R1 = trim_dir / "{sample}.R1.trimmed.fastq.gz",
-            R2 = trim_dir / "{sample}.R2.trimmed.fastq.gz",
+            R1 = trim_dir / "{sample}.R1.fastq.gz",
+            R2 = trim_dir / "{sample}.R2.fastq.gz",
             json = trim_dir / "{sample}_fastp.json",
             html = trim_dir / "{sample}_fastp.html",
         log:
@@ -128,7 +128,7 @@ if config["mode"] == "se":
         input:
             R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
         output:
-            R1 = trim_dir / "{sample}.trimmed.fastq.gz",
+            R1 = trim_dir / "{sample}.fastq.gz",
             json = trim_dir / "{sample}_fastp.json",
             html = trim_dir / "{sample}_fastp.html",
         log:
@@ -199,8 +199,8 @@ rule STAR_all:
 if config["mode"] == "pe":
     rule STAR:
         input:
-            R1 = trim_dir / "{sample}.R1.trimmed.fastq.gz",
-            R2 = trim_dir / "{sample}.R2.trimmed.fastq.gz",
+            R1 = trim_dir / "{sample}.R1.fastq.gz",
+            R2 = trim_dir / "{sample}.R2.fastq.gz",
             index = genome_dir / "STAR_index",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
@@ -226,7 +226,7 @@ if config["mode"] == "pe":
 if config["mode"] == "se":
     rule STAR:
         input:
-            R1 = trim_dir / "{sample}.trimmed.fastq.gz",
+            R1 = trim_dir / "{sample}.fastq.gz",
             index = genome_dir / "STAR_index",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
