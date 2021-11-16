@@ -2430,15 +2430,13 @@ write.table(as.data.frame(enrich_go_cc),
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
 ```
 
-```{r plot_GO_analysis_bp, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_bp, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_bp)) {
   if (nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_bp, font.size = 9, showCategory = 20)  +
       theme(axis.text.y = element_text(angle = 0)) +
       scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
-    
-    
-    
+
     simplified_bp <- simplify(enrich_go_bp, cutoff = 0.7, by = "p.adjust", select_fun = min)
     # Max size of gene set... useful for visualizing networks
     simplified_bp_for_network <- simplified_bp %>% DOSE::gsfilter(by = "GSSize", max = 400)
@@ -2448,34 +2446,36 @@ if (!is.null(enrich_go_bp)) {
       filter(p.adjust < .05, qvalue < 0.05) %>%
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
-    
-    show3 <- simplified_bp_filt$Description[1:3] # Top 3
-    show3 <- show3[!is.na(show3)]
-    show5 <- simplified_bp_filt$Description[1:5] # Top 5
-    show5 <- show5[!is.na(show5)]
-    show10 <- simplified_bp_filt$Description[1:10] # Top 10
-    show10 <- show10[!is.na(show10)]
+
+    if (nrow(as.data.frame(simplified_bp_filt)) < 10) {
+        show_num <- simplified_bp_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_bp_filt$Description[1:10] # Top 10
+      }
     
     plot2 <- cnetplot(simplified_bp,
                       foldChange = foldChanges,
-                      showCategory = show10,
+                      showCategory = show_num,
                       cex_label_gene = 0.3)
     
     plot3 <- upsetplot(enrich_go_bp)
-    plot4 <- heatplot(simplified_bp, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- heatplot(simplified_bp, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     print(plot2)
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected") }
+} else { cat("No significantly enriched terms using criteria selected") }
 ```
 
 ## Molecular Functions
 
-```{r plot_GO_analysis_mf, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_mf, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_mf)) {
   
   if (nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
@@ -2493,34 +2493,39 @@ if (!is.null(enrich_go_mf)) {
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
     
-    show3 <- simplified_mf_filt$Description[1:3] # Top 3
-    show5 <- simplified_mf_filt$Description[1:5] # Top 5
-    show10 <- simplified_mf_filt$Description[1:10] # Top 10
+    if (nrow(as.data.frame(simplified_mf)) < 10) {
+        show_num <- simplified_mf_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_mf_filt$Description[1:10] # Top 10
+      }
     
     if (nrow(simplified_mf) > 3) {
       plot2 <- cnetplot(simplified_mf,
                         foldChange = foldChanges,
-                        showCategory = show10,
+                        showCategory = show_num,
                         cex_label_gene = 0.3)
     }
     
     enrich_go_mf_upset <- enrich_go_mf
     enrich_go_mf_upset@result$Description <- str_trunc(enrich_go_mf_upset@result$Description, width = 50)
     plot3 <- upsetplot(enrich_go_mf_upset)
-    plot4 <- enrichplot::heatplot(simplified_mf, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- enrichplot::heatplot(simplified_mf, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     if (nrow(simplified_mf) > 3) {print(plot2)} else {print("Network plot not shown due to a limited number of enriched terms.")}
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected") }
+} else {cat("No significantly enriched terms using criteria selected") }
 ```
 
 ## Cellular Component
 
-```{r plot_GO_analysis_cc, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_cc, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_cc)) {
   if (nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_cc, font.size = 9)  +
@@ -2536,28 +2541,33 @@ if (!is.null(enrich_go_cc)) {
       filter(p.adjust < .05, qvalue < 0.05) %>%
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
-    
-    show3 <- simplified_cc_filt$Description[1:3] # Top 3
-    show5 <- simplified_cc_filt$Description[1:5] # Top 5
-    show10 <- simplified_cc_filt$Description[1:10] # Top 10
+
+    if (nrow(as.data.frame(simplified_cc_filt)) < 10) {
+      show_num <- simplified_cc_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_cc_filt$Description[1:10] # Top 10
+      }
     
     plot2 <- cnetplot(simplified_cc,
                       foldChange = foldChanges,
-                      showCategory = show10,
+                      showCategory = show_num,
                       cex_label_gene = 0.3)
     
     enrich_go_cc_upset <- enrich_go_cc
     enrich_go_cc_upset@result$Description <- str_trunc(enrich_go_cc_upset@result$Description, width = 50)
     plot3 <- upsetplot(enrich_go_cc_upset)
-    plot4 <- enrichplot::heatplot(simplified_cc, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- enrichplot::heatplot(simplified_cc, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     print(plot2)
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected")}
+} else {cat("No significantly enriched terms using criteria selected")}
 ```
 
 ```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 & nrow(significantResults) > 0}
