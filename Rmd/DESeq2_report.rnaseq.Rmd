@@ -1106,7 +1106,7 @@ if (Platform == "TempO-Seq") {
   id_table_entrez <- id_table_entrez %>%
     dplyr::left_join(biospyder,
                      by = setNames(biospyder_ID, biospyder_filter) )
-  id_table_entrez$Probe.Name <- toupper(id_table_entrez$Probe.Name) #hackity hack hack for mouse S1500
+  id_table_entrez[,biomart_filter] <- toupper(id_table_entrez[,biomart_filter]) #hackity hack hack for mouse S1500 - extra hack for cases where probe name isn't the column name
   # Note that the setNames() function above actually reverses the arguments...
   id_table <- id_table_entrez[, c(biomart_filter,
                                   "ensembl_gene_id",
@@ -1430,6 +1430,10 @@ short_contrast_names <- stringr::str_trunc(short_contrast_names,
                                            31,
                                            side = "right",
                                            ellipsis = "")
+# Get rid of illegal characters... I'm sure there will be more some day
+short_contrast_names <- gsub(pattern = ":",
+                             replacement = ".",
+                             x = short_contrast_names)
 
 for (i in 1:length(levels(factor(allResults$contrast)))) {
   print(i)
@@ -1518,14 +1522,18 @@ data_pca <- plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld)), retu
 ## Get percent of variance explained
 percentVar <- round(100 * attr(data_pca, "percentVar"))
 ## Plot
-plot_ly(data = data_pca,
+highlight_pca <- highlight_key(data_pca, ~group)
+p <- plot_ly(data = highlight_pca,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
         text = ~name,
-        type = "scatter") %>%
+        type = "scatter",
+        mode = "markers") %>%
   layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
          yaxis = list(title = paste0("PC2: ", percentVar[1] ,"% variance")))
+highlight( p, on = "plotly_click", off = "plotly_doubleclick", color = "red" )
+
 ```
 
 This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
@@ -1545,7 +1553,8 @@ if (length(rld_degs_names) > 1) {
 
   ## Get percent of variance explained
   percentVarDEGs <- round(100 * attr(PCAplotDEGs, "percentVar"))
-  plot_ly(data = PCAplotDEGs,
+  highlight_PCAplotDEGs <-  highlight_key(PCAplotDEGs, ~group)
+  p <- plot_ly(data = highlight_PCAplotDEGs,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
@@ -1553,6 +1562,7 @@ if (length(rld_degs_names) > 1) {
         type = "scatter") %>%
   layout(xaxis = list(title = paste0("PC1: ", percentVarDEGs[1] ,"% variance")),
          yaxis = list(title = paste0("PC2: ", percentVarDEGs[1] ,"% variance")))
+  highlight( p, on = "plotly_click", off = "plotly_doubleclick", color = "red" )
 } else {
   print("Insufficient DEGs found.")
   percentVarDEGs <- 0
@@ -1576,7 +1586,8 @@ rld_top <- rld[select,]
 ## Get percent of variance explained
 data_pcaTop <- plotPCA(rld_top, intgroup = params$design, returnData = TRUE, ntop = nrow(rld_top))
 percentVarTop <- round(100 * attr(data_pcaTop, "percentVar"))
-plot_ly(data = data_pcaTop,
+highlight_data_pcaTop <- highlight_key(data_pcaTop, ~group)
+plot_ly(data = highlight_data_pcaTop,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
@@ -2053,7 +2064,7 @@ plotCounts_gg <- function(i, dds, intgroup) {
                        intgroup = intgroup,
                        returnData = TRUE)
     plot_title <- paste(id_table[[biomart_filter]][grep(i,id_table[[biomart_filter]])],
-                        id_table[[species_gene_symbol]][grep(i  ,id_table[[biomart_filter]])])
+                        id_table[[species_gene_symbol]][grep(i, id_table[[biomart_filter]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}
@@ -2227,24 +2238,93 @@ allResultsOrdered_logFC_filter %>%
                  "), grouped by treatment"))
 ```
 
-# Volcano plot
+# Volcano plots
 
 This section shows a volcano plot for each contrast.  
+
+The tabs show each contrast interactively.
+
+## All data
 
 Note that scales are set manually for this plot: therefore, there may be data points outside the range shown (see warnings).  
 
 Data reported as significant are shown as red points.
 
-```{r 'volcano-plot', fig.width = 12, fig.height = 6, warning = TRUE, collapse = TRUE}
+```{r 'volcano-plot', fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
-  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
-  facet_wrap(~contrast, ncol = 4) + # , scales = "free"
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red", text = species_gene_symbol) +
   geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
   geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
-  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) + # 
-  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) # 
+  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
+  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) + 
+  facet_wrap(~contrast, ncol = 4, labeller = labeller(
+    .default = label_wrap_gen(15)))
 ```
+
+## By contrast
+
+```{r plotly_volcanos}
+volcano_df <- as.data.frame(allResults) %>%
+  dplyr::select(c(biomart_filter,
+                  species_gene_symbol,
+                  "log2FoldChange",
+                  "linearFoldChange",
+                  "padj","contrast")) %>%
+  distinct()
+volcano_df_sig <- as.data.frame(significantResults)
+volcano_df["sig_group"] <- "Not significant"
+  volcano_df[which(volcano_df['padj'] < alpha &
+                     abs(volcano_df['linearFoldChange']) < linear_fc_filter ),
+             "sig_group"] <- paste0("FDR >", alpha)
+  volcano_df[which(volcano_df['padj'] > alpha &
+                     abs(volcano_df['linearFoldChange']) > linear_fc_filter ),
+             "sig_group"] <- paste0("Linear fold change >", linear_fc_filter)
+  volcano_df[!is.na(volcano_df[['padj']]) &
+               abs(volcano_df['linearFoldChange']) > linear_fc_filter &
+               volcano_df['padj'] < alpha &
+               volcano_df[[biomart_filter]] %in% volcano_df_sig[[biomart_filter]],
+             "sig_group"] <- "Passed all filters"
+  
+volcano_df_shared <- SharedData$new(volcano_df)
+volcano_contrasts <- unique(allResults$contrast)
+
+contrast_init = volcano_contrasts[1]
+i = as.character(which(volcano_df$contrast == contrast_init))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(volcano_df_shared,
+               "transceiver",
+               init = i,
+               channel = "filter",
+               reset = rownames(volcano_df))
+
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(3,NA),
+  list(
+    filter_select("contrast_to_filter",
+                  "Contrast",
+                  volcano_df_shared,
+                  ~contrast,
+                  volcano_contrasts,
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = volcano_df_shared,
+            x = ~log2FoldChange,
+            y = ~-log10(padj),
+                             type = 'scatter',
+                             mode = 'markers',
+                             color = ~sig_group,
+                             text = formula(paste0(paste0("~"),
+                                                   paste0(species_gene_symbol)))) %>%
+    layout(xaxis = list(title = 'log2 Fold Change'),
+           yaxis = list(title = '-log10 adjusted p-value')),
+    # How to add title that gets updated??? Same problem with gene plots.
+    tx)
+)
+```
+
 
 
 # GO Enrichment Analysis {.tabset .tabset-fade}
@@ -2350,15 +2430,13 @@ write.table(as.data.frame(enrich_go_cc),
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
 ```
 
-```{r plot_GO_analysis_bp, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_bp, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_bp)) {
   if (nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_bp, font.size = 9, showCategory = 20)  +
       theme(axis.text.y = element_text(angle = 0)) +
       scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
-    
-    
-    
+
     simplified_bp <- simplify(enrich_go_bp, cutoff = 0.7, by = "p.adjust", select_fun = min)
     # Max size of gene set... useful for visualizing networks
     simplified_bp_for_network <- simplified_bp %>% DOSE::gsfilter(by = "GSSize", max = 400)
@@ -2368,34 +2446,36 @@ if (!is.null(enrich_go_bp)) {
       filter(p.adjust < .05, qvalue < 0.05) %>%
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
-    
-    show3 <- simplified_bp_filt$Description[1:3] # Top 3
-    show3 <- show3[!is.na(show3)]
-    show5 <- simplified_bp_filt$Description[1:5] # Top 5
-    show5 <- show5[!is.na(show5)]
-    show10 <- simplified_bp_filt$Description[1:10] # Top 10
-    show10 <- show10[!is.na(show10)]
+
+    if (nrow(as.data.frame(simplified_bp_filt)) < 10) {
+        show_num <- simplified_bp_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_bp_filt$Description[1:10] # Top 10
+      }
     
     plot2 <- cnetplot(simplified_bp,
                       foldChange = foldChanges,
-                      showCategory = show10,
+                      showCategory = show_num,
                       cex_label_gene = 0.3)
     
     plot3 <- upsetplot(enrich_go_bp)
-    plot4 <- heatplot(simplified_bp, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- heatplot(simplified_bp, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     print(plot2)
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected") }
+} else { cat("No significantly enriched terms using criteria selected") }
 ```
 
 ## Molecular Functions
 
-```{r plot_GO_analysis_mf, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_mf, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_mf)) {
   
   if (nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
@@ -2413,34 +2493,39 @@ if (!is.null(enrich_go_mf)) {
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
     
-    show3 <- simplified_mf_filt$Description[1:3] # Top 3
-    show5 <- simplified_mf_filt$Description[1:5] # Top 5
-    show10 <- simplified_mf_filt$Description[1:10] # Top 10
+    if (nrow(as.data.frame(simplified_mf)) < 10) {
+        show_num <- simplified_mf_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_mf_filt$Description[1:10] # Top 10
+      }
     
     if (nrow(simplified_mf) > 3) {
       plot2 <- cnetplot(simplified_mf,
                         foldChange = foldChanges,
-                        showCategory = show10,
+                        showCategory = show_num,
                         cex_label_gene = 0.3)
     }
     
     enrich_go_mf_upset <- enrich_go_mf
     enrich_go_mf_upset@result$Description <- str_trunc(enrich_go_mf_upset@result$Description, width = 50)
     plot3 <- upsetplot(enrich_go_mf_upset)
-    plot4 <- enrichplot::heatplot(simplified_mf, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- enrichplot::heatplot(simplified_mf, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     if (nrow(simplified_mf) > 3) {print(plot2)} else {print("Network plot not shown due to a limited number of enriched terms.")}
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected") }
+} else {cat("No significantly enriched terms using criteria selected") }
 ```
 
 ## Cellular Component
 
-```{r plot_GO_analysis_cc, message = FALSE, warning = FALSE, fig.width = 12, collapse = TRUE}
+```{r plot_GO_analysis_cc, warning = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_cc)) {
   if (nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_cc, font.size = 9)  +
@@ -2456,28 +2541,33 @@ if (!is.null(enrich_go_cc)) {
       filter(p.adjust < .05, qvalue < 0.05) %>%
       mutate(GeneRatio = DOSE::parse_ratio(GeneRatio)) %>%
       arrange(desc(GeneRatio))
-    
-    show3 <- simplified_cc_filt$Description[1:3] # Top 3
-    show5 <- simplified_cc_filt$Description[1:5] # Top 5
-    show10 <- simplified_cc_filt$Description[1:10] # Top 10
+
+    if (nrow(as.data.frame(simplified_cc_filt)) < 10) {
+      show_num <- simplified_cc_filt$Description # Top N less than 10
+      } else {
+        show_num <- simplified_cc_filt$Description[1:10] # Top 10
+      }
     
     plot2 <- cnetplot(simplified_cc,
                       foldChange = foldChanges,
-                      showCategory = show10,
+                      showCategory = show_num,
                       cex_label_gene = 0.3)
     
     enrich_go_cc_upset <- enrich_go_cc
     enrich_go_cc_upset@result$Description <- str_trunc(enrich_go_cc_upset@result$Description, width = 50)
     plot3 <- upsetplot(enrich_go_cc_upset)
-    plot4 <- enrichplot::heatplot(simplified_cc, foldChange = foldChanges, showCategory = show10) +
+    plot4 <- enrichplot::heatplot(simplified_cc, foldChange = foldChanges, showCategory = show_num) +
       scale_y_discrete(labels = function(x) stringr::str_trunc(x, width = 50))
     
     print(plot1)
     print(plot2)
     print(plot3)
     print(plot4)
+  } else {
+    num_terms <- nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05))
+    cat(paste0(num_terms," enriched terms found. This is not enough to report in the results."))
   }
-} else {print("No significantly enriched terms using criteria selected")}
+} else {cat("No significantly enriched terms using criteria selected")}
 ```
 
 ```{r run_pathway_analysis_child_document, child = pathway_analysis, eval = params$run_pathway_analysis & length(entrezDEGs) > 1 & nrow(significantResults) > 0}
