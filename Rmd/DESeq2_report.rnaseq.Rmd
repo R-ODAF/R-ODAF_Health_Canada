@@ -1522,14 +1522,18 @@ data_pca <- plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld)), retu
 ## Get percent of variance explained
 percentVar <- round(100 * attr(data_pca, "percentVar"))
 ## Plot
-plot_ly(data = data_pca,
+highlight_pca <- highlight_key(data_pca, ~group)
+p <- plot_ly(data = highlight_pca,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
         text = ~name,
-        type = "scatter") %>%
+        type = "scatter",
+        mode = "markers") %>%
   layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
          yaxis = list(title = paste0("PC2: ", percentVar[1] ,"% variance")))
+highlight( p, on = "plotly_click", off = "plotly_doubleclick", color = "red" )
+
 ```
 
 This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
@@ -1549,7 +1553,8 @@ if (length(rld_degs_names) > 1) {
 
   ## Get percent of variance explained
   percentVarDEGs <- round(100 * attr(PCAplotDEGs, "percentVar"))
-  plot_ly(data = PCAplotDEGs,
+  highlight_PCAplotDEGs <-  highlight_key(PCAplotDEGs, ~group)
+  p <- plot_ly(data = highlight_PCAplotDEGs,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
@@ -1557,6 +1562,7 @@ if (length(rld_degs_names) > 1) {
         type = "scatter") %>%
   layout(xaxis = list(title = paste0("PC1: ", percentVarDEGs[1] ,"% variance")),
          yaxis = list(title = paste0("PC2: ", percentVarDEGs[1] ,"% variance")))
+  highlight( p, on = "plotly_click", off = "plotly_doubleclick", color = "red" )
 } else {
   print("Insufficient DEGs found.")
   percentVarDEGs <- 0
@@ -1580,7 +1586,8 @@ rld_top <- rld[select,]
 ## Get percent of variance explained
 data_pcaTop <- plotPCA(rld_top, intgroup = params$design, returnData = TRUE, ntop = nrow(rld_top))
 percentVarTop <- round(100 * attr(data_pcaTop, "percentVar"))
-plot_ly(data = data_pcaTop,
+highlight_data_pcaTop <- highlight_key(data_pcaTop, ~group)
+plot_ly(data = highlight_data_pcaTop,
         x = ~PC1,
         y = ~PC2,
         color = ~group,
