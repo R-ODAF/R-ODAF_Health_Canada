@@ -544,7 +544,8 @@ Samples less than `r align_threshold` aligned reads removed.
 
 ```{r fraction_mapped_reads}
 if (Platform == "TempO-Seq") {
-  QAQC$FMR <- mu$pct_mapped
+  FMR_df <- rownames_to_column(mu) %>% mutate(FMR = pct_mapped) %>% select(rowname,FMR)
+  QAQC <- QAQC %>% left_join(FMR_df, QAQC, by=c("Sample" = "rowname"))
 } else {
   QAQC <- QAQC %>% left_join(mu, by = "Sample")
 }
@@ -1103,6 +1104,8 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 ```{r plate_pos, eval = are_there_plates}
 if (!is.null(batch_var)) {
   batch_length <- length(unique(QAQC_annotated[,batch_var]))
+} else{
+  batch_length <- 7
 }
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
 rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
