@@ -11,12 +11,12 @@ params:
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
   groups:
     value:
-      one: ["dose"]
-      two: ["chemical_timepoint"]
-      three: ["row", "column"]
-      four: ["temposeq_plate"]
-      #As many groups as desired...
-  batch_var: "temposeq_plate"          # "batch"
+    one: ["chemical", "dose"]
+    two: ["I7_Index_ID", "I5_Index_ID"] 
+    three: ["row", "column"]
+    #4: ["batch"]
+    #As many groups as desired...
+  batch_var: "batch"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "chemical"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
@@ -338,18 +338,21 @@ In the code below, a `r clust_method` distance of `r tree_height_cutoff` is used
 tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
 n <- table(tree_groups)
 n <- sort(n, decreasing = T)
-n <- n[2:dim(n)]
 
-if (length(n > 0)) {
-  flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
-  write.table(d[flag_cluster,],
-              file.path(paths$processed, "outliers_cluster_analysis.txt"),
-              sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-  d[flag_cluster,] %>%
-    dplyr::select(original_names, dendro_color_by) %>%
-    kable(caption = "Samples flagged as outliers by clustering distance") %>%
-    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-    scroll_box(width = "100%", height = "480px")
+if(!is.null(dim(n))){
+  n <- n[2:dim(n)]
+  
+  if (length(n > 0)) {
+    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
+    write.table(d[flag_cluster,],
+                file.path(paths$processed, "outliers_cluster_analysis.txt"),
+                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+    d[flag_cluster,] %>%
+      dplyr::select(original_names, dendro_color_by) %>%
+      kable(caption = "Samples flagged as outliers by clustering distance") %>%
+      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+      scroll_box(width = "100%", height = "480px")
+  }
 }
 ```
 

@@ -33,8 +33,6 @@ for (name in names(config$DESeq2)) {
   }
 }
 
-print(params)
-
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
                           stringsAsFactors = FALSE,
@@ -87,8 +85,7 @@ if (is.na(params$group_facet)) {
     unique()
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
-  print(facets)
-  for (i in facets) {
+  for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
     filename <- paste0(params$platform, "_",
