@@ -3,7 +3,7 @@
 library(tidyverse)
 require(yaml)
 
-Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
+#Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
 
 
 config <- yaml::read_yaml(file.path(here::here(),
