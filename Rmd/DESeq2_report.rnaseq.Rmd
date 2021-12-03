@@ -1310,6 +1310,9 @@ kable(degTable,
 #######################################
 ### Write results table from DESeq2
 #######################################
+degSummary <- rbind(c(params$group_filter, degTable[[1]]),
+                    c(params$group_filter, degTable[[2]]))
+
 write.table(allResults,
             file = file.path(paths$DEG_output,
                              paste0(NORM_TYPE,"-DESeq_output_ALL.txt")),
@@ -1330,6 +1333,10 @@ write.table(Counts,
             file = file.path(paths$DEG_output,
                              paste0(NORM_TYPE, "-Per_sample_normalized_counts.txt")),
             quote = F, sep = '\t', col.names = NA)
+write.table(degSummary,
+            file = file.path(paths$DEG_output,
+                             paste0(NORM_TYPE, "-DEG_summary.txt")),
+            quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
 ```
 
 The code above (not shown by default) writes text files for each DEG summary type.
