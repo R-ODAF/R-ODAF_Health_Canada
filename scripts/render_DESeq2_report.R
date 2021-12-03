@@ -89,6 +89,9 @@ if (is.na(params$group_facet)) {
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
   print(facets)
+  # Initialize a summary file
+  make_table <- paste0('touch ', file.path(params$projectdir, "DEG_output/DEG_summary.txt"))
+  system(command = make_table)
   for (i in facets) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
@@ -106,4 +109,15 @@ if (is.na(params$group_facet)) {
                       params = params,
                       envir = new.env())
   }
+  deg_files <- fs::dir_ls(file.path(config$DESeq2$projectdir, "DEG_output"),
+                          regexp = "\\-DEG_summary.txt$", recurse = T)
+  # This depends on 'cat' being available on the command line (i.e., linux-specific)
+  # Also some insane quoting going on here, but I don't see an easier way
+  system(paste0('cat "', paste(deg_files, collapse='"  "'),
+                '"  >  ', file.path(config$DESeq2$projectdir,
+                                 "DEG_output/DEG_summary.txt")))
+  
+  # This would probably fail in cases where different numbers of contrasts exists across facets.
+  # But could otherwise be useful?
+  # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 
 }
