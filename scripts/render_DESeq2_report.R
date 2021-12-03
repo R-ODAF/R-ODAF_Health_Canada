@@ -85,6 +85,7 @@ if (is.na(params$group_facet)) {
              c(params$exclude_groups, skip_extra)) %>%
     pull(params$group_facet) %>% 
     unique()
+  facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
   print(facets)
