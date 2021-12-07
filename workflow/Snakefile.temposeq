@@ -117,7 +117,8 @@ rule fastp:
         tail_quality = 3,
         right_size = 4,
         right_quality = 15,
-        length_required = 36,
+        length_required = 50,
+        trim_tail1 = 1,
         threads = config["threads"],
     shell:
         '''
@@ -136,6 +137,7 @@ rule fastp:
         --cut_right_window_size {params.right_size} \
         --cut_right_mean_quality {params.right_quality} \
         --length_required {params.length_required} \
+        --trim_tail1 {params.trim_tail1} \
         --thread {params.threads} \
         '''
 
