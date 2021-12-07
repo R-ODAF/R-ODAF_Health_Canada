@@ -717,7 +717,7 @@ This table shows the final list of samples that were used in the data analysis (
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
   if(length(doseCol)>1){
-    doseCol <- doseCol[1]
+    doseCol <- doseCol[1] # This should be assigned explictly instead. Todo.
   }
   knitr::kable(DESeqDesign %>%
                  group_by(!!sym(params$design)) %>%
@@ -2006,7 +2006,6 @@ genes_filtered <- unlist(genes_filtered) %>% unique()
 
 
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
-  doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
   # Create input file...
   read.counts <- as.data.frame(counts(dds, normalized = TRUE))
   lognorm.read.counts <- log2(read.counts + 1)
