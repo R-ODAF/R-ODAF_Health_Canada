@@ -1,17 +1,17 @@
 ---
 params:
   projectdir: !r here::here() # Can hard code if for some reason you need that
-  project_name: "Halappanavar CuO"        # Change depending on your project name
-  species: "mouse"                 # one of human, mouse, rat, hamster
-  design: "Treatment_dose_description"
-  intgroup: ["Treatment_dose_description"]            # experimental group of interest plus covariates; can be more than one
+  project_name: "test data"        # Change depending on your project name
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   nuisance: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   flag: TRUE                     # runs all analysis by default when set to TRUE
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: Treatment  # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  Nano # Optional. Only look at a particular group within a facet.
-  sortcol: Dose
-  strict_contrasts: F # If TRUE, use BOTH columns (exp, cont) of contrasts file to limit what is included in the report. Use with caution!
+  group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  "CISP"       # null # Which group will this report be done on?
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  !r NA # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
@@ -21,6 +21,7 @@ params:
   run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file: "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   nBestFeatures: 20 # The number of best features to make plots of their counts
   nBest: 100 # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50 # Number of most variable genes for heatmap
@@ -166,7 +167,7 @@ if (species == "human") {
   ensembl_species <- "hsapiens_gene_ensembl"
   species_gene_symbol <- "external_gene_name"
   kegg_organism <- "hsa"
-  temposeq_manifest <- "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  temposeq_manifest <- params$biospyder_manifest_file #"191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # options:
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
@@ -181,7 +182,7 @@ if (species == "human") {
     ensembl_species <- "mmusculus_gene_ensembl"
     species_gene_symbol <- "mgi_symbol"
     kegg_organism <- "mmu"
-    temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.txt" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
+    temposeq_manifest <- params$biospyder_manifest_file  # "181130 Mouse S1500+ Surrogate 1.2 Manifest.txt" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
 } else {
   if (species == "rat") {
     # Rat: 
@@ -192,7 +193,7 @@ if (species == "human") {
     ensembl_species <- "rnorvegicus_gene_ensembl"
     species_gene_symbol <- "rgd_symbol"
     kegg_organism <- "rno"
-    temposeq_manifest <- "190809 Rat Whole Transcriptome 1.0 Manifest.xlsx"
+    temposeq_manifest <- params$biospyder_manifest_file # "190809 Rat Whole Transcriptome 1.0 Manifest.xlsx"
 } else {
   if (species == "hamster") {
     # Golden hamster:
@@ -1788,14 +1789,21 @@ matRV <- assay(rld)[select,]
 matRV <- matRV - rowMeans(matRV)
 genes_for_heatmap <- get_clean_names(row.names(matRV))
 
+cutree_rows <- 3
+cutree_cols <- 4
+
+if(nrow(heatmap_df) < 5){
+  cutree_cols <- 2
+}
+
 pheatmap(matRV,
          #color = rev(brewer.pal(11, "RdBu")), # inferno(10),
          annotation_col = heatmap_df,
          labels_row = genes_for_heatmap,
          border_color = NA,
          scale = "row",
-         cutree_rows = 3,
-         cutree_cols = 4)
+         cutree_rows = cutree_rows,
+         cutree_cols = cutree_cols)
 
 ```
 

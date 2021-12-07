@@ -3,6 +3,9 @@
 library(tidyverse)
 require(yaml)
 
+#Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
+
+
 config <- yaml::read_yaml(file.path(here::here(),
                                     "config/config.yaml"),
                           eval.expr = T)
@@ -32,8 +35,6 @@ for (name in names(config$DESeq2)) {
     params[[name]] <- param
   }
 }
-
-print(params)
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
@@ -92,7 +93,7 @@ if (is.na(params$group_facet)) {
   # Initialize a summary file
   make_table <- paste0('touch ', file.path(params$projectdir, "DEG_output/DEG_summary.txt"))
   system(command = make_table)
-  for (i in facets) {
+  for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
     filename <- paste0(params$platform, "_",
