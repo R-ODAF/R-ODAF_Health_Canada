@@ -234,7 +234,7 @@ mu <- mu[d$original_names,]
 ############################################################################
 # Check if there's a file called remove.txt in metadata before proceeding...
 remove_file <- file.path(paths$metadata,"remove.txt")
-if (!file.exists(remove_file)) {
+if (file.exists(remove_file)) {
   # How many groups in total are being input?
   DESeqDesign %>% group_by(group) %>% dplyr::count()
   
