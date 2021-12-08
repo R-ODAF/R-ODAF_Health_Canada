@@ -90,9 +90,6 @@ if (is.na(params$group_facet)) {
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
   print(facets)
-  # Initialize a summary file
-  make_table <- paste0('touch ', file.path(params$projectdir, "DEG_output/DEG_summary.txt"))
-  system(command = make_table)
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
