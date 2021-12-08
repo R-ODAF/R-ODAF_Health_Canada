@@ -718,7 +718,7 @@ This table shows the final list of samples that were used in the data analysis (
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
   if(length(doseCol)>1){
-    doseCol <- doseCol[1]
+    doseCol <- doseCol[1] # This should be assigned explictly instead. Todo.
   }
   knitr::kable(DESeqDesign %>%
                  group_by(!!sym(params$design)) %>%
@@ -892,7 +892,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 
 	print(paste0("Filtering genes: 75% of at least 1 group need to be above ", MinCount, " CPM"))
 	SampPerGroup <- table(DE_Design[, DESIGN])
-	if (!SampPerGroup[1] > 1) { next }
+	if (!SampPerGroup[2] > 1) { next }
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
   		
@@ -1311,6 +1311,9 @@ kable(degTable,
 #######################################
 ### Write results table from DESeq2
 #######################################
+degSummary <- rbind(c(params$group_filter, degTable[[1]]),
+                    c(params$group_filter, degTable[[2]]))
+
 write.table(allResults,
             file = file.path(paths$DEG_output,
                              paste0(NORM_TYPE,"-DESeq_output_ALL.txt")),
@@ -1331,6 +1334,10 @@ write.table(Counts,
             file = file.path(paths$DEG_output,
                              paste0(NORM_TYPE, "-Per_sample_normalized_counts.txt")),
             quote = F, sep = '\t', col.names = NA)
+write.table(degSummary,
+            file = file.path(paths$DEG_output,
+                             paste0(NORM_TYPE, "-DEG_summary.txt")),
+            quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
 ```
 
 The code above (not shown by default) writes text files for each DEG summary type.
@@ -2007,7 +2014,6 @@ genes_filtered <- unlist(genes_filtered) %>% unique()
 
 
 if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
-  doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
   # Create input file...
   read.counts <- as.data.frame(counts(dds, normalized = TRUE))
   lognorm.read.counts <- log2(read.counts + 1)

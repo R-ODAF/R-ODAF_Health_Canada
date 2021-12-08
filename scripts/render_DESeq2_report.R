@@ -86,8 +86,10 @@ if (is.na(params$group_facet)) {
              c(params$exclude_groups, skip_extra)) %>%
     pull(params$group_facet) %>% 
     unique()
+  facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$group_facet ,"..."))
+  print(facets)
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
@@ -105,4 +107,15 @@ if (is.na(params$group_facet)) {
                       params = params,
                       envir = new.env())
   }
+  deg_files <- fs::dir_ls(file.path(config$DESeq2$projectdir, "DEG_output"),
+                          regexp = "\\-DEG_summary.txt$", recurse = T)
+  # This depends on 'cat' being available on the command line (i.e., linux-specific)
+  # Also some insane quoting going on here, but I don't see an easier way
+  system(paste0('cat "', paste(deg_files, collapse='"  "'),
+                '"  >  ', file.path(config$DESeq2$projectdir,
+                                 "DEG_output/DEG_summary.txt")))
+  
+  # This would probably fail in cases where different numbers of contrasts exists across facets.
+  # But could otherwise be useful?
+  # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 
 }
