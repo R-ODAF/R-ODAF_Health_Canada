@@ -9,9 +9,9 @@ params:
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
   group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  "BitA"       # null # Which group will this report be done on?
-  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
-  strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
+  lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
+  strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  !r NA # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
@@ -314,8 +314,12 @@ if (!is.na(params$group_facet)) {
   pull(params$design) %>% 
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
-  if (params$strict_contrasts == T) {
+  if (params$lenient_contrasts == T) {
     contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
+                                             V1 %in% contrasts_to_filter  )
+  }
+  if (params$strict_contrasts == T) {
+    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter &
                                              V1 %in% contrasts_to_filter  )
   }
   DESeqDesign <- DESeqDesign %>% dplyr::filter(!!sym(params$design) %in% (unlist(contrasts) %>% unique()) )
@@ -330,12 +334,18 @@ if (any(!is.na(params$exclude_groups))) {
   pull(params$design) %>% 
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
-  if (params$strict_contrasts == T) {
+  if (params$lenient_contrasts == T) {
     contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
                                              V1 %in% contrasts_to_filter  )
   }
+  if (params$strict_contrasts == T) {
+    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter &
+                                             V1 %in% contrasts_to_filter  )
+  }
 }
-if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
+
+
+if (!is.na(params$include_only_column) & any(!is.na(params$include_only_group))) {
   DESeqDesign <- DESeqDesign %>%
     dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
   limit_contrasts <- DESeqDesign %>%
@@ -694,7 +704,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	condition1 <- contrasts[x, 2] # Control
 	condition2 <- contrasts[x, 1] # Experimental
-	print(paste(condition2, " vs ", condition1, ":", NORM_TYPE))
+	message(paste(condition2, " vs ", condition1, ":", NORM_TYPE))
 	
 	DE_Design <- matrix(data = NA, ncol = 2)
 	DE_Design <- as.matrix(DESeqDesign[DESeqDesign[, DESIGN] %in% c(condition1,

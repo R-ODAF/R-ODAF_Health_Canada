@@ -904,8 +904,7 @@ ggplotly(cor_plot_2)
 This tests the Pearson correlation of log2-normalized CPM of read counts. If your data includes reference RNA, it should be shown here. If your data includes two sources of reference RNA, the same standard mix should shower higher correlations than between different standards. The correlations for the same standards across different batches/plates should be relatively high.
 
 ```{r correlation_3, fig.width = 11, fig.height = 10, eval=(length(ref_samples) > 0)}
-ref_correlations <- cor(as.matrix(cpm %>%
-                                      dplyr::select(all_of(ref_samples))),
+ref_correlations <- cor(as.matrix(cpm %>% dplyr::select(all_of(ref_samples))),
                           method = "pearson")
 
 correlation_df <- DESeqDesign %>%
