@@ -1164,8 +1164,13 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 # Need a better way to add row and column labels. Free axes in ggplot don't
 # currently support showing on all facets: https://github.com/tidyverse/ggplot2/issues/4064
 # There is a PR in ggplot to fix this: https://github.com/tidyverse/ggplot2/pull/4467
+```
+
+
+```{r}
 custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 7)
 ```
+
 
 ### Number of Mapped Reads
 
