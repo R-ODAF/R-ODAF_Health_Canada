@@ -420,7 +420,7 @@ if (Platform == "RNA-Seq") {
   } else if (colnames(biospyder)[1] == "Probe.Name") { # mouse S1500, note that spaces arent allowed in R colnames
     biospyder_ID = "Gene.Symbol"
     biomart_filter <- "Probe.Name"
-    biospyder_filter = "external_gene_name"
+    biospyder_filter = species_gene_symbol
   }
 
   # Fill in the blanks for TempO-Seq Manifest...
