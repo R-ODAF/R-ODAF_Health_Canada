@@ -420,7 +420,7 @@ if (Platform == "RNA-Seq") {
   } else if (colnames(biospyder)[1] == "Probe.Name") { # mouse S1500, note that spaces arent allowed in R colnames
     biospyder_ID = "Gene.Symbol"
     biomart_filter <- "Probe.Name"
-    biospyder_filter = "external_gene_name"
+    biospyder_filter = species_gene_symbol
   }
 
   # Fill in the blanks for TempO-Seq Manifest...
@@ -1094,7 +1094,7 @@ genes <- unlist(genes) %>% unique()
 #   } else {
 
 if (Platform == "TempO-Seq") {
-  genes <- biospyder[toupper(biospyder[[biomart_filter]]) %in% genes,] %>% pull(!!ensym(biospyder_ID))
+  genes <- biospyder[biospyder[[biomart_filter]] %in% genes,] %>% pull(!!ensym(biospyder_ID))
   id_table_entrez <- getBM(filters = biospyder_filter,
                         attributes = c(biospyder_filter,
                                       species_gene_symbol,
@@ -1108,7 +1108,7 @@ if (Platform == "TempO-Seq") {
   id_table_entrez <- id_table_entrez %>%
     dplyr::left_join(biospyder,
                      by = setNames(biospyder_ID, biospyder_filter) )
-  id_table_entrez[,biomart_filter] <- toupper(id_table_entrez[,biomart_filter]) #hackity hack hack for mouse S1500 - extra hack for cases where probe name isn't the column name
+  id_table_entrez[,biomart_filter] <- id_table_entrez[,biomart_filter] #hackity hack hack for mouse S1500 - extra hack for cases where probe name isn't the column name
   # Note that the setNames() function above actually reverses the arguments...
   id_table <- id_table_entrez[, c(biomart_filter,
                                   "ensembl_gene_id",
@@ -1733,8 +1733,9 @@ get_clean_names <- function(vector_of_names) {
     dplyr::mutate(combined = coalesce(!!ensym(species_gene_symbol), !!ensym(biomart_filter))) %>%
     dplyr::select(-!!ensym(species_gene_symbol)) %>%
     slice(1) %>% # This is bit of a hack - ran into problems with TempO-Seq probes that map to multiple genes.
-    dplyr::distinct() %>%
-    dplyr::pull(combined)
+    dplyr::distinct()
+  hm_names <- hm_names[match(vector_of_names, hm_names[[biomart_filter]]), ]
+  hm_names <- hm_names %>% dplyr::pull(combined)
   return(hm_names)
 }
 
