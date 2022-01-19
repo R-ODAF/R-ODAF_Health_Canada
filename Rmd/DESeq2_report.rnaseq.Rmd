@@ -868,15 +868,16 @@ The code above (not shown by default) loads in plotting functions specific to th
 
 # Initial setup for DESeq2 contrasts
 cooks   <- F # Sometimes may need consideration
-resList <- list()
-resListAll <- list()
+resListAll <- list() # all results
+resListFiltered <- list() # ODAF filtering applied
+resListSig <- list() # ODAF filtering applied, significant results only
 filterList <- list()
 Counts  <- counts(dds, normalized = TRUE)
 CPMdds  <- cpm(counts(dds, normalized = TRUE))
 
 for (x in 1:nrow(contrasts)) {	# For all comparisons to be done	
 	
-  condition1 <- contrasts[x, 2] # Control
+	condition1 <- contrasts[x, 2] # Control
 	condition2 <- contrasts[x, 1] # Experimental
 	print(paste(condition2, " vs ", condition1, ":", NORM_TYPE))
 	
@@ -1000,12 +1001,12 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	}
 	
 	# Extract the final list of DEGs
-
-	DECounts_real <- DEsamples[rowSums(Filter) == 3 ,]
+	allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
+	DECounts_all_filters <- DEsamples[rowSums(Filter) == 3 ,]
 	DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,]
 	DECounts_spike <- DEsamples[Filter[, 3] == 0 ,]
 	
-  print(paste0("A total of ", nrow(DECounts_real),
+  print(paste0("A total of ", nrow(DECounts_all_filters),
               " DEGs were selected, after ", nrow(DECounts_no_quant),
               " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
               " gene(s) with a spike"))
@@ -1034,7 +1035,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	colnames(norm_data) <- colData(dds)[, DESIGN]
 
-	resList[[x]] <- DECounts_real
+	resListSig[[x]] <- DECounts_all_filters
+	resListFiltered[[x]] <- allCounts_all_filters
 	
 	if (R_ODAF_plots == TRUE) {
   	print("creating Read count Plots")
@@ -1060,8 +1062,9 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 }
 # If there are no significant results - remove the empty contrast from the list:
 # Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
-resList <- resList[!sapply(resList, is.null)]
+resListSig <- resListSig[!sapply(resListSig, is.null)]
 resListAll <- resListAll[!sapply(resListAll, is.null)]
+resListFiltered <- resListFiltered[!sapply(resListFiltered, is.null)]
 ```
 
 The code above (not shown by default) runs the R-ODAF spurious spike detection and outputs the DESeq Results objects as a list for each contrast. As specified by the R-ODAF guidelines, 75% of at least 1 group need to be above `r MinCount` CPM and spurious spikes were removed in which Max-Median > Sum/(Rep + 1).  
@@ -1189,10 +1192,10 @@ annotate_deseq_table <- function(deseq_results_list, filter_results = F) {
 
 # Write dataframe of all results
 # Significant only
-significantResults <- annotate_deseq_table(resList, filter_results = T)
+significantResults <- annotate_deseq_table(resListSig, filter_results = T)
 significantResults <- significantResults %>% dplyr::mutate(contrast = as_factor(contrast))
 # Significant genes, not filtered additionally by the above function
-ODAFResults <- annotate_deseq_table(resList, filter_results = F)
+ODAFResults <- annotate_deseq_table(resListSig, filter_results = F)
 # All results including non-significant
 allResults <- annotate_deseq_table(resListAll, filter_results = F)
 allResults <- allResults %>% dplyr::mutate(contrast = as_factor(contrast))
@@ -1229,19 +1232,19 @@ degTable <- degTable %>%
 summaryTable <- allResults %>%
   dplyr::select(!!ensym(biomart_filter), baseMean)
 contrastsInSummary <- vector()
-for (i in 1:length(resList)) {
+for (i in 1:length(resListSig)) {
   print(i)
-  n <- resList[[i]]@elementMetadata[[2]][2]
+  n <- resListSig[[i]]@elementMetadata[[2]][2]
   n <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", DESIGN), # Might need to be MLE for some tests
             replacement =  paste0("log2 Fold Change"),
-            x = resList[[i]]@elementMetadata[[2]][2])
+            x = resListSig[[i]]@elementMetadata[[2]][2])
   p <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", DESIGN),
-           replacement =  resList[[i]]@elementMetadata[[2]][6], # Not used?
-           x = resList[[i]]@elementMetadata[[2]][2])
+           replacement =  resListSig[[i]]@elementMetadata[[2]][6], # Not used?
+           x = resListSig[[i]]@elementMetadata[[2]][2])
   q <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", DESIGN, "\ "),
             replacement =  "",
-            x = resList[[i]]@elementMetadata[[2]][2])
-  toJoin <- as.data.frame(resList[[i]])
+            x = resListSig[[i]]@elementMetadata[[2]][2])
+  toJoin <- as.data.frame(resListSig[[i]])
   setDT(toJoin, keep.rownames = T)[]
   setnames(toJoin, 1, biomart_filter)
   toJoin <- mutate(toJoin, linearFoldChange = ifelse(log2FoldChange > 0,
@@ -1254,7 +1257,7 @@ for (i in 1:length(resList)) {
   names(summaryTable)[[ncol(summaryTable) - 1]] <- paste0("linearFoldChange_", i)
   names(summaryTable)[[ncol(summaryTable)]] <- paste0("FDR_", i)
   contrastsInSummary[i] <- q
-  print(summary(resList[[i]], pAdjValue))
+  print(summary(resListSig[[i]], pAdjValue))
 }
 
 maxFCs <- allResults %>%
@@ -1278,7 +1281,7 @@ summaryTable <- summaryTable %>%
   dplyr::distinct() %>%
   mutate(maxFoldChange = abs(maxFoldChange)) # This eliminates the direction of change: this way it's easy to sort.
 
-numColsToPrepend <- ncol(summaryTable) - 3*length(resList) - 2 # Number of columns per contrast = 3. Subtract two for the baseMean and genes columns.
+numColsToPrepend <- ncol(summaryTable) - 3*length(resListSig) - 2 # Number of columns per contrast = 3. Subtract two for the baseMean and genes columns.
 colPositionsToPrependSTART <- ncol(summaryTable) - numColsToPrepend + 1
 colPositionsOfData <- ncol(summaryTable) - numColsToPrepend
 summaryTable <- as.data.frame(summaryTable)
@@ -1913,19 +1916,19 @@ This table shows the number of features with p-values less or equal than some co
 ## Adjusted p-values histogram plot
 ggplot(allResults, aes(x = padj)) +
   geom_histogram(alpha = 0.5, position = 'identity', bins = 50) +
-  labs(title = paste('Histogram of', elementMetadata(resList[[1]])$description[grep('adjusted', elementMetadata(resList[[1]])$description)])) +
+  labs(title = paste('Histogram of', elementMetadata(resListSig[[1]])$description[grep('adjusted', elementMetadata(resListSig[[1]])$description)])) +
   xlab('Adjusted p-values') +
   facet_wrap( ~ contrast, ncol = 2)
 ```
 
-This plot shows a histogram of the `r elementMetadata(resList[[1]])$description[grep('adjusted', elementMetadata(resList[[1]])$description)]`. It might be skewed right or left, or flat as shown in the [Wikipedia examples](https://en.wikipedia.org/wiki/Histogram#Examples). 
+This plot shows a histogram of the `r elementMetadata(resListSig[[1]])$description[grep('adjusted', elementMetadata(resListSig[[1]])$description)]`. It might be skewed right or left, or flat as shown in the [Wikipedia examples](https://en.wikipedia.org/wiki/Histogram#Examples). 
 
 ```{r padjSumm}
 ## Adjusted p-values distribution summary
 summary(res.df$padj)
 ```
 
-This is the numerical summary of the distribution of the `r elementMetadata(resList[[1]])$description[grep('adjusted', elementMetadata(resList[[1]])$description)]`.
+This is the numerical summary of the distribution of the `r elementMetadata(resListSig[[1]])$description[grep('adjusted', elementMetadata(resListSig[[1]])$description)]`.
 
 ```{r padjTable, results = 'asis'}
 ## Split features by different adjusted p-value cutoffs
@@ -1937,7 +1940,7 @@ padj_table <- do.call(rbind, padj_table)
 kable(padj_table, format = 'markdown', align = c('c', 'c'))
 ```
 
-This table shows the number of features with `r elementMetadata(resList[[1]])$description[grep('adjusted', elementMetadata(resList[[1]])$description)]` less or equal than some commonly used cutoff values. 
+This table shows the number of features with `r elementMetadata(resListSig[[1]])$description[grep('adjusted', elementMetadata(resListSig[[1]])$description)]` less or equal than some commonly used cutoff values. 
 
 # Tables of top features
 
@@ -2006,7 +2009,7 @@ DT::datatable(res.df.dt,
 # Run this code conditional on whether there is a column matching the word dose in the metadata
 
 # Compile list of filtered genes
-genes_filtered <- lapply(resList,
+genes_filtered <- lapply(resListFiltered,
                          function(x) row.names(as.data.frame(x)))
 genes_filtered <- unlist(genes_filtered) %>% unique()
 
@@ -2372,7 +2375,7 @@ background <- as.character(background)
 ##### Use "all" argument to only run each once..?
 
 ## Not all genes have a p-value
-table(!is.na(resList[[1]]$padj))
+table(!is.na(resListSig[[1]]$padj))
 
 KeyType <- "ENTREZID" # ENSEMBL? ACCNUM? GID? ENTREZID?
 # head(keys(orgdb, keytype = "ENTREZID"))
@@ -2593,7 +2596,7 @@ if (!is.null(enrich_go_cc)) {
 
 Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.  
 
-There were `r samples_before` samples for which data was collected. A count matrix containing the $`r initialSampleDataCount`$ samples sequenced in this experiment was imported into R for statistical analysis. After removing samples with less than $`r threshold`$ reads, `r filteredSampleDataCount` samples were left. Following the exclusion of other samples *(which ones? Why? Please explain for your experiment, if applicable.)*, there were `r samples_after` samples remaining. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines, genes were filtered to include only those where 75% of at least one experimental group were above `r MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). The samples excluded from analysis are shown in the table below. We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r Platform` data. The log2FoldChange shrinkage procedure used was `r resList[[1]]@priorInfo$type`. An alpha of `r resList[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resList[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resList[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis. Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r linear_fc_filter` and adjusted p-value of `r alpha`.  
+There were `r samples_before` samples for which data was collected. A count matrix containing the $`r initialSampleDataCount`$ samples sequenced in this experiment was imported into R for statistical analysis. After removing samples with less than $`r threshold`$ reads, `r filteredSampleDataCount` samples were left. Following the exclusion of other samples *(which ones? Why? Please explain for your experiment, if applicable.)*, there were `r samples_after` samples remaining. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines, genes were filtered to include only those where 75% of at least one experimental group were above `r MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). The samples excluded from analysis are shown in the table below. We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r Platform` data. The log2FoldChange shrinkage procedure used was `r resListSig[[1]]@priorInfo$type`. An alpha of `r resListSig[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resListSig[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resListSig[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis. Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r linear_fc_filter` and adjusted p-value of `r alpha`.  
 
 ## References {-}
 
