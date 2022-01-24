@@ -114,7 +114,11 @@ run.alignment.analysis.fn <- function(fasta, queryDirectory, num_clusters){
       # If the FASTQ is not zipped
       cmd.notZipped <- paste("STAR --genomeDir ",
                              ref_dir,
+<<<<<<< Updated upstream
                              " --alignEndsType EndToEnd ",
+=======
+#			     " --alignEndsType EndToEnd ",
+>>>>>>> Stashed changes
                              " --genomeLoad LoadAndKeep ",
                              " --limitBAMsortRAM 50000000000 ",
                              " --readFilesIn ", x,
