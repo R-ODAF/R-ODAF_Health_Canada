@@ -71,3 +71,6 @@ DESeq2:
   nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50                   # Number of most variable genes for heatmap
   nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+

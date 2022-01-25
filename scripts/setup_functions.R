@@ -23,12 +23,8 @@ load_species <- function(species){
     species_data$ensembl_species <- "hsapiens_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
     species_data$kegg_organism <- "hsa"
-    species_data$temposeq_manifest <- "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+    species_data$temposeq_manifest <- params$biospyder_manifest_file
     species_data$loaded <- TRUE
-    # options:
-    # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
-    # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
-    # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
   } else if (species == "mouse") {
     # Mouse:
     library('org.Mm.eg.db')
@@ -38,7 +34,7 @@ load_species <- function(species){
     species_data$ensembl_species <- "mmusculus_gene_ensembl"
     species_data$species_gene_symbol <- "mgi_symbol"
     species_data$kegg_organism <- "mmu"
-    species_data$temposeq_manifest <- "181130 Mouse S1500+ Surrogate 1.2 Manifest.txt" # or 190603 Mouse Whole Transcriptome 1.1 Manifest.xlsx
+    species_data$temposeq_manifest <- params$biospyder_manifest_file
     species_data$loaded <- TRUE
   } else if (species == "rat") {
     # Rat: 
@@ -49,7 +45,7 @@ load_species <- function(species){
     species_data$ensembl_species <- "rnorvegicus_gene_ensembl"
     species_data$species_gene_symbol <- "rgd_symbol"
     species_data$kegg_organism <- "rno"
-    species_data$temposeq_manifest <- "190809 Rat Whole Transcriptome 1.0 Manifest.xlsx"
+    species_data$temposeq_manifest <- params$biospyder_manifest_file
     species_data$loaded <- TRUE
   } else if (species == "hamster") {
     # Golden hamster:
@@ -68,7 +64,7 @@ load_species <- function(species){
 get_analysis_id <- function(params){
     # Set analysis ID. This ID will be used as prefix for the output files
     # Normally, as follows: year - project_name - group_filter
-    if (is.na(params$group_filter)) {
+    if (is.na(params$group_filter) || is.null(params$group_filter)) {
     analysisID <- paste(format(Sys.time(), '%Y'), params$project_name, sep = "_")
     } else {
     analysisID <- paste(format(Sys.time(), '%Y'),
