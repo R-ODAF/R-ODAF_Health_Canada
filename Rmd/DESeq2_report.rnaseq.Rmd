@@ -1069,7 +1069,7 @@ resListFiltered <- resListFiltered[!sapply(resListFiltered, is.null)]
 
 The code above (not shown by default) runs the R-ODAF spurious spike detection and outputs the DESeq Results objects as a list for each contrast. As specified by the R-ODAF guidelines, 75% of at least 1 group need to be above `r MinCount` CPM and spurious spikes were removed in which Max-Median > Sum/(Rep + 1).  
 
-The log2FoldChange shrinkage procedure used was `r resList[[1]]@priorInfo$type`. An alpha of `r resList[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resList[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resList[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis.  
+The log2FoldChange shrinkage procedure used was `r resListAll[[1]]@priorInfo$type`. An alpha of `r resListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis.  
 
 
 ## Create annotation tables
