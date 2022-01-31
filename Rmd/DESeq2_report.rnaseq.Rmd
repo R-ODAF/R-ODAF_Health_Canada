@@ -1069,7 +1069,7 @@ resListFiltered <- resListFiltered[!sapply(resListFiltered, is.null)]
 
 The code above (not shown by default) runs the R-ODAF spurious spike detection and outputs the DESeq Results objects as a list for each contrast. As specified by the R-ODAF guidelines, 75% of at least 1 group need to be above `r MinCount` CPM and spurious spikes were removed in which Max-Median > Sum/(Rep + 1).  
 
-The log2FoldChange shrinkage procedure used was `r resList[[1]]@priorInfo$type`. An alpha of `r resList[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resList[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resList[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis.  
+The log2FoldChange shrinkage procedure used was `r resListAll[[1]]@priorInfo$type`. An alpha of `r resListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis.  
 
 
 ## Create annotation tables
@@ -1816,9 +1816,9 @@ pheatmap(matRV,
 
 This section contains three groups of MA plots (see [Wikipedia](https://en.wikipedia.org/wiki/MA_plot)) that compare the mean of the normalized counts against the log fold change. Each of the groups has a tab for each contrast. The plots show one point per feature. The points are shown in red if the feature has an adjusted p-value less than the cutoff listed in each section, that is, the statistically significant features are shown in red.
 
-## Filtered at `r metadata(resList[[1]])$alpha` {.tabset .tabset-fade}
+## Filtered at `r metadata(resListAll[[1]])$alpha` {.tabset .tabset-fade}
 
-This group of plots shows `alpha` = `r metadata(resList[[1]])$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
+This group of plots shows `alpha` = `r metadata(resListAll[[1]])$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
 
 ```{r fc_range, warning = FALSE}
 # Find IQR for absolute values of all significant log2foldchanges
