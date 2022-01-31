@@ -11,9 +11,6 @@
 library(tidyverse)
 require(yaml)
 
-#Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
-
-
 config <- yaml::read_yaml(file.path(here::here(),
                                     "config/config.yaml"),
                           eval.expr = T)
@@ -50,43 +47,8 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           sep = "\t",
                           header = TRUE,
                           quote = "\"",
-                          row.names = NULL) # Column must have unique IDs!!
-# 
-# DESeqDesignPreQC <- read.delim(file.path(config$DESeq2$projectdir,
-#                                     "data/metadata/metadata.txt"),
-#                           stringsAsFactors = FALSE,
-#                           sep = "\t",
-#                           header = TRUE,
-#                           quote = "\"",
-#                           row.names = NULL) # Column must have unique IDs!!
-# 
-# # How many groups in total are being input?
-# DESeqDesign %>% group_by(group) %>% count()
-# DESeqDesignPreQC  %>% group_by(group) %>% count()
-# # 386
-# # 420
-# 
-# # Manual removal of some groups (e.g., cytotoxicity?)
-# remove <- read.table(file.path(config$DESeq2$projectdir,"./data/metadata/remove.txt"),
-#                      sep="\t", header = F) %>% pull()
-# length(remove)
-# # 48
-# # Expect 420 - 48 = 372 to remain
-# 
-# test <- DESeqDesignPreQC %>% dplyr::filter(!group %in% remove)
-# cytotoxic <- DESeqDesignPreQC %>% dplyr::filter(group %in% remove)
-# test %>% group_by(group) %>% count()
-# # 373??? Mix6 33 10d - not in original metadata...?
-# 
-# # Once above is correct, go ahead and make final filtered metadata
-# DESeqDesign <- DESeqDesign %>% dplyr::filter(!group %in% remove)
-# # If you've already done this, don't overwrite the backup!
-# if (!file.exists(paste0(SampleKeyFile,".bak"))) {
-#   system(paste0("cp ",SampleKeyFile," ",paste0(SampleKeyFile,".bak")))
-# }
-# write.table(DESeqDesign,
-#             SampleKeyFile,
-#             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+                          row.names = 1) # Column must have unique IDs!!
+DESeqDesign$original_names <- rownames(DESeqDesign)
 
 # Run DESeq2 and make reports
 if (is.na(params$group_facet)) {
