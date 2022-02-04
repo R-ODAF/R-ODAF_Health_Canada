@@ -113,11 +113,13 @@ solvent_control <- params$solvent_control
 ############################################################################
 paths <- list()
 paths$root <- here::here()
-paths$data <- paste0(paths$root, "/data")
-paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$data, "/metadata")
-paths$reports <- paste0(paths$root, "/reports")
-paths$qc <- paste0(paths$root, "/analysis/QC")
+paths$data <- file.path(paths$root, "data")
+paths$processed <- file.path(paths$data, "processed")
+paths$metadata <- file.path(paths$data, "metadata")
+paths$qc <- file.path(paths$root, "analysis", "QC")
+paths$details <- file.path(paths$qc, "details")
+
+if (!dir.exists(paths$details)) {dir.create(paths$details, recursive = TRUE)}
 
 knitr::opts_knit$set(root.dir = paths$root)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
@@ -327,7 +329,7 @@ for (k in 1:length(libsize)) {
 ############################################################################
 # Dendrogram: all
 ############################################################################
-CairoPDF(file = file.path(paths$processed, "dendrogram_prefiltering_all.pdf"),
+CairoPDF(file = file.path(paths$details, "dendrogram_prefiltering_all.pdf"),
          width = 14,
          height = 8.5,
          family = "Courier")
@@ -408,7 +410,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
   labels_to_use <- labels_to_use[order.dendrogram(dendro_before_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
-  CairoPDF(file = file.path(paths$processed,
+  CairoPDF(file = file.path(paths$details,
                             "dendrogram_prefiltering_tech_controls.pdf"),
            width = 14,
            height = 8.5,
@@ -438,7 +440,7 @@ The dose colored dendrogram is hard-coded in this version and should be removed 
 # Experimental Samples, Prefiltering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples.pdf"),
          width = 14,
          height = 8.5,
@@ -476,7 +478,7 @@ invisible(dev.off())
 # Experimental Samples, Prefiltering, Colored by Dose
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
          width = 14,
          height = 8.5,
@@ -535,7 +537,7 @@ if(!is.null(dim(n))){
   if (length(n > 0)) {
     flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
     write.table(d[flag_cluster,],
-                file.path(paths$processed, "outliers_cluster_analysis.txt"),
+                file.path(paths$details, "outliers_cluster_analysis.txt"),
                 sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
     d[flag_cluster,] %>%
       dplyr::select(original_names, dendro_color_by) %>%
@@ -1299,11 +1301,11 @@ outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
                                                QAQC_pass_fail,
                                                by = c("original_names" = "Sample"))
 write.table(outlier_metadata_annotated,
-            file.path(paths$processed, "samples_removed.txt"),
+            file.path(paths$details, "samples_removed.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(QAQC_annotated,
-            file.path(paths$processed, "QC_per_sample.txt"),
+            file.path(paths$details, "QC_per_sample.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(metadata_outliers_removed,
@@ -1325,7 +1327,7 @@ There are `ncol(sampleData_filtered)` samples remaining in the study after sampl
 # Dendrogram: all, after filtering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed, "dendrogram_postfiltering_all.pdf"),
+CairoPDF(file = file.path(paths$details, "dendrogram_postfiltering_all.pdf"),
          width = 14,
          height = 8.5,
          family = "Courier")
@@ -1383,7 +1385,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
   labels_to_use <- labels_to_use[order.dendrogram(dendro_after_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
-  CairoPDF(file = file.path(paths$processed,
+  CairoPDF(file = file.path(paths$details,
                             "dendrogram_postfiltering_tech_controls.pdf"),
            width = 14,
            height = 8.5,
@@ -1406,7 +1408,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
 # Experimental Samples, Postfiltering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples.pdf"),
          width = 14,
          height = 8.5,
@@ -1450,7 +1452,7 @@ invisible(dev.off())
 # Experimental Samples, Postfiltering, Colored by Dose
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
          width = 14,
          height = 8.5,
