@@ -356,35 +356,6 @@ abline(h = tree_height_cutoff, col = "red", lwd = 2)
 dev.off()
 ```
 
-### Filtering by Pearson correlation distance
-
-In the code below, a `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
-
-```{r filtering_dendrogram}
-############################################################################
-# Filtering
-############################################################################
-
-tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
-n <- table(tree_groups)
-n <- sort(n, decreasing = T)
-
-if(!is.null(dim(n))){
-  n <- n[2:dim(n)]
-  
-  if (length(n > 0)) {
-    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
-    write.table(d[flag_cluster,],
-                file.path(paths$processed, "outliers_cluster_analysis.txt"),
-                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-    d[flag_cluster,] %>%
-      dplyr::select(original_names, dendro_color_by) %>%
-      kable(caption = "Samples flagged as outliers by clustering distance") %>%
-      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-      scroll_box(width = "100%", height = "480px")
-  }
-}
-```
 
 ### Splitting metadata into groups: technical controls and experimental samples
 
@@ -541,9 +512,40 @@ dev.off()
 
 ```
 
-## Additional QC metrics {.tabset}
+## Samples Removed by QC metrics {.tabset}
 
 Click on the tabs below to view samples removed by each metric.
+
+### Pearson correlation
+
+A `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
+
+```{r filtering_dendrogram}
+############################################################################
+# Filtering
+############################################################################
+
+tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
+n <- table(tree_groups)
+n <- sort(n, decreasing = T)
+
+if(!is.null(dim(n))){
+  n <- n[2:dim(n)]
+  
+  if (length(n > 0)) {
+    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
+    write.table(d[flag_cluster,],
+                file.path(paths$processed, "outliers_cluster_analysis.txt"),
+                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+    d[flag_cluster,] %>%
+      dplyr::select(original_names, dendro_color_by) %>%
+      kable(caption = "Samples flagged as outliers by clustering distance") %>%
+      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+      scroll_box(width = "100%", height = "480px")
+  }
+}
+```
+
 
 ### Number of mapped reads
 
