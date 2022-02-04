@@ -1283,8 +1283,8 @@ wb1 <- createWorkbook()
 modifyBaseFont(wb1, fontSize = 10, fontName = "Arial Narrow")
 addWorksheet(wb1, "DESeq_results_per_gene")
 for (j in 1:length(contrastsInSummary)) {
-  myStartcol = 7 + ((j - 1) * 3)
-  myEndcol = 9 + ((j - 1) * 3)
+  myStartcol = 8 + ((j - 1) * 3)
+  myEndcol = 10 + ((j - 1) * 3)
   mergeCells(wb1,
              sheet = 1,
              cols = myStartcol:myEndcol,
