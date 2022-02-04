@@ -1155,7 +1155,6 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
         axis.ticks = element_blank(),
         panel.spacing = unit(2, "lines")) +
   scale_x_discrete(position = "top") +
-  coord_fixed()  +
   {if (!is.na(batch_var))  facet_wrap(paste0("~",batch_var), ncol = 2)}
 #  {if (!is.na(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
 # The facet_rep_wrap function doesn't actually seem to produce the intended effect.
@@ -1167,7 +1166,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 
 ```{r}
-custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 7)
+custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 5)
 ```
 
 ### Number of Mapped Reads
@@ -1176,7 +1175,9 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
+                                                                
 ```
 
 ### Fraction of Mapped Reads
@@ -1185,7 +1186,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Nsig80
@@ -1194,7 +1196,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Ncov5
@@ -1203,7 +1206,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Gini
@@ -1212,7 +1216,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Any samples which failed
@@ -1224,7 +1229,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
   ggtitle("Any samples failed")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 
 ```
 
