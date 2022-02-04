@@ -353,7 +353,7 @@ plot(dendro_before_all_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 
@@ -422,7 +422,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
              horiz = F)
   )
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
-  dev.off()
+  invisible(dev.off())
 }
 
 ```
@@ -470,7 +470,7 @@ plot(dendro_before_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 
 ############################################################################
 # Experimental Samples, Prefiltering, Colored by Dose
@@ -508,7 +508,7 @@ plot(dendro_before_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 
 ```
 
@@ -1305,8 +1305,10 @@ write.table(metadata_outliers_removed,
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 sampleData_filtered <- sampleData %>% dplyr::select(-all_of(outliers))
-ncol(sampleData_filtered)
+
 ```
+
+There are `ncol(sampleData_filtered)` samples remaining in the study after sample removal.
 
 ## Dendrogram (after filtering)
 
@@ -1345,7 +1347,7 @@ plot(dendro_after_all_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 ### Dendrogram, technical control samples, postfiltering
@@ -1387,7 +1389,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
        main = "log2 CPM",
        horiz = F)
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
-  dev.off()
+  invisible(dev.off())
 }
 ```
 
@@ -1432,7 +1434,7 @@ plot(dendro_after_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 ### Dendrogram, experimental samples, postfiltering, colored by dose
@@ -1476,7 +1478,7 @@ plot(dendro_after_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 
@@ -1491,11 +1493,11 @@ add_spaces <- function(string) {
   string <- gsub(pattern = "_", replacement = " ", string)
   string
 }
-plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
+plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !!ensym(treatment_var))) +
   facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
     .cols = add_spaces,
     .default = label_wrap_gen(20)), ncol = 4) +
-  theme(legend.position = "bottom", axis.text = element_blank())
+  theme(legend.position = "none") + xlab("Batch")
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
@@ -1507,11 +1509,10 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T)), fig.height = as.numeric(custom_fig_height)/2}
-plot_dose_effect <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = factor(!!ensym(dose)))) +
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)/2}
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
-  theme(axis.text = element_blank(), legend.position = "bottom") +
-  labs(color = dose)
+  theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
