@@ -518,7 +518,7 @@ invisible(dev.off())
 
 Click on the tabs below to view samples removed by each metric.
 
-### Pearson correlation
+### Clustering Distance Cutoff
 
 A `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
 
@@ -531,7 +531,7 @@ tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
 n <- table(tree_groups)
 n <- sort(n, decreasing = T)
 
-if(!is.null(dim(n))){
+if (!is.null(dim(n))) {
   n <- n[2:dim(n)]
   
   if (length(n > 0)) {
