@@ -78,7 +78,7 @@ paths$metadata <- file.path(paths$data, "metadata")
 if (is.na(params$group_facet)) {
   paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists")
 } else {
-  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists", "group_",
+  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists",
                                 paste(params$group_filter, collapse = "_"))
 }
 paths$BMD_output <- file.path(paths$root,  "analysis", "BMD_and_biomarker_files")
@@ -87,7 +87,7 @@ paths$RData <- file.path(paths$DEG_output, "RData")
 paths$ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
 
 # Create directories if required
-if (!dir.exists(paths$ODAFdir)) {dir.create(ODAFdir, recursive = TRUE)}
+if (!dir.exists(paths$ODAFdir)) {dir.create(paths$ODAFdir, recursive = TRUE)}
 if (!dir.exists(paths$DEG_output)) {dir.create(paths$DEG_output, recursive = TRUE)}
 if (!dir.exists(paths$BMD_output)) {dir.create(paths$BMD_output, recursive = TRUE)}
 if (!dir.exists(paths$pathway_analysis)) {dir.create(paths$pathway_analysis, recursive = TRUE)}
@@ -354,12 +354,6 @@ if(!is.na(params$sortcol)){
 
 # Once contrasts have been filtered, generate short contrast names for report.
 short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2) # Customize these for your experiment... Must be short enough to fit as Excel tab titles.
-
-# Create directories
-plotdir <- paste(paths$DEG_output, "/plots/", sep = "")
-if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-barplot.dir <- paste(plotdir, "/barplot_genes/", sep = "")
-if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
 
 # Needed later
 ensembl <- useMart("ensembl",
@@ -816,18 +810,19 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   
   filterList[[x]] <- Filter # Useful to explore later...
   
- # Save the normalized counts and the list of DEGs
-	write.table(norm_data,
-	            file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
-	            sep = "\t", quote = FALSE)
+  # Save the R-ODAF tables
+  # Except the first two which are redundant with other ones produced
+  #	write.table(norm_data,
+  #            file = file.path(paths$ODAFdir, paste0(FileName, "_Norm_Data.txt")),
+  #            sep = "\t", quote = FALSE)
 	write.table(DEsamples,
-	            file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_DEG_table.txt")),
 	            sep = "\t", quote = FALSE)
 	write.table(DECounts_no_quant,
-	            file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
 	            sep = "\t", quote = FALSE)
 	write.table(DECounts_spike,
-	            file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
 	            sep = "\t", quote = FALSE)
 
 	print("DESeq2 Done")
