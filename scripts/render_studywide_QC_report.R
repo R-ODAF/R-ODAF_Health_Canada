@@ -34,10 +34,8 @@ filename <- paste0("Study-wide_Sample_QC_",
                    ".html")
 
 outFile <- file.path(projectdir,
-                     "reports",
+                     "analysis", "QC",
                      filename)
-
-dir.create(file.path(projectdir,"reports"))
 
 rmarkdown::render(input = inputFile,
                   encoding = "UTF-8",
