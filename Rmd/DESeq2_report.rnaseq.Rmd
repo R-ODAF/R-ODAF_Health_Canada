@@ -101,10 +101,6 @@ pathway_analysis <- file.path(paths$root, "Rmd/Pathway_analysis.Rmd")
   
 ```
 
-```{r 'warn_user', eval=!flag}
-message("If this text is visible by default, this report was produced to test plotting functions and should be used exclusively for testing and development.")
-```
-
 ```{r setup, warning = FALSE, message = FALSE}
 #### Record start time
 startTime <- Sys.time()
@@ -278,7 +274,7 @@ The code above (not shown by default) specifies user preferences and data locati
 
 ## Load data
 
-```{r 'load_data', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'load_data', collapse = TRUE, warning = FALSE, message = FALSE}
 # Load input files
 message(paste("loading data from ", SampleDataFile))
 sampleData <- read.delim(SampleDataFile,
@@ -563,7 +559,7 @@ knitr::kable(contrasts,
 
 ## Run DESeq2
 
-```{r run-DESeq2, collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r run-DESeq2, collapse = TRUE, warning = FALSE, message = FALSE}
 ##########
 # DESeq2 #
 ##########
@@ -803,7 +799,7 @@ ggplot(reads_df_annotated,
 
 ## Run pairwise comparisons
 
-```{r 'run_ODAF_code', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'run_ODAF_code', collapse = TRUE, warning = FALSE, message = FALSE}
 
 # Initial setup for DESeq2 contrasts
 cooks   <- F # Sometimes may need consideration
@@ -1062,7 +1058,7 @@ if (Platform == "TempO-Seq") {
 
 ## Create summary tables
 
-```{r create_tables, collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r create_tables, collapse = TRUE, warning = FALSE, message = FALSE}
 ################################################################################
 # Table modifications
 ################################################################################
@@ -1229,7 +1225,7 @@ kable(degTable,
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-```{r 'write-tables', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'write-tables', collapse = TRUE, warning = FALSE, message = FALSE}
 #######################################
 ### Write results table from DESeq2
 #######################################
@@ -1266,7 +1262,7 @@ The code above (not shown by default) writes text files for each DEG summary typ
 
 # Write data
 
-```{r 'write-excel-worksheets', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'write-excel-worksheets', collapse = TRUE, warning = FALSE, message = FALSE}
 #######################################
 ### Write results above but in Excel
 #######################################
