@@ -71,23 +71,27 @@ paths <- list()
 # Other important system paths to specify in config
 paths$wikipathways <- params$wikipathways_directory
 # For project structure
-# Should probably update this to use the file.path() function.
 paths$root <- params$projectdir
-paths$data <- paste0(paths$root, "/data")
-paths$raw <- paste0(paths$data, "/raw")
-paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$data, "/metadata")
-paths$reports <- paste0(paths$root, "/reports")
+paths$data <- file.path(paths$root, "data")
+paths$processed <- file.path(paths$data, "processed")
+paths$metadata <- file.path(paths$data, "metadata")
 if (is.na(params$group_facet)) {
-  paths$DEG_output <- paste0(paths$root, "/DEG_output")
+  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists")
 } else {
-  paths$DEG_output <- paste0(paths$root,
-                             "/DEG_output/group_",
-                             paste(params$group_filter, collapse = "_"))
+  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists", "group_",
+                                paste(params$group_filter, collapse = "_"))
 }
-paths$BMD_output <- paste0(paths$root, "/DEG_output/BMD_and_biomarker_files")
-paths$pathway_analysis <- paste0(paths$DEG_output, "/pathway_analysis")
-paths$RData <- paste0(paths$DEG_output, "/RData")
+paths$BMD_output <- file.path(paths$root,  "analysis", "BMD_and_biomarker_files")
+paths$pathway_analysis <- file.path(paths$root, "analysis", "pathway_analysis")
+paths$RData <- file.path(paths$DEG_output, "RData")
+paths$ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
+
+# Create directories if required
+if (!dir.exists(paths$ODAFdir)) {dir.create(ODAFdir, recursive = TRUE)}
+if (!dir.exists(paths$DEG_output)) {dir.create(paths$DEG_output, recursive = TRUE)}
+if (!dir.exists(paths$BMD_output)) {dir.create(paths$BMD_output, recursive = TRUE)}
+if (!dir.exists(paths$pathway_analysis)) {dir.create(paths$pathway_analysis, recursive = TRUE)}
+if (!dir.exists(paths$RData)) {dir.create(paths$RData, recursive = TRUE)}
 
 ## knitrBoostrap and device chunk options
 # Set so that long lines in R will be wrapped:
@@ -95,10 +99,9 @@ knitr::opts_chunk$set(bootstrap.show.code = FALSE,
                       bootstrap.panel = TRUE,
                       cache = FALSE)
 #knitr::tidy.opts = list(width.cutoff = 60), tidy = TRUE, crop = NULL # Use for PDFs
-knitr::opts_knit$set(root.dir = paths$root)
+knitr::opts_knit$set(root.dir = paths$root) # Do we need this?
 
 pathway_analysis <- file.path(paths$root, "Rmd/Pathway_analysis.Rmd")
-  
 ```
 
 ```{r setup, warning = FALSE, message = FALSE}
@@ -257,17 +260,10 @@ SampleKeyFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
 # Group of interest in the left column, control for comparison in the right column
 ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
 
-# Set file locations
-if (!dir.exists(paths$DEG_output)) {dir.create(paths$DEG_output, recursive = TRUE)}
-if (!dir.exists(paths$BMD_output)) {dir.create(paths$BMD_output, recursive = TRUE)}
-if (!dir.exists(paths$pathway_analysis)) {dir.create(paths$pathway_analysis, recursive = TRUE)}
-if (!dir.exists(paths$RData)) {dir.create(paths$RData, recursive = TRUE)}
-
 # Specify which groups need to be compared 
 contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
 DESIGN <- params$design	# Column name which defines the groups to be compared
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
-
 ```
 
 The code above (not shown by default) specifies user preferences and data locations.
@@ -414,130 +410,7 @@ if (Platform == "RNA-Seq") {
   # Fill in the blanks for TempO-Seq Manifest...
   # Set NULL values to NA
   biospyder[ biospyder == "NULL" ] <- NA
-  
-  # Separate out the coordinates into useful columns
-  # biospyder <- biospyder %>%
-  #   separate(PROBE_COORDINATE, into = c("chr","pos","strand"), sep = ":" ) %>%
-  #   separate(pos, into = c("start","end"), sep = "-") %>%
-  #   mutate(start = as.numeric(start)) %>%
-  #   mutate(end = as.numeric(end)) %>%
-  #   mutate(strand = ifelse(strand == "-","-1","1"))
 
-##### NEEDS WORK - Use bitr instead?
-  
-  # # Make a table of the probes where we need a gene ID
-  # missing <-  biospyder %>%
-  #   dplyr::filter(is.na(ENSEMBL_GENE_ID))
-  # 
-  # # Get Ensembl Gene IDs using biomaRt based on locus
-  # to_add_missing <- list()
-  # try_again <- list()
-  # for (row in seq_along(row.names(missing))) {
-  # #for (row in 1:10) {
-  #   if (is.na(missing[row,]["chr"])) {
-  #     try_again <- c(try_again, missing[row,][["GENE_SYMBOL"]])
-  #   } else {
-  #     id <- getBM(filters = c('chromosome_name','start','end','strand'),
-  #                 attributes = c(biomart_filter,
-  #                                'chromosome_name',
-  #                                'start_position',
-  #                                'end_position',
-  #                                species_gene_symbol,
-  #                                "strand"),
-  #                 values = list(missing[row,]["chr"],
-  #                               missing[row,]["start"],
-  #                               missing[row,]["end"],
-  #                               missing[row,]["strand"]),
-  #                 mart = ensembl,
-  #                 uniqueRows = T)
-  #     if (nrow(id) > 0) {
-  #       id$PROBE_ID <- missing[row,][["PROBE_ID"]]
-  #       to_add_missing[[row]] <- id
-  #     } else {
-  #       try_again <- c(try_again, missing[row,][["GENE_SYMBOL"]])
-  #     }
-  #   }
-  # }
-  # to_add_missing <- rbindlist(to_add_missing)
-  # to_add_missing$chr <- as.character(to_add_missing$chromosome_name)
-  # to_add_missing$strand <- as.character(to_add_missing$strand)
-  # to_add_missing$GENE_SYMBOL <- to_add_missing$external_gene_name
-  # to_add_missing <- to_add_missing %>%
-  #   dplyr::select(-c(external_gene_name, chromosome_name))
-  # 
-  # symbol_to_ensembl <- getBM(filters = c('external_gene_name'),
-  #                            attributes = c(biomart_filter,
-  #                                           'chromosome_name',
-  #                                           'start_position',
-  #                                           'end_position',
-  #                                           species_gene_symbol,
-  #                                           "strand"),
-  #                            values =  unlist(try_again),
-  #                            mart = ensembl,
-  #                            uniqueRows = T)
-  # 
-  # symbol_to_ensembl$chr <- as.character(symbol_to_ensembl$chromosome_name)
-  # symbol_to_ensembl$strand <- as.character(symbol_to_ensembl$strand)
-  # symbol_to_ensembl$GENE_SYMBOL <- symbol_to_ensembl$external_gene_name
-  # symbol_to_ensembl <- symbol_to_ensembl %>%
-  #   dplyr::select(-c(external_gene_name, chromosome_name))
-  # 
-  # try_again_2 <- unlist(try_again)[!unlist(try_again) %in% symbol_to_ensembl$GENE_SYMBOL]
-  # try_again_2 <- missing[missing$GENE_SYMBOL %in% try_again_2,]
-  # 
-  # synonym_to_ensembl <- getBM(filters = c('external_synonym'),
-  #                             attributes = c(biomart_filter,
-  #                                           'chromosome_name',
-  #                                           'start_position',
-  #                                           'end_position',
-  #                                           species_gene_symbol,
-  #                                           "strand",
-  #                                           "external_synonym"),
-  #                             values =  try_again_2,
-  #                             mart = ensembl,
-  #                             uniqueRows = T)
-  # 
-  # biospyder <- left_join(biospyder,
-  #                   to_add_missing,
-  #                   by = c("PROBE_ID"),
-  #                   suffix = c("", ".y")) %>%
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id) %>%
-  #   left_join(symbol_to_ensembl, by = c("GENE_SYMBOL" = "GENE_SYMBOL"), suffix = c("", ".y")) %>% 
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id) %>%
-  #   left_join(synonym_to_ensembl, by = c("GENE_SYMBOL" = "external_synonym"), suffix = c("", ".y")) %>%
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id)
-  # biospyder <- biospyder %>% dplyr::select(1:12)
-  
-  # biospyder %>% dplyr::filter(is.na(ENSEMBL_GENE_ID)) %>% glimpse()
-  
-  #################################################
-  # Don't do this
-  # It collapses probes by gene sybmols - which is not really the best way.
-  # We will keep probe-level values because they are usually transcript specific.
-  #################################################
-  # 
-  # sampleData <- sampleData %>%
-  #   mutate(GENE_SYMBOL = str_replace(PROBE_NAME, "_.*", ""))
-  # 
-  # sampleDataTable <- data.table(sampleData %>% dplyr::select(-PROBE_NAME))
-  # sampleData <- sampleDataTable[, lapply(.SD, sum), by = "GENE_SYMBOL"]
-  # 
-  # # sampleData <- sampleData %>%
-  # #   mutate(GENE_SYMBOL = str_replace(PROBE_NAME, "_.*", "")) %>%
-  # #   dplyr::group_by(GENE_SYMBOL) %>%
-  # #   dplyr::summarise_if(.predicate = function(x) is.numeric(x),
-  # #                       .funs = c("sum")) %>%
-  # #   ungroup()
-  # sampleData <- as.data.frame(sampleData)
-  # row.names(sampleData) <- sampleData$GENE_SYMBOL
-  # sampleData <- sampleData[,-1]
-
-  # biospyder %>% select(ENSEMBL_GENE_ID) %>% distinct() %>% count()
-  # sampleData <- sampleData[row.names(sampleData) %in% biospyder$ENSEMBL_GENE_ID,] # If aligned to hg38...
-  
 } else { 
   print("Platform/technology not recognized") 
 }
@@ -654,8 +527,6 @@ head(colData(dds))
 head(assay(dds))
 head(rowRanges(dds))
 str(counts(dds))
-
-
 
 # Make regularized log object for later plotting
 # rld <- tryCatch(rlog(dds), error = function(e) { rlog(dds, fitType = 'mean') })
@@ -792,7 +663,6 @@ ggplot(reads_df_annotated,
   expand_limits(y = 0) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
-
 ```
 
 # Testing for differentially expressed genes
@@ -878,9 +748,6 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	                 type = "ashr")
 	resListAll[[x]] <- res
 	
-	# Make new directory for the ODAF-specific files
-	ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
-	if (!dir.exists(ODAFdir)) {dir.create(ODAFdir, recursive = TRUE)}
 	FileName <- paste(NORM_TYPE, condition2, "vs", condition1, "FDR", pAdjValue, sep = "_")
 	
 	# Create output tables
@@ -952,20 +819,16 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
  # Save the normalized counts and the list of DEGs
 	write.table(norm_data,
 	            file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            sep = "\t", quote = FALSE)
 	write.table(DEsamples,
 	            file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            sep = "\t", quote = FALSE)
 	write.table(DECounts_no_quant,
 	            file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            sep = "\t", quote = FALSE)
 	write.table(DECounts_spike,
 	            file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            sep = "\t", quote = FALSE)
 
 	print("DESeq2 Done")
 	
@@ -1003,13 +866,6 @@ genes <- unlist(genes) %>% unique()
 # listDatasets(useMart('ensembl'))
 # listAttributes(ensembl)
 # listFilters(ensembl)
-
-
-# if (file.exists(file.path(paths$RData, "id_table.Rdata"))) {
-#   print(paste("Already found ID table; skipping biomaRt query and loading from disk."))
-#   load(file.path(paths$RData, "id_table.Rdata"))
-#   id_table <- id_table_entrez[, 1:3] 
-#   } else {
 
 if (Platform == "TempO-Seq") {
   genes <- biospyder[biospyder[[biomart_filter]] %in% genes,] %>% pull(!!ensym(biospyder_ID))
@@ -1052,7 +908,6 @@ if (Platform == "TempO-Seq") {
   save(id_table_entrez, file = file.path(paths$RData, "id_table.Rdata"))
   id_table <- id_table_entrez[, 1:3] # Manageable subset of the annotations
 }
-# }
 ```
 
 
@@ -1139,11 +994,6 @@ degTable_n <- significantResults %>%
 degTable <- degTable %>%
   left_join(degTable_n, by = "contrast", na_matches = "never")
 
-# lengths <- lapply(resList, nrow)
-# longest <- which.max(lengths)
-# summaryTable <- data.frame( genes = row.names(resListSig[[longest]]),
-#                             baseMean = resListSig[[longest]]$baseMean )
-# names(summaryTable)[names(summaryTable) == "genes"] <- biomart_filter
 summaryTable <- allResults %>%
   dplyr::select(!!ensym(biomart_filter), baseMean)
 contrastsInSummary <- vector()
