@@ -77,12 +77,15 @@ paths$processed <- file.path(paths$data, "processed")
 paths$metadata <- file.path(paths$data, "metadata")
 if (is.na(params$group_facet)) {
   paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists")
+  paths$pathway_analysis <- file.path(paths$root, "analysis", "pathway_analysis")
 } else {
-  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists",
-                                paste(params$group_filter, collapse = "_"))
+  paths$DEG_output <- file.path(paths$root, "analysis",
+                                "DEG_lists", params$group_filter)
+  paths$pathway_analysis <- file.path(paths$root, "analysis",
+                                      "pathway_analysis", params$group_filter)
 }
 paths$BMD_output <- file.path(paths$root,  "analysis", "BMD_and_biomarker_files")
-paths$pathway_analysis <- file.path(paths$root, "analysis", "pathway_analysis")
+
 paths$RData <- file.path(paths$DEG_output, "RData")
 paths$ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
 
