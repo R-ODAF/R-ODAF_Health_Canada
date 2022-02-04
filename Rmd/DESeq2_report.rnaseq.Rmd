@@ -5,11 +5,12 @@ params:
   species: "mouse"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  nuisance: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
+  batch_var: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
   group_facet: "chemical_timepoint"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  "BitB_24h"       # null # Which group will this report be done on?
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
   strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
@@ -25,9 +26,8 @@ params:
   nBest: 100 # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50 # Number of most variable genes for heatmap
   nHeatmapDEGs: 50 # Number of DEGs for heatmap
-  sampledata_sep: "," # Changed later in this script according to RNASeq vs TempOSeq!
 title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
+subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.na(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
 output:
   html_document:
     toc: true
@@ -665,14 +665,14 @@ str(counts(dds))
 # rld <- tryCatch(rlog(dds), error = function(e) { rlog(dds, fitType = 'mean') })
 # Use vst for hundreds of samples!
 
-if (!is.na(params$nuisance)) {
+if (!is.na(params$batch_var)) {
   rld <- vst(dds, blind = F) # Should this be blind?
   mat <- assay(rld)
   condition <- formula(paste0(paste0("~"),
-                              paste0(intgroup[!intgroup %in% params$nuisance],
+                              paste0(intgroup[!intgroup %in% params$batch_var],
                                      collapse = " + ")))
   mm <- model.matrix(condition, colData(rld))
-  mat <- limma::removeBatchEffect(mat, batch = rld[[params$nuisance]], design = mm)
+  mat <- limma::removeBatchEffect(mat, batch = rld[[params$batch_var]], design = mm)
   assay(rld) <- mat
 } else {
   rld <- vst(dds, blind = F) # Should this be blind?
