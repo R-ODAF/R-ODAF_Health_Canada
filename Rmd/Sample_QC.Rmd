@@ -1492,7 +1492,7 @@ invisible(dev.off())
 
 ### Batch
 
-```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)/2}
+```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)}
 add_spaces <- function(string) {
   substr(string, 1, 1) <- toupper(substr(string, 1, 1))
   string <- gsub(pattern = "-", replacement = " ", string)
@@ -1515,7 +1515,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)/2}
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)}
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
   theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
