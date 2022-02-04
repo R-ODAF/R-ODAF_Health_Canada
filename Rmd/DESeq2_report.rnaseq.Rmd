@@ -930,6 +930,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	currentContrast <- c(DESIGN, condition2, condition1)
 	bpparam <- MulticoreParam(params$cpus)
 	res <- DESeq2::results(dds[rownames(compte),],
+	                       alpha = alpha,
 	                       parallel = TRUE,
 	                       BPPARAM = bpparam,
 	                       contrast = currentContrast,
@@ -1226,8 +1227,8 @@ degTable <- degTable %>%
 
 # lengths <- lapply(resList, nrow)
 # longest <- which.max(lengths)
-# summaryTable <- data.frame( genes = row.names(resList[[longest]]),
-#                             baseMean = resList[[longest]]$baseMean )
+# summaryTable <- data.frame( genes = row.names(resListSig[[longest]]),
+#                             baseMean = resListSig[[longest]]$baseMean )
 # names(summaryTable)[names(summaryTable) == "genes"] <- biomart_filter
 summaryTable <- allResults %>%
   dplyr::select(!!ensym(biomart_filter), baseMean)
@@ -1849,22 +1850,22 @@ for (i in seq_along(resListAll)) {
 # for (i in 1:length(resList)) {
 # contrast = gsub(pattern = "log2.*Time\ ",
 #                 replacement =  "",
-#                 x = resList[[i]]@elementMetadata[[2]][2])
+#                 x = resListSig[[i]]@elementMetadata[[2]][2])
 # cat("###", contrast, " \n")
-# DESeq2::plotMA(resList[[i]], alpha = metadata(resList[[i]])$alpha / 2,
-#     main = paste('MA plot with alpha =', metadata(resList[[i]])$alpha / 2,',', contrast))
+# DESeq2::plotMA(resListSig[[i]], alpha = metadata(resListSig[[i]])$alpha / 2,
+#     main = paste('MA plot with alpha =', metadata(resListSig[[i]])$alpha / 2,',', contrast))
 # cat('\n\n')
 # }
 
 ## MA plot with alpha corresponding to the one that gives the nBest features
 # for (i in 1:length(resList)) {
-# nBest.actual <- min(nBest, nrow(head(resList[[i]], n = nBest)))
-# nBest.alpha <- head( resList[[i]][order(resList[[i]]$pvalue),], n = nBest)$padj[nBest.actual]
+# nBest.actual <- min(nBest, nrow(head(resListSig[[i]], n = nBest)))
+# nBest.alpha <- head( resListSig[[i]][order(resListSig[[i]]$pvalue),], n = nBest)$padj[nBest.actual]
 # contrast = gsub(pattern = "log2.*Time\ ",
 #                 replacement =  "",
-#                 x = resList[[i]]@elementMetadata[[2]][2])
+#                 x = resListSig[[i]]@elementMetadata[[2]][2])
 # cat("###", contrast, " \n")
-# DESeq2::plotMA(resList[[i]], alpha = nBest.alpha * 1.00000000000001,
+# DESeq2::plotMA(resListSig[[i]], alpha = nBest.alpha * 1.00000000000001,
 #     main = paste('MA plot for top', nBest.actual, 'features',',', contrast))
 # cat('\n\n')
 # }

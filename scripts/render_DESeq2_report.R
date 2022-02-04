@@ -1,10 +1,15 @@
 #!/usr/bin/R
 # Custom parameters for the report
+
+# If you want to run this outside RStudio, you need to tell R where Pandoc is:
+# Find it in RStudio:
+# Sys.getenv("RSTUDIO_PANDOC")
+# Set it in the terminal:
+# Sys.setenv(RSTUDIO_PANDOC="OUTPUT FROM ABOVE COMMAND")
+# Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio-server/bin/pandoc")
+
 library(tidyverse)
 require(yaml)
-
-#Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
-
 
 config <- yaml::read_yaml(file.path(here::here(),
                                     "config/config.yaml"),

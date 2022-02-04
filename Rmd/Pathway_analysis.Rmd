@@ -95,8 +95,8 @@ This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways a
 ```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
-for (i in seq_along(levels(significantResults$contrast))) {
-  DEGs_full <- dplyr::left_join(significantResults %>% filter(contrast ==  levels(significantResults$contrast)[i]),
+for (i in seq_along(levels(allResults$contrast))) {
+  DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  levels(allResults$contrast)[i]),
                                 id_table_entrez,
                                 by = biomart_filter)
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
@@ -109,16 +109,17 @@ for (i in seq_along(levels(significantResults$contrast))) {
     next
   }
   kk <- gseKEGG(foldChanges, keyType = "ncbi-geneid", organism = kegg_organism)
-  gsea_sorted <- kk %>% filter(p.adjust < 0.05) %>% arrange(desc(enrichmentScore))
+  gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
+  gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
               file = file.path(paths$pathway_analysis,paste0("Enriched.KEGG_Pathways.",
-                                                       str_replace_all(levels(significantResults$contrast)[i],
+                                                       str_replace_all(levels(allResults$contrast)[i],
                                                                        " ",
                                                                        "_"),
                                                        ".txt")))
   if (dim(kk@result)[1] > 1) {
     plotListGSEA[[i]] <- ridgeplot(kk)
-    plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(gsea_sorted, geneSetID = c(seq_along(gsea_sorted$ID)))
+    plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(gsea_sig, geneSetID = c(seq_along(gsea_sig$ID)))
   } else {
     plotListGSEA[[i]] <- NA
     plotListGSEA_escore[[i]] <- NA
@@ -127,9 +128,9 @@ for (i in seq_along(levels(significantResults$contrast))) {
 ```
 
 ```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
-for (i in seq_along(levels(significantResults$contrast))) {
+for (i in seq_along(levels(allResults$contrast))) {
   if (any(!is.na(plotListGSEA[[i]]))) {
-    cat("###", levels(significantResults$contrast)[i], "  \n\n")
+    cat("###", levels(allResults$contrast)[i], "  \n\n")
     print(plotListGSEA[[i]])
     cat('  \n\n')
   }
@@ -141,9 +142,9 @@ for (i in seq_along(levels(significantResults$contrast))) {
 In this section, only the pathway with the top enrichment score is shown (for simplicity). Note that it is possible to plot any pathway of interest by altering the call to `gseaplot`.
 
 ```{r 'gsea_scores_plot', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
-for (i in seq_along(levels(significantResults$contrast))) {
+for (i in seq_along(levels(allResults$contrast))) {
   if (any(!is.na(plotListGSEA_escore[[i]]))) {
-    cat("###", levels(significantResults$contrast)[i], "  \n\n")
+    cat("###", levels(allResults$contrast)[i], "  \n\n")
     print(plotListGSEA_escore[[i]])
     cat('  \n\n')
   }
