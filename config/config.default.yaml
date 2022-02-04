@@ -58,7 +58,6 @@ DESeq2:
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   nuisance: batch                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
-  flag: TRUE                     # runs all analysis by default when set to TRUE
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
   group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # null # Which group will this report be done on?

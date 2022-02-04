@@ -2,14 +2,13 @@
 params:
   projectdir: !r here::here() # Can hard code if for some reason you need that
   project_name: "test data"        # Change depending on your project name
-  species: "human"                 # one of human, mouse, rat, hamster
+  species: "mouse"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   nuisance: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
-  flag: TRUE                     # runs all analysis by default when set to TRUE
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "CISP"       # null # Which group will this report be done on?
+  group_facet: "chemical_timepoint"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  "BitB_24h"       # null # Which group will this report be done on?
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
@@ -21,7 +20,7 @@ params:
   run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file: "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  biospyder_manifest_file: "190603 Mouse Whole Transcriptome 1.1 Manifest.txt"
   nBestFeatures: 20 # The number of best features to make plots of their counts
   nBest: 100 # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50 # Number of most variable genes for heatmap
@@ -98,13 +97,6 @@ knitr::opts_chunk$set(bootstrap.show.code = FALSE,
 #knitr::tidy.opts = list(width.cutoff = 60), tidy = TRUE, crop = NULL # Use for PDFs
 knitr::opts_knit$set(root.dir = paths$root)
 
-# Set this variable to FALSE if you only want to run the plotting functions by reloading the last RData file.
-flag = params$flag # To evaluate analysis chunks
-if (flag == FALSE) { load(paste0(params$projectdir, "Partial_analysis.RData")) }
-# Set this variable to TRUE if you would like to embed the files directly into the HTML for portability. This slows down page responsiveness drastically, since the files are generally quite large.
-embedFiles = FALSE
-# Se this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
-R_ODAF_plots = FALSE
 pathway_analysis <- file.path(paths$root, "Rmd/Pathway_analysis.Rmd")
   
 ```
@@ -809,59 +801,6 @@ ggplot(reads_df_annotated,
 
 # Testing for differentially expressed genes
 
-## Load R-ODAF functions
-
-```{r 'define-ODAF-functions', collapse = TRUE, warning = FALSE, message = FALSE}
-###################################################################################
-#DEFINE FUNCTIONS
-###################################################################################
-plot.barplots <- function(samples, b) {
-  color <- NULL
-  for (h in 1:ncol(norm_data)) {
-    if (substring(colnames(norm_data)[h], 1, 3) == substring(condition2, 1, 3)) { color <- c(color, "red3") } else {color <- c(color, "darkgrey")}
-  }
-  fileNamePlot <- paste0(b, row.names(samples)[b], ".png")
-  pseudoTitle <- paste0(row.names(samples)[b], "_pAdj:", samples[b, "padj"])
-  
-  png(file = paste(fileNamePlot, sep = "/"), width = 1200, height = 700, pointsize = 20)
-  par(mar = c(8, 4, 3, 1))
-  barplot(as.numeric(norm_data[row.names(samples)[b],]), las = 2, col = color, main = pseudoTitle, cex.names = 0.5,  cex.axis = 0.8, names.arg = colnames(norm_data)) 
-  dev.off()
-} #plot.barplots function done
-
-###################################################################################
-draw.barplots <- function(samples, top_bottom, NUM){
-  if (nrow(samples) == 0) {
-    #print("no genes to plot") 
-  } else { 
-    if (top_bottom == "top") {
-      #print(paste0("drawing Top ", NUM, " plots"))
-      if (nrow(samples) <= NUM) { 
-        for (b in 1:nrow(samples)) {plot.barplots(samples, b)}
-      }
-      
-      if (nrow(samples) > NUM) { 
-        for (b in 1:NUM) {plot.barplots(samples, b)}	
-      }	
-    }
-    
-    if (top_bottom == "bottom") {
-      #print(paste0("drawing Bottom", NUM, " plots"))
-      if (nrow(samples) <= NUM) { 
-        for (b in 1:nrow(samples)) {plot.barplots(samples, b)}
-      }
-      if (nrow(samples) > NUM) { 
-        for (b in ((nrow(samples) - NUM + 1):nrow(samples))) {plot.barplots(DEsamples, b)}
-      }
-    }}
-} #draw.barplots function done
-
-###################################################################################
-###################################################################################
-```
-
-The code above (not shown by default) loads in plotting functions specific to the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) template. More information on the R-ODAF framework is available [here](https://github.com/MCTverheijen/R-ODAF).
-
 ## Run pairwise comparisons
 
 ```{r 'run_ODAF_code', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
@@ -1038,28 +977,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 
 	resListSig[[x]] <- DECounts_all_filters
 	resListFiltered[[x]] <- allCounts_all_filters
-	
-	if (R_ODAF_plots == TRUE) {
-  	print("creating Read count Plots")
-  	# top DEGs
-  	plotdir <- file.path(paths$DEG_output, "plots")
-  	if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-  	barplot.dir <- file.path(paths$DEG_output, "plots", "/barplot_genes/")
-  	if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
-  
-  	TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
-  	if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
-  	setwd(TOPbarplot.dir)
-  	draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
-  	print("Top 20 DEG plots done")
-  
-  	# Spurious spikes
-  	SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
-  	if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
-  	setwd(SPIKEbarplot.dir)
-  	draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
-  	print("All DE_Spurious_spike plots done")
-	}
+
 }
 # If there are no significant results - remove the empty contrast from the list:
 # Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
@@ -1508,22 +1426,6 @@ saveWorkbook(wb5, fname5, overwrite = TRUE)
 The code above (not shown by default) writes Excel workbooks and text files of DEG lists.
 
 These files should be provided to you as a separate zip file.
-
-```{r 'embed_excel_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_files(list.files(".", "[.](xlsx)$"), name = "RNASeq_Spreadsheets.zip")
-```
-
-```{r 'embed_text_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_files(list.files(".", "[.](txt)$"), name = "RNASeq_Text_Files.zip")
-```
-
-```{r 'embed_ODAF_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_dir(ODAFdir, name = "RNASeq_R-ODAF_text_files.zip")
-```
-
 
 # PCA Plots {.tabset .tabset-fade}
 
@@ -2645,19 +2547,5 @@ session_info()
 ```
 
 ## Pandoc version used: `r rmarkdown::pandoc_version()`.
-
-```{r 'save_final', show = FALSE}
-# Save complete workspace
-if (is.na(params$group_facet)) {
-  save.image(file = file.path(paths$RData, "Complete_analysis.RData"))
-} else {
-  save.image(file = file.path(paths$RData,
-                              paste0("Complete_analysis_",
-                                     paste(params$group_filter, collapse = "_"),
-                                     ".RData")))
-}
-# Add a flag to the start of the script with if statements in all code chunks to check if the flag is set.
-# If flag is TRUE, run analysis; if flag is FALSE, SKIP analysis and continue here (just to modify plotting output).
-```
 
 <div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
