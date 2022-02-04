@@ -28,7 +28,7 @@ if (is.null(projectdir)) {
 replace_nulls <- function(x) {ifelse(is.null(x), NA, x)}
 params <- lapply(params, replace_nulls)
 
-skip_extra <- c("DMSO Pool 1", "DMSO Pool 2", "DMSO Pool 3", "DMSO Pool 4") # Remove DMSO controls as a facet
+skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 
 # Input file - Rmd
 inputFile <- file.path(projectdir, "Rmd", "DESeq2_report.rnaseq.Rmd")
@@ -45,6 +45,12 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 
+# Make directory for DESeq2 Reports
+report_dir <- file.path(projectdir, "analysis", "DEG_reports")
+deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
+if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
+if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
+
 # Run DESeq2 and make reports
 if (is.na(params$group_facet)) {
   message("Writing a single report for whole experiment.")
@@ -53,9 +59,7 @@ if (is.na(params$group_facet)) {
                      params$project_name, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
-  outFile <- file.path(projectdir,
-                       "reports",
-                       filename)
+  outFile <- file.path(report_dir, filename)
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
                     output_file = outFile,
@@ -71,9 +75,7 @@ if (is.na(params$group_facet)) {
                      paste(params$group_filter, collapse = "_"), "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
-  outFile <- file.path(projectdir,
-                       "reports",
-                       filename)
+  outFile <- file.path(report_dir, filename)
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
                     output_file = outFile,
@@ -98,22 +100,18 @@ if (is.na(params$group_facet)) {
                        i, "_",
                        format(Sys.time(),'%d-%m-%Y.%H.%M'),
                        ".html")
-    outFile <- file.path(projectdir,
-                         "reports",
-                         filename)
+    outFile <- file.path(report_dir, filename)
     rmarkdown::render(input = inputFile,
                       encoding = "UTF-8",
                       output_file = outFile,
                       params = params,
                       envir = new.env())
   }
-  deg_files <- fs::dir_ls(file.path(projectdir, "DEG_output"),
-                          regexp = "\\-DEG_summary.txt$", recurse = T)
+  deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
   # This depends on 'cat' being available on the command line (i.e., linux-specific)
   # Also some insane quoting going on here, but I don't see an easier way
   system(paste0('cat "', paste(deg_files, collapse='"  "'),
-                '"  >  ', file.path(projectdir,
-                                 "DEG_output/DEG_summary.txt")))
+                '"  >  ', file.path(deglist_dir, "DEG_summary.txt")))
   
   # This would probably fail in cases where different numbers of contrasts exists across facets.
   # But could otherwise be useful?
