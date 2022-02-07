@@ -2,15 +2,15 @@
 params:
   projectdir: !r here::here() # Can hard code if for some reason you need that
   project_name: "test data"        # Change depending on your project name
-  species: "human"                 # one of human, mouse, rat, hamster
+  species: "mouse"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  nuisance: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
-  flag: TRUE                     # runs all analysis by default when set to TRUE
+  batch_var: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "CISP"       # null # Which group will this report be done on?
+  group_facet: "chemical_timepoint"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:  "BitB_24h"       # null # Which group will this report be done on?
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
   strict_contrasts: FALSE         # Use both columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: !r NA # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
@@ -21,14 +21,13 @@ params:
   run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file: "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  biospyder_manifest_file: "190603 Mouse Whole Transcriptome 1.1 Manifest.txt"
   nBestFeatures: 20 # The number of best features to make plots of their counts
   nBest: 100 # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50 # Number of most variable genes for heatmap
   nHeatmapDEGs: 50 # Number of DEGs for heatmap
-  sampledata_sep: "," # Changed later in this script according to RNASeq vs TempOSeq!
 title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
+subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.na(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
 output:
   html_document:
     toc: true
@@ -72,23 +71,30 @@ paths <- list()
 # Other important system paths to specify in config
 paths$wikipathways <- params$wikipathways_directory
 # For project structure
-# Should probably update this to use the file.path() function.
 paths$root <- params$projectdir
-paths$data <- paste0(paths$root, "/data")
-paths$raw <- paste0(paths$data, "/raw")
-paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$data, "/metadata")
-paths$reports <- paste0(paths$root, "/reports")
+paths$data <- file.path(paths$root, "data")
+paths$processed <- file.path(paths$data, "processed")
+paths$metadata <- file.path(paths$data, "metadata")
 if (is.na(params$group_facet)) {
-  paths$DEG_output <- paste0(paths$root, "/DEG_output")
+  paths$DEG_output <- file.path(paths$root, "analysis", "DEG_lists")
+  paths$pathway_analysis <- file.path(paths$root, "analysis", "pathway_analysis")
 } else {
-  paths$DEG_output <- paste0(paths$root,
-                             "/DEG_output/group_",
-                             paste(params$group_filter, collapse = "_"))
+  paths$DEG_output <- file.path(paths$root, "analysis",
+                                "DEG_lists", params$group_filter)
+  paths$pathway_analysis <- file.path(paths$root, "analysis",
+                                      "pathway_analysis", params$group_filter)
 }
-paths$BMD_output <- paste0(paths$root, "/DEG_output/BMD_and_biomarker_files")
-paths$pathway_analysis <- paste0(paths$DEG_output, "/pathway_analysis")
-paths$RData <- paste0(paths$DEG_output, "/RData")
+paths$BMD_output <- file.path(paths$root,  "analysis", "BMD_and_biomarker_files")
+
+paths$RData <- file.path(paths$DEG_output, "RData")
+paths$ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
+
+# Create directories if required
+if (!dir.exists(paths$ODAFdir)) {dir.create(paths$ODAFdir, recursive = TRUE)}
+if (!dir.exists(paths$DEG_output)) {dir.create(paths$DEG_output, recursive = TRUE)}
+if (!dir.exists(paths$BMD_output)) {dir.create(paths$BMD_output, recursive = TRUE)}
+if (!dir.exists(paths$pathway_analysis)) {dir.create(paths$pathway_analysis, recursive = TRUE)}
+if (!dir.exists(paths$RData)) {dir.create(paths$RData, recursive = TRUE)}
 
 ## knitrBoostrap and device chunk options
 # Set so that long lines in R will be wrapped:
@@ -96,21 +102,9 @@ knitr::opts_chunk$set(bootstrap.show.code = FALSE,
                       bootstrap.panel = TRUE,
                       cache = FALSE)
 #knitr::tidy.opts = list(width.cutoff = 60), tidy = TRUE, crop = NULL # Use for PDFs
-knitr::opts_knit$set(root.dir = paths$root)
+knitr::opts_knit$set(root.dir = paths$root) # Do we need this?
 
-# Set this variable to FALSE if you only want to run the plotting functions by reloading the last RData file.
-flag = params$flag # To evaluate analysis chunks
-if (flag == FALSE) { load(paste0(params$projectdir, "Partial_analysis.RData")) }
-# Set this variable to TRUE if you would like to embed the files directly into the HTML for portability. This slows down page responsiveness drastically, since the files are generally quite large.
-embedFiles = FALSE
-# Se this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
-R_ODAF_plots = FALSE
 pathway_analysis <- file.path(paths$root, "Rmd/Pathway_analysis.Rmd")
-  
-```
-
-```{r 'warn_user', eval=!flag}
-message("If this text is visible by default, this report was produced to test plotting functions and should be used exclusively for testing and development.")
 ```
 
 ```{r setup, warning = FALSE, message = FALSE}
@@ -269,24 +263,17 @@ SampleKeyFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
 # Group of interest in the left column, control for comparison in the right column
 ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
 
-# Set file locations
-if (!dir.exists(paths$DEG_output)) {dir.create(paths$DEG_output, recursive = TRUE)}
-if (!dir.exists(paths$BMD_output)) {dir.create(paths$BMD_output, recursive = TRUE)}
-if (!dir.exists(paths$pathway_analysis)) {dir.create(paths$pathway_analysis, recursive = TRUE)}
-if (!dir.exists(paths$RData)) {dir.create(paths$RData, recursive = TRUE)}
-
 # Specify which groups need to be compared 
 contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
 DESIGN <- params$design	# Column name which defines the groups to be compared
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
-
 ```
 
 The code above (not shown by default) specifies user preferences and data locations.
 
 ## Load data
 
-```{r 'load_data', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'load_data', collapse = TRUE, warning = FALSE, message = FALSE}
 # Load input files
 message(paste("loading data from ", SampleDataFile))
 sampleData <- read.delim(SampleDataFile,
@@ -371,12 +358,6 @@ if(!is.na(params$sortcol)){
 # Once contrasts have been filtered, generate short contrast names for report.
 short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2) # Customize these for your experiment... Must be short enough to fit as Excel tab titles.
 
-# Create directories
-plotdir <- paste(paths$DEG_output, "/plots/", sep = "")
-if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-barplot.dir <- paste(plotdir, "/barplot_genes/", sep = "")
-if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
-
 # Needed later
 ensembl <- useMart("ensembl",
                    dataset = ensembl_species,
@@ -426,130 +407,7 @@ if (Platform == "RNA-Seq") {
   # Fill in the blanks for TempO-Seq Manifest...
   # Set NULL values to NA
   biospyder[ biospyder == "NULL" ] <- NA
-  
-  # Separate out the coordinates into useful columns
-  # biospyder <- biospyder %>%
-  #   separate(PROBE_COORDINATE, into = c("chr","pos","strand"), sep = ":" ) %>%
-  #   separate(pos, into = c("start","end"), sep = "-") %>%
-  #   mutate(start = as.numeric(start)) %>%
-  #   mutate(end = as.numeric(end)) %>%
-  #   mutate(strand = ifelse(strand == "-","-1","1"))
 
-##### NEEDS WORK - Use bitr instead?
-  
-  # # Make a table of the probes where we need a gene ID
-  # missing <-  biospyder %>%
-  #   dplyr::filter(is.na(ENSEMBL_GENE_ID))
-  # 
-  # # Get Ensembl Gene IDs using biomaRt based on locus
-  # to_add_missing <- list()
-  # try_again <- list()
-  # for (row in seq_along(row.names(missing))) {
-  # #for (row in 1:10) {
-  #   if (is.na(missing[row,]["chr"])) {
-  #     try_again <- c(try_again, missing[row,][["GENE_SYMBOL"]])
-  #   } else {
-  #     id <- getBM(filters = c('chromosome_name','start','end','strand'),
-  #                 attributes = c(biomart_filter,
-  #                                'chromosome_name',
-  #                                'start_position',
-  #                                'end_position',
-  #                                species_gene_symbol,
-  #                                "strand"),
-  #                 values = list(missing[row,]["chr"],
-  #                               missing[row,]["start"],
-  #                               missing[row,]["end"],
-  #                               missing[row,]["strand"]),
-  #                 mart = ensembl,
-  #                 uniqueRows = T)
-  #     if (nrow(id) > 0) {
-  #       id$PROBE_ID <- missing[row,][["PROBE_ID"]]
-  #       to_add_missing[[row]] <- id
-  #     } else {
-  #       try_again <- c(try_again, missing[row,][["GENE_SYMBOL"]])
-  #     }
-  #   }
-  # }
-  # to_add_missing <- rbindlist(to_add_missing)
-  # to_add_missing$chr <- as.character(to_add_missing$chromosome_name)
-  # to_add_missing$strand <- as.character(to_add_missing$strand)
-  # to_add_missing$GENE_SYMBOL <- to_add_missing$external_gene_name
-  # to_add_missing <- to_add_missing %>%
-  #   dplyr::select(-c(external_gene_name, chromosome_name))
-  # 
-  # symbol_to_ensembl <- getBM(filters = c('external_gene_name'),
-  #                            attributes = c(biomart_filter,
-  #                                           'chromosome_name',
-  #                                           'start_position',
-  #                                           'end_position',
-  #                                           species_gene_symbol,
-  #                                           "strand"),
-  #                            values =  unlist(try_again),
-  #                            mart = ensembl,
-  #                            uniqueRows = T)
-  # 
-  # symbol_to_ensembl$chr <- as.character(symbol_to_ensembl$chromosome_name)
-  # symbol_to_ensembl$strand <- as.character(symbol_to_ensembl$strand)
-  # symbol_to_ensembl$GENE_SYMBOL <- symbol_to_ensembl$external_gene_name
-  # symbol_to_ensembl <- symbol_to_ensembl %>%
-  #   dplyr::select(-c(external_gene_name, chromosome_name))
-  # 
-  # try_again_2 <- unlist(try_again)[!unlist(try_again) %in% symbol_to_ensembl$GENE_SYMBOL]
-  # try_again_2 <- missing[missing$GENE_SYMBOL %in% try_again_2,]
-  # 
-  # synonym_to_ensembl <- getBM(filters = c('external_synonym'),
-  #                             attributes = c(biomart_filter,
-  #                                           'chromosome_name',
-  #                                           'start_position',
-  #                                           'end_position',
-  #                                           species_gene_symbol,
-  #                                           "strand",
-  #                                           "external_synonym"),
-  #                             values =  try_again_2,
-  #                             mart = ensembl,
-  #                             uniqueRows = T)
-  # 
-  # biospyder <- left_join(biospyder,
-  #                   to_add_missing,
-  #                   by = c("PROBE_ID"),
-  #                   suffix = c("", ".y")) %>%
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id) %>%
-  #   left_join(symbol_to_ensembl, by = c("GENE_SYMBOL" = "GENE_SYMBOL"), suffix = c("", ".y")) %>% 
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id) %>%
-  #   left_join(synonym_to_ensembl, by = c("GENE_SYMBOL" = "external_synonym"), suffix = c("", ".y")) %>%
-  #   mutate(ENSEMBL_GENE_ID = dplyr::coalesce(ENSEMBL_GENE_ID, ensembl_gene_id)) %>%
-  #   dplyr::select(-ensembl_gene_id)
-  # biospyder <- biospyder %>% dplyr::select(1:12)
-  
-  # biospyder %>% dplyr::filter(is.na(ENSEMBL_GENE_ID)) %>% glimpse()
-  
-  #################################################
-  # Don't do this
-  # It collapses probes by gene sybmols - which is not really the best way.
-  # We will keep probe-level values because they are usually transcript specific.
-  #################################################
-  # 
-  # sampleData <- sampleData %>%
-  #   mutate(GENE_SYMBOL = str_replace(PROBE_NAME, "_.*", ""))
-  # 
-  # sampleDataTable <- data.table(sampleData %>% dplyr::select(-PROBE_NAME))
-  # sampleData <- sampleDataTable[, lapply(.SD, sum), by = "GENE_SYMBOL"]
-  # 
-  # # sampleData <- sampleData %>%
-  # #   mutate(GENE_SYMBOL = str_replace(PROBE_NAME, "_.*", "")) %>%
-  # #   dplyr::group_by(GENE_SYMBOL) %>%
-  # #   dplyr::summarise_if(.predicate = function(x) is.numeric(x),
-  # #                       .funs = c("sum")) %>%
-  # #   ungroup()
-  # sampleData <- as.data.frame(sampleData)
-  # row.names(sampleData) <- sampleData$GENE_SYMBOL
-  # sampleData <- sampleData[,-1]
-
-  # biospyder %>% select(ENSEMBL_GENE_ID) %>% distinct() %>% count()
-  # sampleData <- sampleData[row.names(sampleData) %in% biospyder$ENSEMBL_GENE_ID,] # If aligned to hg38...
-  
 } else { 
   print("Platform/technology not recognized") 
 }
@@ -571,7 +429,7 @@ knitr::kable(contrasts,
 
 ## Run DESeq2
 
-```{r run-DESeq2, collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r run-DESeq2, collapse = TRUE, warning = FALSE, message = FALSE}
 ##########
 # DESeq2 #
 ##########
@@ -667,20 +525,18 @@ head(assay(dds))
 head(rowRanges(dds))
 str(counts(dds))
 
-
-
 # Make regularized log object for later plotting
 # rld <- tryCatch(rlog(dds), error = function(e) { rlog(dds, fitType = 'mean') })
 # Use vst for hundreds of samples!
 
-if (!is.na(params$nuisance)) {
+if (!is.na(params$batch_var)) {
   rld <- vst(dds, blind = F) # Should this be blind?
   mat <- assay(rld)
   condition <- formula(paste0(paste0("~"),
-                              paste0(intgroup[!intgroup %in% params$nuisance],
+                              paste0(intgroup[!intgroup %in% params$batch_var],
                                      collapse = " + ")))
   mm <- model.matrix(condition, colData(rld))
-  mat <- limma::removeBatchEffect(mat, batch = rld[[params$nuisance]], design = mm)
+  mat <- limma::removeBatchEffect(mat, batch = rld[[params$batch_var]], design = mm)
   assay(rld) <- mat
 } else {
   rld <- vst(dds, blind = F) # Should this be blind?
@@ -804,67 +660,13 @@ ggplot(reads_df_annotated,
   expand_limits(y = 0) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
-
 ```
 
 # Testing for differentially expressed genes
 
-## Load R-ODAF functions
-
-```{r 'define-ODAF-functions', collapse = TRUE, warning = FALSE, message = FALSE}
-###################################################################################
-#DEFINE FUNCTIONS
-###################################################################################
-plot.barplots <- function(samples, b) {
-  color <- NULL
-  for (h in 1:ncol(norm_data)) {
-    if (substring(colnames(norm_data)[h], 1, 3) == substring(condition2, 1, 3)) { color <- c(color, "red3") } else {color <- c(color, "darkgrey")}
-  }
-  fileNamePlot <- paste0(b, row.names(samples)[b], ".png")
-  pseudoTitle <- paste0(row.names(samples)[b], "_pAdj:", samples[b, "padj"])
-  
-  png(file = paste(fileNamePlot, sep = "/"), width = 1200, height = 700, pointsize = 20)
-  par(mar = c(8, 4, 3, 1))
-  barplot(as.numeric(norm_data[row.names(samples)[b],]), las = 2, col = color, main = pseudoTitle, cex.names = 0.5,  cex.axis = 0.8, names.arg = colnames(norm_data)) 
-  dev.off()
-} #plot.barplots function done
-
-###################################################################################
-draw.barplots <- function(samples, top_bottom, NUM){
-  if (nrow(samples) == 0) {
-    #print("no genes to plot") 
-  } else { 
-    if (top_bottom == "top") {
-      #print(paste0("drawing Top ", NUM, " plots"))
-      if (nrow(samples) <= NUM) { 
-        for (b in 1:nrow(samples)) {plot.barplots(samples, b)}
-      }
-      
-      if (nrow(samples) > NUM) { 
-        for (b in 1:NUM) {plot.barplots(samples, b)}	
-      }	
-    }
-    
-    if (top_bottom == "bottom") {
-      #print(paste0("drawing Bottom", NUM, " plots"))
-      if (nrow(samples) <= NUM) { 
-        for (b in 1:nrow(samples)) {plot.barplots(samples, b)}
-      }
-      if (nrow(samples) > NUM) { 
-        for (b in ((nrow(samples) - NUM + 1):nrow(samples))) {plot.barplots(DEsamples, b)}
-      }
-    }}
-} #draw.barplots function done
-
-###################################################################################
-###################################################################################
-```
-
-The code above (not shown by default) loads in plotting functions specific to the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) template. More information on the R-ODAF framework is available [here](https://github.com/MCTverheijen/R-ODAF).
-
 ## Run pairwise comparisons
 
-```{r 'run_ODAF_code', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'run_ODAF_code', collapse = TRUE, warning = FALSE, message = FALSE}
 
 # Initial setup for DESeq2 contrasts
 cooks   <- F # Sometimes may need consideration
@@ -943,9 +745,6 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	                 type = "ashr")
 	resListAll[[x]] <- res
 	
-	# Make new directory for the ODAF-specific files
-	ODAFdir <- file.path(paths$DEG_output, "R-ODAF")
-	if (!dir.exists(ODAFdir)) {dir.create(ODAFdir, recursive = TRUE)}
 	FileName <- paste(NORM_TYPE, condition2, "vs", condition1, "FDR", pAdjValue, sep = "_")
 	
 	# Create output tables
@@ -1014,23 +813,20 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
   
   filterList[[x]] <- Filter # Useful to explore later...
   
- # Save the normalized counts and the list of DEGs
-	write.table(norm_data,
-	            file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+  # Save the R-ODAF tables
+  # Except the first two which are redundant with other ones produced
+  #	write.table(norm_data,
+  #            file = file.path(paths$ODAFdir, paste0(FileName, "_Norm_Data.txt")),
+  #            sep = "\t", quote = FALSE)
 	write.table(DEsamples,
-	            file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_DEG_table.txt")),
+	            sep = "\t", quote = FALSE)
 	write.table(DECounts_no_quant,
-	            file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
+	            sep = "\t", quote = FALSE)
 	write.table(DECounts_spike,
-	            file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
-	            sep = "\t",
-	            quote = FALSE)
+	            file = file.path(paths$ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
+	            sep = "\t", quote = FALSE)
 
 	print("DESeq2 Done")
 	
@@ -1038,28 +834,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 
 	resListSig[[x]] <- DECounts_all_filters
 	resListFiltered[[x]] <- allCounts_all_filters
-	
-	if (R_ODAF_plots == TRUE) {
-  	print("creating Read count Plots")
-  	# top DEGs
-  	plotdir <- file.path(paths$DEG_output, "plots")
-  	if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-  	barplot.dir <- file.path(paths$DEG_output, "plots", "/barplot_genes/")
-  	if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
-  
-  	TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
-  	if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
-  	setwd(TOPbarplot.dir)
-  	draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
-  	print("Top 20 DEG plots done")
-  
-  	# Spurious spikes
-  	SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
-  	if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
-  	setwd(SPIKEbarplot.dir)
-  	draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
-  	print("All DE_Spurious_spike plots done")
-	}
+
 }
 # If there are no significant results - remove the empty contrast from the list:
 # Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
@@ -1089,13 +864,6 @@ genes <- unlist(genes) %>% unique()
 # listDatasets(useMart('ensembl'))
 # listAttributes(ensembl)
 # listFilters(ensembl)
-
-
-# if (file.exists(file.path(paths$RData, "id_table.Rdata"))) {
-#   print(paste("Already found ID table; skipping biomaRt query and loading from disk."))
-#   load(file.path(paths$RData, "id_table.Rdata"))
-#   id_table <- id_table_entrez[, 1:3] 
-#   } else {
 
 if (Platform == "TempO-Seq") {
   genes <- biospyder[biospyder[[biomart_filter]] %in% genes,] %>% pull(!!ensym(biospyder_ID))
@@ -1138,13 +906,12 @@ if (Platform == "TempO-Seq") {
   save(id_table_entrez, file = file.path(paths$RData, "id_table.Rdata"))
   id_table <- id_table_entrez[, 1:3] # Manageable subset of the annotations
 }
-# }
 ```
 
 
 ## Create summary tables
 
-```{r create_tables, collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r create_tables, collapse = TRUE, warning = FALSE, message = FALSE}
 ################################################################################
 # Table modifications
 ################################################################################
@@ -1225,11 +992,6 @@ degTable_n <- significantResults %>%
 degTable <- degTable %>%
   left_join(degTable_n, by = "contrast", na_matches = "never")
 
-# lengths <- lapply(resList, nrow)
-# longest <- which.max(lengths)
-# summaryTable <- data.frame( genes = row.names(resListSig[[longest]]),
-#                             baseMean = resListSig[[longest]]$baseMean )
-# names(summaryTable)[names(summaryTable) == "genes"] <- biomart_filter
 summaryTable <- allResults %>%
   dplyr::select(!!ensym(biomart_filter), baseMean)
 contrastsInSummary <- vector()
@@ -1311,7 +1073,7 @@ kable(degTable,
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-```{r 'write-tables', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'write-tables', collapse = TRUE, warning = FALSE, message = FALSE}
 #######################################
 ### Write results table from DESeq2
 #######################################
@@ -1348,7 +1110,7 @@ The code above (not shown by default) writes text files for each DEG summary typ
 
 # Write data
 
-```{r 'write-excel-worksheets', collapse = TRUE, warning = FALSE, message = FALSE, eval = flag}
+```{r 'write-excel-worksheets', collapse = TRUE, warning = FALSE, message = FALSE}
 #######################################
 ### Write results above but in Excel
 #######################################
@@ -1369,8 +1131,8 @@ wb1 <- createWorkbook()
 modifyBaseFont(wb1, fontSize = 10, fontName = "Arial Narrow")
 addWorksheet(wb1, "DESeq_results_per_gene")
 for (j in 1:length(contrastsInSummary)) {
-  myStartcol = 7 + ((j - 1) * 3)
-  myEndcol = 9 + ((j - 1) * 3)
+  myStartcol = 8 + ((j - 1) * 3)
+  myEndcol = 10 + ((j - 1) * 3)
   mergeCells(wb1,
              sheet = 1,
              cols = myStartcol:myEndcol,
@@ -1508,22 +1270,6 @@ saveWorkbook(wb5, fname5, overwrite = TRUE)
 The code above (not shown by default) writes Excel workbooks and text files of DEG lists.
 
 These files should be provided to you as a separate zip file.
-
-```{r 'embed_excel_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_files(list.files(".", "[.](xlsx)$"), name = "RNASeq_Spreadsheets.zip")
-```
-
-```{r 'embed_text_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_files(list.files(".", "[.](txt)$"), name = "RNASeq_Text_Files.zip")
-```
-
-```{r 'embed_ODAF_files', eval = embedFiles}
-# setwd(paths$DEG_output)
-# xfun::embed_dir(ODAFdir, name = "RNASeq_R-ODAF_text_files.zip")
-```
-
 
 # PCA Plots {.tabset .tabset-fade}
 
@@ -2645,19 +2391,5 @@ session_info()
 ```
 
 ## Pandoc version used: `r rmarkdown::pandoc_version()`.
-
-```{r 'save_final', show = FALSE}
-# Save complete workspace
-if (is.na(params$group_facet)) {
-  save.image(file = file.path(paths$RData, "Complete_analysis.RData"))
-} else {
-  save.image(file = file.path(paths$RData,
-                              paste0("Complete_analysis_",
-                                     paste(params$group_filter, collapse = "_"),
-                                     ".RData")))
-}
-# Add a flag to the start of the script with if statements in all code chunks to check if the flag is set.
-# If flag is TRUE, run analysis; if flag is FALSE, SKIP analysis and continue here (just to modify plotting output).
-```
 
 <div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>

@@ -113,11 +113,13 @@ solvent_control <- params$solvent_control
 ############################################################################
 paths <- list()
 paths$root <- here::here()
-paths$data <- paste0(paths$root, "/data")
-paths$processed <- paste0(paths$data, "/processed")
-paths$metadata <- paste0(paths$data, "/metadata")
-paths$reports <- paste0(paths$root, "/reports")
-paths$qc <- paste0(paths$root, "/analysis/QC")
+paths$data <- file.path(paths$root, "data")
+paths$processed <- file.path(paths$data, "processed")
+paths$metadata <- file.path(paths$data, "metadata")
+paths$qc <- file.path(paths$root, "analysis", "QC")
+paths$details <- file.path(paths$qc, "details")
+
+if (!dir.exists(paths$details)) {dir.create(paths$details, recursive = TRUE)}
 
 knitr::opts_knit$set(root.dir = paths$root)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
@@ -327,7 +329,7 @@ for (k in 1:length(libsize)) {
 ############################################################################
 # Dendrogram: all
 ############################################################################
-CairoPDF(file = file.path(paths$processed, "dendrogram_prefiltering_all.pdf"),
+CairoPDF(file = file.path(paths$details, "dendrogram_prefiltering_all.pdf"),
          width = 14,
          height = 8.5,
          family = "Courier")
@@ -353,38 +355,9 @@ plot(dendro_before_all_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
-### Filtering by Pearson correlation distance
-
-In the code below, a `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
-
-```{r filtering_dendrogram}
-############################################################################
-# Filtering
-############################################################################
-
-tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
-n <- table(tree_groups)
-n <- sort(n, decreasing = T)
-
-if(!is.null(dim(n))){
-  n <- n[2:dim(n)]
-  
-  if (length(n > 0)) {
-    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
-    write.table(d[flag_cluster,],
-                file.path(paths$processed, "outliers_cluster_analysis.txt"),
-                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-    d[flag_cluster,] %>%
-      dplyr::select(original_names, dendro_color_by) %>%
-      kable(caption = "Samples flagged as outliers by clustering distance") %>%
-      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-      scroll_box(width = "100%", height = "480px")
-  }
-}
-```
 
 ### Splitting metadata into groups: technical controls and experimental samples
 
@@ -437,7 +410,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
   labels_to_use <- labels_to_use[order.dendrogram(dendro_before_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
-  CairoPDF(file = file.path(paths$processed,
+  CairoPDF(file = file.path(paths$details,
                             "dendrogram_prefiltering_tech_controls.pdf"),
            width = 14,
            height = 8.5,
@@ -451,7 +424,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
              horiz = F)
   )
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
-  dev.off()
+  invisible(dev.off())
 }
 
 ```
@@ -467,7 +440,7 @@ The dose colored dendrogram is hard-coded in this version and should be removed 
 # Experimental Samples, Prefiltering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples.pdf"),
          width = 14,
          height = 8.5,
@@ -499,13 +472,13 @@ plot(dendro_before_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 
 ############################################################################
 # Experimental Samples, Prefiltering, Colored by Dose
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
          width = 14,
          height = 8.5,
@@ -537,13 +510,44 @@ plot(dendro_before_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 
 ```
 
-## Additional QC metrics {.tabset}
+## Samples Removed by QC metrics {.tabset}
 
 Click on the tabs below to view samples removed by each metric.
+
+### Clustering Distance Cutoff
+
+A `r clust_method` distance of `r tree_height_cutoff` is used to cut the tree and separate outliers.
+
+```{r filtering_dendrogram}
+############################################################################
+# Filtering
+############################################################################
+
+tree_groups <- cutree(dendro_before_all_samples, h = tree_height_cutoff)
+n <- table(tree_groups)
+n <- sort(n, decreasing = T)
+
+if (!is.null(dim(n))) {
+  n <- n[2:dim(n)]
+  
+  if (length(n > 0)) {
+    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
+    write.table(d[flag_cluster,],
+                file.path(paths$details, "outliers_cluster_analysis.txt"),
+                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+    d[flag_cluster,] %>%
+      dplyr::select(original_names, dendro_color_by) %>%
+      kable(caption = "Samples flagged as outliers by clustering distance") %>%
+      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+      scroll_box(width = "100%", height = "480px")
+  }
+}
+```
+
 
 ### Number of mapped reads
 
@@ -755,7 +759,6 @@ detach("package:OUTRIDER", unload = TRUE)
 ```
 
 
-
 # Correlations
 
 ## All samples
@@ -937,8 +940,6 @@ annotation_col <- HeatmapAnnotation(df = correlation_df)
 
 ```
 
-
-
 # Compose tables
 
 ```{r return_data}
@@ -1061,9 +1062,9 @@ This examines correlations between the QC metrics calculated and any factors in 
 
 Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
 
-```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.null(batch_var)}
+```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.na(batch_var)}
 
-if (!is.null(batch_var)) {
+if (!is.na(batch_var)) {
 QAQC_metadata_subset <- QAQC_annotated %>%
   dplyr::select(unlist(groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
@@ -1086,7 +1087,7 @@ covariate_names <- names(potential_covariates[potential_covariates < 24])
 # Need a generic way to look for dose column...
 #QAQC_metadata_subset$dose <- factor(log(QAQC_metadata_subset$dose+1))
 
-if (length(groups) > 1 & !is.null(batch_var)) {
+if (length(groups) > 1 & !is.na(batch_var)) {
   for (i in seq_along(groups)[1:length(groups)]) {
     # Drop groups that have high numbers of possible values
     covariate_cols <- unlist(groups[[i]])
@@ -1105,7 +1106,7 @@ if (length(groups) > 1 & !is.null(batch_var)) {
     print(p)
   }
 } else {
-  if (!is.null(batch_var)) {
+  if (!is.na(batch_var)) {
   p <- ggpairs(QAQC_metadata_subset,
                  cardinality_threshold = 24,
                  columns = c(unlist(groups),
@@ -1113,7 +1114,7 @@ if (length(groups) > 1 & !is.null(batch_var)) {
                  ggplot2::aes(colour = !!ensym(batch_var)))
   print(p)
 } else {
-  if (is.null(batch_var)) {
+  if (is.na(batch_var)) {
   p <- ggpairs(QAQC_metadata_subset,
                  cardinality_threshold = 24,
                  columns = c(unlist(groups),
@@ -1135,7 +1136,7 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 ```
 
 ```{r plate_pos, eval = are_there_plates}
-if (!is.null(batch_var)) {
+if (!is.na(batch_var)) {
   batch_length <- length(unique(QAQC_annotated[,batch_var]))
 } else{
   batch_length <- 7
@@ -1156,9 +1157,8 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
         axis.ticks = element_blank(),
         panel.spacing = unit(2, "lines")) +
   scale_x_discrete(position = "top") +
-  coord_fixed()  +
-  {if (!is.null(batch_var))  facet_wrap(paste0("~",batch_var), ncol = 2)}
-#  {if (!is.null(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
+  {if (!is.na(batch_var))  facet_wrap(paste0("~",batch_var), ncol = 2)}
+#  {if (!is.na(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
 # The facet_rep_wrap function doesn't actually seem to produce the intended effect.
 # Probably broken by something in ggplot.
 # Need a better way to add row and column labels. Free axes in ggplot don't
@@ -1168,9 +1168,8 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
 
 
 ```{r}
-custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 7)
+custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, no = 5)
 ```
-
 
 ### Number of Mapped Reads
 
@@ -1178,7 +1177,9 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
+                                                                
 ```
 
 ### Fraction of Mapped Reads
@@ -1187,7 +1188,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Nsig80
@@ -1196,7 +1198,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Ncov5
@@ -1205,7 +1208,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Gini
@@ -1214,7 +1218,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 ```
 
 ### Any samples which failed
@@ -1226,7 +1231,8 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
   ggtitle("Any samples failed")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) # Add x and y for row and column... not really necessary though
+  ggplotly(tooltip = c("name","treat","dose","val")) %>%
+  layout(autosize = F, width = 500, height = 333)
 
 ```
 
@@ -1295,11 +1301,11 @@ outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
                                                QAQC_pass_fail,
                                                by = c("original_names" = "Sample"))
 write.table(outlier_metadata_annotated,
-            file.path(paths$processed, "samples_removed.txt"),
+            file.path(paths$details, "samples_removed.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(QAQC_annotated,
-            file.path(paths$processed, "QC_per_sample.txt"),
+            file.path(paths$details, "QC_per_sample.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(metadata_outliers_removed,
@@ -1307,8 +1313,10 @@ write.table(metadata_outliers_removed,
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 sampleData_filtered <- sampleData %>% dplyr::select(-all_of(outliers))
-ncol(sampleData_filtered)
+
 ```
+
+There are `ncol(sampleData_filtered)` samples remaining in the study after sample removal.
 
 ## Dendrogram (after filtering)
 
@@ -1319,7 +1327,7 @@ ncol(sampleData_filtered)
 # Dendrogram: all, after filtering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed, "dendrogram_postfiltering_all.pdf"),
+CairoPDF(file = file.path(paths$details, "dendrogram_postfiltering_all.pdf"),
          width = 14,
          height = 8.5,
          family = "Courier")
@@ -1347,7 +1355,7 @@ plot(dendro_after_all_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 ### Dendrogram, technical control samples, postfiltering
@@ -1377,7 +1385,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
   labels_to_use <- labels_to_use[order.dendrogram(dendro_after_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
-  CairoPDF(file = file.path(paths$processed,
+  CairoPDF(file = file.path(paths$details,
                             "dendrogram_postfiltering_tech_controls.pdf"),
            width = 14,
            height = 8.5,
@@ -1389,7 +1397,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
        main = "log2 CPM",
        horiz = F)
   abline(h = tree_height_cutoff, col = "red", lwd = 2)
-  dev.off()
+  invisible(dev.off())
 }
 ```
 
@@ -1400,7 +1408,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
 # Experimental Samples, Postfiltering
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples.pdf"),
          width = 14,
          height = 8.5,
@@ -1434,7 +1442,7 @@ plot(dendro_after_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 ### Dendrogram, experimental samples, postfiltering, colored by dose
@@ -1444,7 +1452,7 @@ dev.off()
 # Experimental Samples, Postfiltering, Colored by Dose
 ############################################################################
 
-CairoPDF(file = file.path(paths$processed,
+CairoPDF(file = file.path(paths$details,
                           "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
          width = 14,
          height = 8.5,
@@ -1478,7 +1486,7 @@ plot(dendro_after_all_exp_samples %>%
      main = "log2 CPM",
      horiz = F)
 abline(h = tree_height_cutoff, col = "red", lwd = 2)
-dev.off()
+invisible(dev.off())
 ```
 
 
@@ -1486,18 +1494,18 @@ dev.off()
 
 ### Batch
 
-```{r plot_batch_effects, eval = !is.null(batch_var), fig.height = as.numeric(custom_fig_height)/2}
+```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)}
 add_spaces <- function(string) {
   substr(string, 1, 1) <- toupper(substr(string, 1, 1))
   string <- gsub(pattern = "-", replacement = " ", string)
   string <- gsub(pattern = "_", replacement = " ", string)
   string
 }
-plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(batch_var), color = !!ensym(treatment_var))) +
+plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !!ensym(treatment_var))) +
   facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
     .cols = add_spaces,
     .default = label_wrap_gen(20)), ncol = 4) +
-  theme(legend.position = "bottom", axis.text = element_blank())
+  theme(legend.position = "none") + xlab("Batch")
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
@@ -1509,11 +1517,10 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=any(grepl("dose", colnames(QAQC_annotated), ignore.case = T)), fig.height = as.numeric(custom_fig_height)/2}
-plot_dose_effect <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = factor(!!ensym(dose)))) +
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)}
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(params$dose)), color = factor(!!ensym(params$dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
-  theme(axis.text = element_blank(), legend.position = "bottom") +
-  labs(color = dose)
+  theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
