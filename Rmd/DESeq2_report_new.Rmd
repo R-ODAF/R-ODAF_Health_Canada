@@ -46,10 +46,19 @@ library('kableExtra')
 
 ```
 
-
 ## load functions
 ```{r load_functions}
 
+
+
+```
+
+## load config
+```{r load_config}
+
+config <- yaml::read_yaml(file.path(here::here(),
+                                    "config/config.yaml"),
+                          eval.expr = T)
 
 
 ```

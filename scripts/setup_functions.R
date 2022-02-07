@@ -75,6 +75,25 @@ get_analysis_id <- function(params){
     return(analysisID)
 }
 
+load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
+  return_data = list()
+  biospyder <- read.delim(file.path(biospyder_dbs, temposeq_manifest), # Assay manifest...
+                          stringsAsFactors = FALSE,
+                          sep = ",",
+                          header = TRUE,
+                          quote = "\"")
+  
+  biospyder_ID = "Ensembl_Gene_ID"
+  biomart_filter <- "Probe_Name"
+  biospyder_filter = "Ensembl_Gene_ID"
+  biospyder[ biospyder == "NULL" ] <- NA
+  return_data$biospyder <- biospyder
+  return_data$biospyder_ID <- biospyder_ID
+  return_data$biomart_filter <- biomart_filter
+  return_data$biospyder_filter <- biospyder_filter
+  return(return_data)
+}
+
 load_biospyder <- function(biospyder_dbs, temposeq_manifest){
   return_data = list()
   biospyder <- read.delim(file.path(biospyder_dbs, temposeq_manifest), # Assay manifest...

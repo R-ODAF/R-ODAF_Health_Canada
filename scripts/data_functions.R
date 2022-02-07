@@ -89,8 +89,6 @@ check_data <- function(sd, des, con){
         nrow(des) > 0
         nrow(con) > 0
     })
-    print(head(des))
-    print(tail(des))
     # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
     stopifnot(all(des$original_names %in% colnames(sd)))
     # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
@@ -121,7 +119,7 @@ subset_metadata <- function(DESeqDesign, design, contrasts, current_filter){
         contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
     }
     DESeqDesign_subset <- DESeqDesign %>% dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) )
-    levels(DESeqDesign_subset[design,]) <- unlist(contrasts_subset) %>% unique()
+    #levels(DESeqDesign_subset[design,]) <- unlist(contrasts_subset) %>% unique()
     return(list(DESeqDesign=DESeqDesign_subset, contrasts=contrasts_subset))
 }
 

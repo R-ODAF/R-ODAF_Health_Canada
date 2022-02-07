@@ -53,8 +53,8 @@ if (params$platform == "RNA-Seq") {
   params$MinCount <- 0.5
   params$alpha <- pAdjValue <- 0.05 
   params$linear_fc_filter <- 1.5
-  
-  bs <- load_biospyder(params$biospyder_dbs, species_data$temposeq_manifest)
+
+  bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
   params$biospyder_ID <- bs$biospyder_ID
   params$biomart_filter <- bs$biomart_filter
   params$biospyder_filter <- bs$biospyder_filter
@@ -114,7 +114,6 @@ if (length(intgroup) > 1){
 
 # load count data
 sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
-print(typeof(sampleData))
 
 processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, design_to_use, params)
 sampleData <- processed$sampleData

@@ -12,6 +12,8 @@ library(tidyverse)
 require(yaml)
 
 source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+
 
 config <- yaml::read_yaml(file.path(here::here(),
                                     "config/config.yaml"),
@@ -38,6 +40,9 @@ inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
 
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+
+# replace nulls in params with NA
+params <- replace_nulls_in_config(config$DESeq2)
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
