@@ -1518,7 +1518,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 ### Dose effects
 
 ```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)}
-plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(params$dose)), color = factor(!!ensym(params$dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
   theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
 
