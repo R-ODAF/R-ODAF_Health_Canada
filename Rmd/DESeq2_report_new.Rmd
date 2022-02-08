@@ -79,8 +79,6 @@ inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
-# replace nulls in params with NA
-params <- replace_nulls_in_config(config$DESeq2)
 params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
 
 
@@ -112,6 +110,7 @@ load(params$dataFile) # metadata, contrasts, counts, resultsList
 if(is.na(params$group_facet) && is.na(params$display_group_facet)){
     dds <- ddsList[['all']]
     resultsList <- overallResList[['all']]
+    rld <- rldList[['all']]
 }
 
 ```
@@ -185,10 +184,20 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 
 # PCA plots (all genes, DEGs only, top 1000 most variable genes)
 ```{r PCA, collapse=TRUE}
-
-# plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
-#   theme(legend.position = "bottom") +
-#   guides(color = guide_legend(ncol = 3))
+# all genes
+plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) +
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(ncol = 3))
+# DEGs only
+plotPCA(rld[rownames(res)], intgroup = params$design, ntop = nrow(assay(rld))) +
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(ncol = 3))
+# top N most variable
+topN <- 100
+most_variable <- res[order(-abs(res$log2FoldChange)),]
+plotPCA(rld[rownames(most_variable[1:topN,])], intgroup = params$design, ntop = nrow(assay(rld))) +
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(ncol = 3))
 
 ```
 

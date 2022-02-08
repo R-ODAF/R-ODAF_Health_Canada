@@ -19,21 +19,25 @@ source(here::here("scripts","DESeq_functions.R"))
 
 config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
 
-params <- replace_nulls_in_config(config$DESeq2)
-
+# Combine required params from config
+params <- c(config$common, config$DESeq2)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
+# If projectdir is not set, figure out current project root directory
 projectdir <- params$projectdir
-if(is.na(projectdir)){
+if (is.na(projectdir)) {
   projectdir <- here::here()
   params$projectdir <- projectdir
 }
 
 paths <- set_up_paths(params)
+
 get_analysis_id <- get_analysis_id(params)
 
 species_data <- load_species(params$species)
-ensembl <- useMart("ensembl",
-                   dataset = species_data$ensembl_species,
-                   host = "useast.ensembl.org")
+# ensembl <- useMart("ensembl",
+#                    dataset = species_data$ensembl_species,
+#                    host = "useast.ensembl.org")
 
 # set some additional parameters based on platform
 if (params$platform == "RNA-Seq") {
@@ -110,7 +114,11 @@ if (length(intgroup) > 1){
         dplyr::select(V1=V1.new, V2=V2.new)
     design_to_use <- new_group_name
     intgroup <- new_group_name
+    covariates <- intgroup[intgroup != params$design]
+} else {
+  covariates <- NA
 }
+original_design <- params$design
 
 # load count data
 sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
@@ -147,14 +155,13 @@ rldList <- list()
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
     dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, design_to_use, params)
-    # TODO: do this. need nuisance params
-    # rld <- regularize_data(dds, covariates, nuisance)
+    rld <- regularize_data(dds, original_design, covariates, params$batch_var)
     DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, design_to_use, params, NA, paths$DEG_output)
     resList <- DESeq_results$resList
     ddsList[['all']] <- dds
     overallResList[['all']] <- DESeq_results$resList
     designList[['all']] <- DESeqDesign
-    # rldList[['all']] <- rld
+    rldList[['all']] <- rld
 } else {
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
@@ -167,13 +174,11 @@ if(is.na(params$group_facet)){
 
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
-        # TODO: do this. need nuisance params
-        # rldList[[current_filter]] <- regularize_data(dds, covariates, nuisance)
+        rldList[[current_filter]] <- regularize_data(dds, original_design, covariates, params$batch_var)
         DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
         overallResList[[current_filter]] <- DESeq_results$resList
     }
 }
-
 
 summary_counts <- data.frame()
 if(is.na(params$group_facet)){

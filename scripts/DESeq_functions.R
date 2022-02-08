@@ -19,12 +19,18 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
 
 # covariates are used to calculate within-group variability. Nuisance parameters are removed (e.g. for visualization) See:
 # http://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#why-after-vst-are-there-still-batches-in-the-pca-plot
-regularize_data <- function(dds, covariates, nuisance, blind=FALSE){
+regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
   if (!is.na(nuisance)) {
     rld <- vst(dds, blind)
     mat <- assay(rld)
-    condition <- formula(paste0("~",
-                                paste0(covariates[!covariates %in% nuisance],collapse = " + ")))
+    if(!is.na(covariates)){
+      condition <- formula(paste0("~",
+                                  design,
+                                  paste0(covariates[!covariates %in% nuisance],collapse = " + ")))
+      
+    } else {
+      condition <- formula(paste0("~", design))
+    }
     mm <- model.matrix(condition, colData(rld))
     mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
     assay(rld) <- mat
@@ -201,31 +207,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         if (nrow(DECounts_real) > 0){
             resList[[contrast_string]] <- DECounts_real
         }
-
-
-        # Is this stuff needed? Would prefer to keep plotting stuff out of this script
-        #
-        # if (params$R_ODAF_plots == TRUE) {
-        #     message("creating Read count Plots")
-        #     # top DEGs
-        #     plotdir <- file.path(outdir, "plots")
-        #     if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-        #     barplot.dir <- file.path(outdir, "plots", "/barplot_genes/")
-        #     if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
-
-        #     TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
-        #     if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
-        #     setwd(TOPbarplot.dir)
-        #     draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
-        #     message("Top 20 DEG plots done")
-
-        #     # Spurious spikes
-        #     SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
-        #     if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
-        #     setwd(SPIKEbarplot.dir)
-        #     draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
-        #     message("All DE_Spurious_spike plots done")
-        # }
     }
     # If there are no significant results - remove the empty contrast from the list:
     resList <- resList[!sapply(resList, is.null)]
