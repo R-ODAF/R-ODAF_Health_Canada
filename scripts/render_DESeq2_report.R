@@ -21,17 +21,17 @@ config <- yaml::read_yaml(file.path(here::here(),
 
 # Combine required params from config
 params <- c(config$common, config$DESeq2)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
 # If projectdir is not set, figure out current project root directory
 projectdir <- params$projectdir
-if (is.null(projectdir)) {
+if (is.na(projectdir)) {
   projectdir <- here::here()
   params$projectdir <- projectdir
 }
 
-paths <- set_up_paths(config$DESeq2)
+paths <- set_up_paths(params)
 
-# replace nulls in params with NA
-replace_nulls_in_config(config$DESeq2)
 
 skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 
@@ -67,20 +67,21 @@ if (is.na(params$display_group_facet)) {
                      params$project_name, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
+  params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
   outFile <- file.path(report_dir, filename)
   rmarkdown::render(input = inputFile,
                     encoding = "UTF-8",
                     output_file = outFile,
                     params = params,
                     envir = new.env())
-} else if (any(!is.na(params$group_filter))) {
+} else if (any(!is.na(params$display_group_filter))) {
   message(paste0("The group(s) of interest is (are) ",
-                 paste(params$group_filter, collapse = " and "),".\n",
+                 paste(params$display_group_filter, collapse = " and "),".\n",
                  "Writing a single report for that (those) groups."))
   # Output file - HTML
   filename <- paste0(params$platform, "_",
                      params$project_name, "_",
-                     paste(params$group_filter, collapse = "_"), "_",
+                     paste(params$display_group_filter, collapse = "_"), "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'),
                      ".html")
   outFile <- file.path(report_dir, filename)

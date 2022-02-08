@@ -6,12 +6,12 @@ set_up_paths <- function(params) {
     # Should probably update this to use the file.path() function.
     paths$root <- params$projectdir
     paths$data <- file.path(paths$root, "data")
-      paths$raw <- file.path(paths$data, "raw")
-      paths$processed <- file.path(paths$data, "processed")
-      paths$metadata <- file.path(paths$data, "metadata")
+    paths$raw <- file.path(paths$data, "raw")
+    paths$processed <- file.path(paths$data, "processed")
+    paths$metadata <- file.path(paths$data, "metadata")
     paths$reports <- file.path(paths$root, "reports")
     paths$results <- file.path(paths$root, "results")
-    if (is.na(params$group_facet)) {
+    if (is.na(params$group_facet) || is.null(params$group_facet)) {
       paths$DEG_output <- file.path(paths$results, "DEG_output")
     } else {
       paths$DEG_output <- file.path(paths$results, "DEG_output", paste0("group_", paste(params$group_filter, collapse = "_")))

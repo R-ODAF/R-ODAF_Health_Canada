@@ -7,9 +7,9 @@ output:
     code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
-title: "`r paste('Transcriptome analysis:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
-subtitle: "`r paste(params$platform, 'analysis', ifelse(!is.null(params$group_filter), paste('for', paste(params$group_filter, collapse=' and ')), ''))`"
 ---
+
+
 
 
 ***
@@ -42,9 +42,50 @@ This report is meant to help explore DESeq2 results and was generated using RMar
 library('tidyverse')
 library('knitr')
 library('kableExtra')
+library('DESeq2')
+
+```
+
+
+```{r extra stuff}
+
+source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+
+
+config <- yaml::read_yaml(file.path(here::here(),
+                                    "config/config.yaml"),
+                          eval.expr = T)
+
+# Combine required params from config
+params <- c(config$common, config$DESeq2)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
+# If projectdir is not set, figure out current project root directory
+projectdir <- params$projectdir
+if (is.na(projectdir)) {
+  projectdir <- here::here()
+  params$projectdir <- projectdir
+}
+
+paths <- set_up_paths(params)
+
+
+skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+
+# Input file - Rmd
+inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+
+# Identify where metadata can be found
+SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+
+# replace nulls in params with NA
+params <- replace_nulls_in_config(config$DESeq2)
+params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
 
 
 ```
+
 
 ## load functions
 ```{r load_functions}
@@ -64,11 +105,14 @@ config <- yaml::read_yaml(file.path(here::here(),
 ```
 
 
-```{r load_data, collapse=TRUE}
-
+```{r load_data}
 load(params$dataFile) # metadata, contrasts, counts, resultsList
 
-
+# reformat data based on group_facet and display_group_facet
+if(is.na(params$group_facet) && is.na(params$display_group_facet)){
+    dds <- ddsList[['all']]
+    resultsList <- overallResList[['all']]
+}
 
 ```
 
@@ -77,7 +121,7 @@ load(params$dataFile) # metadata, contrasts, counts, resultsList
 ```{r tables, collapse=TRUE}
 
 # table of sample metadata
-metadata_table <- metadata %>% arrange(!!sym(design_to_use))
+metadata_table <- DESeqDesign %>% arrange(!!sym(design_to_use))
 knitr::kable(metadata_table,
              row.names =  F,
              caption = "Sample metadata") %>%
@@ -124,11 +168,11 @@ knitr::kable(summary_counts,
 
 # boxplots of reads/sample (by group)
 ```{r nReads_boxplot, collapse=TRUE}
-df<-data.frame(colSums(counts))
+df<-data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
 df$original_names = rownames(df)
 df2 <- df %>%
-    left_join(metadata) %>%
+    left_join(DESeqDesign) %>%
     dplyr::select(original_names,sym(design_to_use),nReads)
 
 ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
@@ -142,9 +186,9 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 # PCA plots (all genes, DEGs only, top 1000 most variable genes)
 ```{r PCA, collapse=TRUE}
 
-plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
-  theme(legend.position = "bottom") +
-  guides(color = guide_legend(ncol = 3))
+# plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) + 
+#   theme(legend.position = "bottom") +
+#   guides(color = guide_legend(ncol = 3))
 
 ```
 
