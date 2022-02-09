@@ -61,7 +61,7 @@ N/A
 
 # Code setup, Data Loading, and DESeq2 Code
 
-This report is meant to help explore DESeq2 results and was generated using RMarkdown. The structure of this document extends the DESeq2 regionReport RMarkdown [@collado2015regionreport,@regionreport2017]. This section contains the code for setting up the rest of the report.  
+This report is meant to help explore DESeq2 results and was generated using RMarkdown. The structure of this document extends the DESeq2 regionReport RMarkdown [@collado2015regionreport][@regionreport2017]. This section contains the code for setting up the rest of the report.  
 
 ## Load libraries
 
