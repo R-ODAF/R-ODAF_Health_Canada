@@ -1760,7 +1760,7 @@ genes_filtered <- unlist(genes_filtered) %>% unique()
 # ODAFResults %>% count(PROBE_NAME)
 
 
-if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
+if (!is.na(params$dose)) {
   # Create input file...
   read.counts <- as.data.frame(counts(dds, normalized = TRUE))
   lognorm.read.counts <- log2(read.counts + 1)
@@ -1768,7 +1768,7 @@ if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
   bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
                       bmdexpress,
                       stringsAsFactors = F)
-  bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][, doseCol])),
+  bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
                       bmdexpress,
                       stringsAsFactors = F)
   biomarkers <- bmdexpress # Still includes all genes
