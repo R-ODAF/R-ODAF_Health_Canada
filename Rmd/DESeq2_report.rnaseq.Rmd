@@ -571,18 +571,14 @@ This table shows the final list of samples that were used in the data analysis (
 
 ```{r print_metadata_used}
 # Conditionally sort by dose if that column name is present
-if (any(grepl(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T))) {
-  doseCol <- grep(x = colnames(DESeqDesign), pattern = "dose", ignore.case = T)
-  if(length(doseCol)>1){
-    doseCol <- doseCol[1] # This should be assigned explictly instead. Todo.
-  }
+if (!is.na(params$dose)) {
   knitr::kable(DESeqDesign %>%
                  group_by(!!sym(params$design)) %>%
-                 arrange(!!sym(colnames(DESeqDesign)[doseCol])),
-             row.names =  F,
-             caption = "Samples and corresponding experimental conditions used in this report") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  scroll_box(width = "100%", height = "480px")
+                 arrange(!!sym(params$dose)),
+               row.names =  F,
+               caption = "Samples and corresponding experimental conditions used in this report") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+    scroll_box(width = "100%", height = "480px")
 } else {
   knitr::kable(DESeqDesign %>% arrange(!!sym(params$design)),
              row.names =  F,
