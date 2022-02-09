@@ -2360,6 +2360,10 @@ nocite: '@*'
 Sys.time()
 ```
 
+## Version of R-ODAF Repository
+
+The git hash for the commit of the [R-ODAF repository](`r system("git remote get-url origin", intern = T)`) used in this analysis is `r system("git rev-parse HEAD", intern = T)`.
+
 ## Parameters Used
 
 From the list elements in each params${variable} used to generate this report.
