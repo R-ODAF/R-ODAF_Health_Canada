@@ -691,7 +691,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 
 	print(paste0("Filtering genes: 75% of at least 1 group need to be above ", MinCount, " CPM"))
 	SampPerGroup <- table(DE_Design[, DESIGN])
-	if (!SampPerGroup[2] > 1) { next }
+	if (!SampPerGroup[condition2] > 1) { next }
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
   		
