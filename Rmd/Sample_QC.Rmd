@@ -1496,7 +1496,8 @@ plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !
   facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
     .cols = add_spaces,
     .default = label_wrap_gen(20)), ncol = 4) +
-  theme(legend.position = "none") + xlab("Batch")
+  theme(legend.position = "none") + xlab("Batch") +
+  theme(axis.text.x = element_text(angle = 90))
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
@@ -1512,7 +1513,8 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
-  theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
+  theme(legend.position = "none") + xlab("Dose") + # labs(color = dose) + 
+  theme(axis.text.x = element_text(angle = 90))
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
