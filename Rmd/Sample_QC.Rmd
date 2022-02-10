@@ -197,6 +197,12 @@ if (Platform == "TempO-Seq") {
 #    1. sample names identical to the column names of sampleData
 #    2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
 SampleKeyFile <- file.path(paths$metadata, "metadata.txt")
+# Check if the metadata was previously backed up.
+# If so, restore it before doing the new manual sample removal.
+# This is done to ensure we start with the full list of samples from the start.
+if (file.exists(paste0(SampleKeyFile,".bak"))) {
+    system(paste0("cp ",paste0(SampleKeyFile,".bak "),SampleKeyFile))
+  }
 
 DESeqDesign <- read.delim(SampleKeyFile,
                           stringsAsFactors = FALSE,
