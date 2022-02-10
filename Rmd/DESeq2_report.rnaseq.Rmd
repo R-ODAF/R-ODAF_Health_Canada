@@ -359,9 +359,18 @@ if(!is.na(params$sortcol)){
 short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2) # Customize these for your experiment... Must be short enough to fit as Excel tab titles.
 
 # Needed later
-ensembl <- useMart("ensembl",
-                   dataset = ensembl_species,
-                   host = "uswest.ensembl.org")
+ensembl <- NULL
+tryCatch({
+  ensembl <- useMart("ensembl",
+                     dataset = ensembl_species,
+                     host = "uswest.ensembl.org")
+}, error = function(err){
+     ensembl <- useMart("ensembl",
+                     dataset = ensembl_species,
+                     host = "useast.ensembl.org")
+},finally={
+    if (is.null(ensembl)) {stop("Can't connect to Ensembl!")}
+})
 
 #Set parameters according to platform
 if (Platform == "RNA-Seq") {
