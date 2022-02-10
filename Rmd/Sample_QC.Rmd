@@ -242,6 +242,7 @@ mu <- mu[d$original_names,]
 ############################################################################
 # Check if there's a file called remove.txt in metadata before proceeding...
 remove_file <- file.path(paths$metadata,"remove.txt")
+cytotoxic <- data.frame()
 if (file.exists(remove_file)) {
   # How many groups in total are being input?
   DESeqDesign %>% group_by(group) %>% dplyr::count()
@@ -301,6 +302,21 @@ if (file.exists(remove_file)) {
 # sampleData <- sampleData[gene_flag,]
 # p <- row.names(sampleData)
 # nrow(sampleData)
+## Samples Removed Manually
+
+If samples were removed due to the results of cytotoxicity assays or other experimentally-determined reasons, they are listed here.
+
+In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the following groups:
+
+`r if (!is.null(remove)) { print(remove) }`
+
+```{r}
+
+cytotoxic %>%
+  kable(caption = "Samples removed manually before this report was generated.") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
 ```
 
 ## Dendrogram and distance based filtering
