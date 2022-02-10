@@ -271,37 +271,6 @@ if (file.exists(remove_file)) {
 
 # Sample Filtering Code
 
-```{r read-count-filter-not-used, echo = F, eval = F}
-############################################################################
-# Filter by median read counts per gene per group
-############################################################################
-# Nominally, this is done for the groups under consideration instead.
-# Done for each contrast within the RMarkdown script,
-# so no need to run it here.
-# 
-# group <- unique(d$group)
-# group <- group[order(group)]
-# 
-# #Way too many groups, lets use some parallel computing on this
-# #okay this is much faster
-# 
-# cores = detectCores()
-# cl <- makeCluster(cores[1]-1) #not to overload your computer
-# registerDoParallel(cl)
-# medcounts <- foreach(k = 1:length(group), .combine = cbind) %dopar%
-#   apply(sampleData[,d$group == group[k]], 1, median)
-# 
-# stopCluster(cl)
-# 
-# gene_flag <- apply(medcounts, 1, max)
-# quantile(gene_flag, probs = seq(0.1, 0.5, by = 0.1))
-# 
-# gene_flag <- gene_flag > 5
-# 
-# nrow(sampleData)
-# sampleData <- sampleData[gene_flag,]
-# p <- row.names(sampleData)
-# nrow(sampleData)
 ## Samples Removed Manually
 
 If samples were removed due to the results of cytotoxicity assays or other experimentally-determined reasons, they are listed here.
