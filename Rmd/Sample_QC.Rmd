@@ -1489,7 +1489,8 @@ plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !
     .cols = add_spaces,
     .default = label_wrap_gen(20)), ncol = 4) +
   theme(legend.position = "none") + xlab("Batch") +
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90)) +
+  coord_flip()
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
