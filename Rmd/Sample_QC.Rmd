@@ -1168,9 +1168,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
-                                                                
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Fraction of Mapped Reads
@@ -1179,8 +1177,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Nsig80
@@ -1189,8 +1186,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Ncov5
@@ -1199,8 +1195,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Gini
@@ -1209,8 +1204,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Any samples which failed
@@ -1222,9 +1216,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
   ggtitle("Any samples failed")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
-
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 
