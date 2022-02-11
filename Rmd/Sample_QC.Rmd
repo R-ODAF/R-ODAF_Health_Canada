@@ -1130,7 +1130,7 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 if (!is.na(batch_var)) {
   batch_length <- length(unique(QAQC_annotated[,batch_var]))
 } else{
-  batch_length <- 7
+  batch_length <- 5
 }
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
 rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
@@ -1477,7 +1477,7 @@ invisible(dev.off())
 
 ### Batch
 
-```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)}
+```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
 add_spaces <- function(string) {
   substr(string, 1, 1) <- toupper(substr(string, 1, 1))
   string <- gsub(pattern = "-", replacement = " ", string)
@@ -1485,9 +1485,9 @@ add_spaces <- function(string) {
   string
 }
 plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !!ensym(treatment_var))) +
-  facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
+  facet_wrap(paste0("~",batch_var), scales = "free_y", labeller = labeller(
     .cols = add_spaces,
-    .default = label_wrap_gen(20)), ncol = 4) +
+    .default = label_wrap_gen(100)), ncol = 1) +
   theme(legend.position = "none") + xlab("Batch") +
   theme(axis.text.x = element_text(angle = 90)) +
   coord_flip()
@@ -1502,7 +1502,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)}
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*0.75}
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
