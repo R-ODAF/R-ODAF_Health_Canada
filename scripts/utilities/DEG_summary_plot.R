@@ -26,7 +26,19 @@ clean_data <- function(x) {
 degs <- files %>%
   map_dfr(clean_data)
 
-ggplot(degs, aes(x=Condition, y=DEGs)) +
-  geom_bar(stat="identity") +
-  facet_wrap(~Sample, scales = "free_x") +
+###################################################
+# Optional... Data cleaning examples
+# Some fun regex if you want to split things up...
+# This takes the last space in the string as the delimiter
+degs <- degs %>% tidyr::separate(Sample, c("Chemical","Timepoint"),
+                                 sep = "\\s+(?=\\S*$)" )
+#
+###################################################
+
+###################################################
+# Plot
+ggplot(degs, aes(x = Condition, y = DEGs, fill = Timepoint)) +
+  geom_bar(stat="identity", position="dodge") +
+  facet_wrap(~Chemical, scales = "free_x") +
   theme(axis.text.x = element_blank()) # element_text(angle = 90))
+
