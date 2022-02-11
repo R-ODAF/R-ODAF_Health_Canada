@@ -197,6 +197,12 @@ if (Platform == "TempO-Seq") {
 #    1. sample names identical to the column names of sampleData
 #    2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
 SampleKeyFile <- file.path(paths$metadata, "metadata.txt")
+# Check if the metadata was previously backed up.
+# If so, restore it before doing the new manual sample removal.
+# This is done to ensure we start with the full list of samples from the start.
+if (file.exists(paste0(SampleKeyFile,".bak"))) {
+    system(paste0("cp ",paste0(SampleKeyFile,".bak "),SampleKeyFile))
+  }
 
 DESeqDesign <- read.delim(SampleKeyFile,
                           stringsAsFactors = FALSE,
@@ -236,6 +242,7 @@ mu <- mu[d$original_names,]
 ############################################################################
 # Check if there's a file called remove.txt in metadata before proceeding...
 remove_file <- file.path(paths$metadata,"remove.txt")
+cytotoxic <- data.frame()
 if (file.exists(remove_file)) {
   # How many groups in total are being input?
   DESeqDesign %>% group_by(group) %>% dplyr::count()
@@ -264,37 +271,21 @@ if (file.exists(remove_file)) {
 
 # Sample Filtering Code
 
-```{r read-count-filter-not-used, echo = F, eval = F}
-############################################################################
-# Filter by median read counts per gene per group
-############################################################################
-# Nominally, this is done for the groups under consideration instead.
-# Done for each contrast within the RMarkdown script,
-# so no need to run it here.
-# 
-# group <- unique(d$group)
-# group <- group[order(group)]
-# 
-# #Way too many groups, lets use some parallel computing on this
-# #okay this is much faster
-# 
-# cores = detectCores()
-# cl <- makeCluster(cores[1]-1) #not to overload your computer
-# registerDoParallel(cl)
-# medcounts <- foreach(k = 1:length(group), .combine = cbind) %dopar%
-#   apply(sampleData[,d$group == group[k]], 1, median)
-# 
-# stopCluster(cl)
-# 
-# gene_flag <- apply(medcounts, 1, max)
-# quantile(gene_flag, probs = seq(0.1, 0.5, by = 0.1))
-# 
-# gene_flag <- gene_flag > 5
-# 
-# nrow(sampleData)
-# sampleData <- sampleData[gene_flag,]
-# p <- row.names(sampleData)
-# nrow(sampleData)
+## Samples Removed Manually
+
+If samples were removed due to the results of cytotoxicity assays or other experimentally-determined reasons, they are listed here.
+
+In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the following groups:
+
+`r if (!is.null(remove)) { print(remove) }`
+
+```{r}
+
+cytotoxic %>%
+  kable(caption = "Samples removed manually before this report was generated.") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
 ```
 
 ## Dendrogram and distance based filtering
@@ -316,7 +307,7 @@ message(paste0("The treatment variable is: ", treatment_var))
 ############################################################################
 flag_order <- order(d[treatment_var])
 d <- d[flag_order,]
-sampleData <- sampleData[,flag_order]
+sampleData <- sampleData[,d$original_names]
 ############################################################################
 # CPM (used in dendrogram/cluster analysis)
 ############################################################################
@@ -1139,7 +1130,7 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 if (!is.na(batch_var)) {
   batch_length <- length(unique(QAQC_annotated[,batch_var]))
 } else{
-  batch_length <- 7
+  batch_length <- 5
 }
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
 rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
@@ -1177,9 +1168,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
-                                                                
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Fraction of Mapped Reads
@@ -1188,8 +1177,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Nsig80
@@ -1198,8 +1186,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Ncov5
@@ -1208,8 +1195,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Gini
@@ -1218,8 +1204,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 ### Any samples which failed
@@ -1231,9 +1216,7 @@ custom_fig_height <- ifelse(test = !is.null(batch_length), yes = batch_length, n
   scale_fill_gradient(low = "grey", high = "black") +
   geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
   ggtitle("Any samples failed")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val")) %>%
-  layout(autosize = F, width = 500, height = 333)
-
+  ggplotly(tooltip = c("name","treat","dose","val"))
 ```
 
 
@@ -1494,7 +1477,7 @@ invisible(dev.off())
 
 ### Batch
 
-```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)}
+```{r plot_batch_effects, eval = !is.na(batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
 add_spaces <- function(string) {
   substr(string, 1, 1) <- toupper(substr(string, 1, 1))
   string <- gsub(pattern = "-", replacement = " ", string)
@@ -1502,10 +1485,12 @@ add_spaces <- function(string) {
   string
 }
 plot_batches <- ggplot(QAQC_annotated, aes(x = !!ensym(treatment_var), color = !!ensym(treatment_var))) +
-  facet_wrap(paste0("~",batch_var), scales = "free_x", labeller = labeller(
+  facet_wrap(paste0("~",batch_var), scales = "free_y", labeller = labeller(
     .cols = add_spaces,
-    .default = label_wrap_gen(20)), ncol = 4) +
-  theme(legend.position = "none") + xlab("Batch")
+    .default = label_wrap_gen(100)), ncol = 1) +
+  theme(legend.position = "none") + xlab("Batch") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  coord_flip()
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
@@ -1517,11 +1502,12 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)}
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*0.75}
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
-  theme(legend.position = "none") + xlab("Dose") # labs(color = dose) + 
+  theme(legend.position = "none") + xlab("Dose") + # labs(color = dose) + 
+  theme(axis.text.x = element_text(angle = 90))
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
 plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
