@@ -51,6 +51,7 @@ library('DESeq2')
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","setup_functions.R"))
 
 
 config <- yaml::read_yaml(file.path(here::here(),
@@ -88,7 +89,13 @@ params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG
 ## load functions
 ```{r load_functions}
 
+source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","setup_functions.R"))
 
+species_data <- load_species(params$species)
+
+bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
 
 ```
 
@@ -115,72 +122,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
 
 ```
 
-
-# metadata tables
-```{r tables, collapse=TRUE}
-
-# table of sample metadata
-metadata_table <- DESeqDesign %>% arrange(!!sym(design_to_use))
-knitr::kable(metadata_table,
-             row.names =  F,
-             caption = "Sample metadata") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  scroll_box(width = "100%", height = "480px")
-
-# table of contrasts
-knitr::kable(contrasts,
-             row.names =  F,
-             caption = "Sample metadata") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  scroll_box(width = "100%", height = "480px")
-
-# table of #samples/group
-nSamples_table <- table(metadata_table %>% dplyr::pull(!!sym(params$design))) 
-knitr::kable(nSamples_table,
-             row.names =  F,
-             caption = "Sample metadata") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  scroll_box(width = "100%", height = "480px")
-
-# table of #DEGs/contrast 
-summary_counts <- data.frame()
-comparisons <- names(resultsList)
-for(comp in comparisons){ # by comparison
-    res <- resultsList[[comp]]
-    c <- nrow(res)
-    row <- data.frame(comparison=comp, DEG=c)
-    summary_counts <- rbind(summary_counts, row)
-}
-
-knitr::kable(summary_counts,
-             row.names =  F,
-             caption = "Sample metadata") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  scroll_box(width = "100%", height = "480px")
-
-
-
-```
-
-
 # descriptive plots
 
-# boxplots of reads/sample (by group)
-```{r nReads_boxplot, collapse=TRUE}
-df<-data.frame(colSums(counts(dds)))
-names(df) <- c("nReads")
-df$original_names = rownames(df)
-df2 <- df %>%
-    left_join(DESeqDesign) %>%
-    dplyr::select(original_names,sym(design_to_use),nReads)
-
-ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
-    geom_boxplot() +
-    xlab("Group") +
-    ylab("Number of reads") +
-    theme_bw()
-
-```
+# Volcano plots (14) -- gives a good high level summary at a glance
 
 # PCA plots (all genes, DEGs only, top 1000 most variable genes)
 ```{r PCA, collapse=TRUE}
@@ -201,20 +145,37 @@ plotPCA(rld[rownames(most_variable[1:topN,])], intgroup = params$design, ntop = 
 
 ```
 
-# sample-to-sample heatmaps
+
 # DEG heatmaps
+# Heatmaps (18) -- I also like these but would consider dropping the row variance based one entirely, because I think it can be misleading
 
-# Differential gene expression plots
+```{r DEG_heatmaps}
+mat <- assay(rld)[row.names(assay(rld)) %in%
+                                          res[[bs$biomart_filter]],
+                  , drop = F] # Otherwise will return numeric for 1 row matrix
+if (nrow(as.matrix(mat)) > 1) {
+  mat <- mat - rowMeans(mat)
+  pheatmap(mat,
+           annotation_col = heatmap_df,
+           show_rownames = FALSE,
+           border_color = NA,
+           scale = "row")
+  # color = inferno(10)
+} else {
+  print("No DEGs found.")
+}
+```
 
-# MA plots
-# volcano plots
-# p-value distribution
-# DEG gene info table
-# gene-level plots across timepoints (?)
+# Genes of interest (13) -- often one the first things I'll look at myself... it shows upfront any big trends and whether genes you recognize are where they should be
+```{r genes_of_interest}
 
-# Pathway analysis plots
+```
 
-# todo
+# Gene-level plots for top 20 features -- maybe we could cut this to 10, since we will have the data exploration plot. Maybe even make it a tabset? I do like having it myself because it gives granularity at the sample level - how much spread is in the data... are dose-response trends looking reasonable or not across doses...
+```{r genelevel_plots}
+
+
+```
 
 # methods summary
 # references

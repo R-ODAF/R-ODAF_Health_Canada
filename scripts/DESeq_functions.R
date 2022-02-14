@@ -214,3 +214,47 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 
     return(list(resList=resList, resListAll=resListAll))
 }
+
+
+# not done yet
+annotate_deseq_table <- function(deseq_results_list, params, bs, filter_results = F) {
+  x <- deseq_results_list
+  annotated_results <- list()
+  for (i in 1:length(x)) {
+    print(i)
+    deg_table <- x[[i]]
+    # Add taxonomy
+    if (is.null(deg_table)) {
+      next
+    } else if (nrow(deg_table) == 0) {
+      next
+    } else {
+      deg_table <- cbind(genes = row.names(x[[i]]),
+                         as(deg_table, "data.frame"),
+                         contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
+                                         replacement =  "",
+                                         x = x[[i]]@elementMetadata[[2]][2]))
+      names(deg_table)[names(deg_table) == "genes"] <- bs$biomart_filter
+      deg_table <- dplyr::left_join(deg_table,
+                                    id_table,
+                                    by = biomart_filter)
+      deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
+                                                                      2 ^ log2FoldChange,
+                                                                      -1 / (2 ^ log2FoldChange)))
+      if (Platform == "TempO-Seq") {
+        deg_table <- deg_table[, c(1, 8:10, 2, 3, 11, 4:7)]
+        # Depends on whether you include extra column for ensembl...
+        # deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
+      } else {
+        deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
+      }
+      ## FILTERS ##
+      if (filter_results == T) {
+        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < alpha & abs(deg_table$linearFoldChange) > linear_fc_filter, ]
+      }
+      annotated_results[[i]] <- deg_table %>% dplyr::distinct()
+    }
+  }
+  y <- rbindlist(annotated_results)
+  return(y)
+}

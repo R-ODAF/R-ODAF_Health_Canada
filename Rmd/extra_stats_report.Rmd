@@ -1,0 +1,219 @@
+---
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+---
+
+
+
+
+***
+
+# Revision History
+
+**This version**  
+  
+*Current version: 1*  
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+Report prepared for: Name  
+Purpose of report:  
+
+* Exercise to analyze RNA-Seq data  
+
+**Previous revisions**  
+
+N/A  
+
+***
+
+
+
+## Load libraries
+
+```{r docSetup, warning = FALSE, message = FALSE}
+library('tidyverse')
+library('knitr')
+library('kableExtra')
+library('DESeq2')
+
+```
+
+
+```{r extra stuff}
+
+source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+
+
+config <- yaml::read_yaml(file.path(here::here(),
+                                    "config/config.yaml"),
+                          eval.expr = T)
+
+# Combine required params from config
+params <- c(config$common, config$DESeq2)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
+# If projectdir is not set, figure out current project root directory
+projectdir <- params$projectdir
+if (is.na(projectdir)) {
+  projectdir <- here::here()
+  params$projectdir <- projectdir
+}
+
+paths <- set_up_paths(params)
+
+
+skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+
+# Input file - Rmd
+inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+
+# Identify where metadata can be found
+SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+
+params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
+
+
+```
+
+
+## load functions
+```{r load_functions}
+
+source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+
+species_data <- load_species(params$species)
+
+bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
+
+```
+
+## load config
+```{r load_config}
+
+config <- yaml::read_yaml(file.path(here::here(),
+                                    "config/config.yaml"),
+                          eval.expr = T)
+
+
+```
+
+
+```{r load_data}
+load(params$dataFile) # metadata, contrasts, counts, resultsList
+
+# reformat data based on group_facet and display_group_facet
+if(is.na(params$group_facet) && is.na(params$display_group_facet)){
+    dds <- ddsList[['all']]
+    resultsList <- overallResList[['all']]
+    rld <- rldList[['all']]
+}
+
+```
+
+
+# metadata tables
+```{r tables, collapse=TRUE}
+
+# table of sample metadata
+metadata_table <- DESeqDesign %>% arrange(!!sym(design_to_use))
+knitr::kable(metadata_table,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of contrasts
+knitr::kable(contrasts,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of #samples/group
+nSamples_table <- table(metadata_table %>% dplyr::pull(!!sym(params$design))) 
+knitr::kable(nSamples_table,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+# table of #DEGs/contrast 
+summary_counts <- data.frame()
+comparisons <- names(resultsList)
+for(comp in comparisons){ # by comparison
+    res <- resultsList[[comp]]
+    c <- nrow(res)
+    row <- data.frame(comparison=comp, DEG=c)
+    summary_counts <- rbind(summary_counts, row)
+}
+
+knitr::kable(summary_counts,
+             row.names =  F,
+             caption = "Sample metadata") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  scroll_box(width = "100%", height = "480px")
+
+
+
+```
+
+
+# descriptive plots
+
+# boxplots of reads/sample (by group)
+```{r nReads_boxplot, collapse=TRUE}
+df<-data.frame(colSums(counts(dds)))
+names(df) <- c("nReads")
+df$original_names = rownames(df)
+df2 <- df %>%
+    left_join(DESeqDesign) %>%
+    dplyr::select(original_names,sym(design_to_use),nReads)
+
+ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
+    geom_boxplot() +
+    xlab("Group") +
+    ylab("Number of reads") +
+    theme_bw()
+
+```
+
+# sample-to-sample heatmaps
+```{r sample-to-sample_heatmaps}
+## Obtain the sample euclidean distances
+sampleDists <- stats::dist(t(assay(rld)))
+sampleDists <- dendextend::sort_dist_mat(sampleDists)
+sampleDistMatrix <- as.matrix(sampleDists)
+
+distances_df <- as.data.frame(colData(rld)[, intgroup, drop = F])
+
+## Define colors to use for the heatmap
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+
+## Make the heatmap
+pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDists,
+         clustering_distance_cols = sampleDists,
+         color = colors,
+         annotation_col = distances_df)
+```
+
+# where we could shunt the p-value distribution
+```{r pvalue_distribution}
+
+```
+
+# MA plots
+```{r MA_plots}
+
+```
+
+
