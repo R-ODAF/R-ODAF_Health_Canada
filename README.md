@@ -63,56 +63,56 @@ It is a good strategy to manage these particular software dependencies, required
 
 There are also numerous dependencies in R. This list might be complete: 
 
-AnnotationHub
-BiocParallel
-biomaRt
-Cairo
-cellWise
-cluster
-clusterProfiler
-ComplexHeatmap
-conflicted
-crosstalk
-crosstool
-data.table
-dendextend
-dendsort
-DESeq2
-doParallel
-DT
-edgeR
-enrichplot
-fields
-foreach
-GGally
-ggplot2
-ggridges
-gtools
-heatmap3
-kableExtra
-knitr
-lattice
-limma
-magrittr
-manipulateWidget
-openxlsx
-org.(YourFavoriteGenomeHere).eg.db
-OUTRIDER
-pheatmap
-plotly
-RColorBrewer
-RMariaDB
-rrcov
-rWikiPathways
-sessioninfo
-sfsmisc
-tidytext
-tidyverse
-UpSetR
-viridis
-vsn
-vtree
-yaml
+* AnnotationHub
+* BiocParallel
+* biomaRt
+* Cairo
+* cellWise
+* cluster
+* clusterProfiler
+* ComplexHeatmap
+* conflicted
+* crosstalk
+* crosstool
+* data.table
+* dendextend
+* dendsort
+* DESeq2
+* doParallel
+* DT
+* edgeR
+* enrichplot
+* fields
+* foreach
+* GGally
+* ggplot2
+* ggridges
+* gtools
+* heatmap3
+* kableExtra
+* knitr
+* lattice
+* limma
+* magrittr
+* manipulateWidget
+* openxlsx
+* org.(YourFavoriteGenomeHere).eg.db
+* ~~OUTRIDER (not currently used)~~
+* pheatmap
+* plotly
+* RColorBrewer
+* RMariaDB
+* rrcov
+* rWikiPathways
+* sessioninfo
+* sfsmisc
+* tidytext
+* tidyverse
+* UpSetR
+* viridis
+* vsn
+* vtree
+* yaml
 
 # Running the data analysis
 
