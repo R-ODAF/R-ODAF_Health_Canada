@@ -162,4 +162,4 @@ Again, rather than using the `./Rmd/DESeq2_report.rnaseq.Rmd` file interactively
 
 ## Questions?
 
-I'm not surprised if you have questions. This is very much a draft of the workflow, and is incomplete except for serving highly experienced users. Please reach out if you have questions or issues, and feel free to submit a PR with any suggestions you might have.
+I'm not surprised if you have questions. This is very much a draft of the workflow, and is incomplete except for serving highly experienced users. Please reach out if you have questions or issues, and feel free to submit an [issue](https://github.com/R-ODAF/R-ODAF_Health_Canada/issues) or PR with any suggestions you might have.
