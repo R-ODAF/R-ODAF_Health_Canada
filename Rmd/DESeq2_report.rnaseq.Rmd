@@ -750,8 +750,8 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	                 type = "ashr")
 	resListAll[[x]] <- res
 	
+	NORM_TYPE <- gsub(" ", "_", NORM_TYPE, fixed = TRUE)
 	FileName <- paste(NORM_TYPE, condition2, "vs", condition1, "FDR", pAdjValue, sep = "_")
-	
 	# Create output tables
 	norm_data <<- counts(dds[rownames(compte)], normalized = TRUE)
 	DEsamples <<- subset(res, res$padj < pAdjValue)
