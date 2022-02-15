@@ -33,22 +33,22 @@ N/A
 
 
 
-## Load libraries
-
 ```{r docSetup, warning = FALSE, message = FALSE}
 library('tidyverse')
 library('knitr')
 library('kableExtra')
 library('DESeq2')
+library('RColorBrewer')
+library('pheatmap')
+library('data.table')
 
-```
-
-
-```{r extra stuff}
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
+
+#########################################
+# to delete, should all be done by the render_DEseq2_reports.R script. Just in here to help with development
 
 
 config <- yaml::read_yaml(file.path(here::here(),
@@ -79,29 +79,19 @@ SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
 params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
 
-
-```
-
-
-## load functions
-```{r load_functions}
-
-source(here::here("scripts","file_functions.R"))
-source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+#########################################
 
 species_data <- load_species(params$species)
 
 bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
 
+
 ```
+
 
 ## load config
 ```{r load_config}
 
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
 
 
 ```
@@ -204,15 +194,40 @@ pheatmap(sampleDistMatrix,
          clustering_distance_cols = sampleDists,
          color = colors,
          annotation_col = distances_df)
+
+# DEGs only
+
+# 100 most variable genes
 ```
 
-# where we could shunt the p-value distribution
+# P-value distributions
 ```{r pvalue_distribution}
-
+allResults <- annotate_deseq_table(resultsList, params, bs, filter_results = F)
+ggplot(data.frame(allResults), aes(x = pvalue)) +
+    geom_histogram(alpha = .5, position = 'identity', bins = 50) +
+    labs(title = 'Histogram of unadjusted p-values') +
+    xlab('Unadjusted p-values') +
+    facet_wrap( ~ contrast, ncol = 2)
 ```
 
 # MA plots
 ```{r MA_plots}
+foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
+ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
+
+
+for (i in seq_along(resultsList)) {
+  contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
+                  replacement =  "",
+                  x = resultsList[[i]]@elementMetadata[[2]][2])
+  cat("###", contrast, "  \n\n")
+  MA_title <- paste0('MA plot, alpha = ', metadata(resultsList[[i]])$alpha,', ', contrast)
+  DESeq2::plotMA(resultsList[[i]],
+                 alpha = metadata(resultsList[[i]])$alpha,
+                 main = str_wrap(MA_title, width = 40),
+                 ylim = ylims_for_ma_plots)
+  cat('  \n\n')
+}
 
 ```
 

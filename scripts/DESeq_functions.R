@@ -181,23 +181,23 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                     " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
                     " gene(s) with a spike"))
 
-        # Save the normalized counts and the list of DEGs
-        write.table(norm_data,
-                    file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DEsamples,
-                    file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DECounts_no_quant,
-                    file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DECounts_spike,
-                    file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
+        # # Save the normalized counts and the list of DEGs
+        # write.table(norm_data,
+        #             file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
+        #             sep = "\t",
+        #             quote = FALSE)
+        # write.table(DEsamples,
+        #             file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
+        #             sep = "\t",
+        #             quote = FALSE)
+        # write.table(DECounts_no_quant,
+        #             file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
+        #             sep = "\t",
+        #             quote = FALSE)
+        # write.table(DECounts_spike,
+        #             file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
+        #             sep = "\t",
+        #             quote = FALSE)
 
         message("DESeq2 Done")
 
@@ -216,7 +216,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 }
 
 
-# not done yet
 annotate_deseq_table <- function(deseq_results_list, params, bs, filter_results = F) {
   x <- deseq_results_list
   annotated_results <- list()
@@ -229,25 +228,19 @@ annotate_deseq_table <- function(deseq_results_list, params, bs, filter_results 
     } else if (nrow(deg_table) == 0) {
       next
     } else {
-      deg_table <- cbind(genes = row.names(x[[i]]),
+      deg_table <- cbind(Probe_Name = row.names(x[[i]]),
                          as(deg_table, "data.frame"),
                          contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
                                          replacement =  "",
                                          x = x[[i]]@elementMetadata[[2]][2]))
-      names(deg_table)[names(deg_table) == "genes"] <- bs$biomart_filter
       deg_table <- dplyr::left_join(deg_table,
-                                    id_table,
-                                    by = biomart_filter)
+                                    bs$biospyder,
+                                    by = "Probe_Name")
       deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
                                                                       2 ^ log2FoldChange,
                                                                       -1 / (2 ^ log2FoldChange)))
-      if (Platform == "TempO-Seq") {
-        deg_table <- deg_table[, c(1, 8:10, 2, 3, 11, 4:7)]
-        # Depends on whether you include extra column for ensembl...
-        # deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
-      } else {
-        deg_table <- deg_table[, c(1, 8, 9, 2, 3, 10, 4:7)]
-      }
+      deg_table <- deg_table %>%
+        dplyr::select(Probe_Name, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
       ## FILTERS ##
       if (filter_results == T) {
         deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < alpha & abs(deg_table$linearFoldChange) > linear_fc_filter, ]
