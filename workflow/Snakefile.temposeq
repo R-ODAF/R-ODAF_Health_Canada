@@ -19,6 +19,7 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
 temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
+temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
 
 sample_id_col = config["sample_id"]
 
@@ -140,6 +141,100 @@ rule fastp:
         --trim_tail1 {params.trim_tail1} \
         --thread {params.threads} \
         '''
+
+####################################################
+### Alignment of reads (paired end & single end) ###
+####################################################
+
+
+rule STAR_all:
+    input:
+        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+
+
+
+rule STAR:
+    input:
+        R1 = trim_dir / "{sample}.fastq.gz",
+        index = genome_dir,
+    output:
+        sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+        toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+    params:
+        annotations = genome_dir / config["annotation_filename"],
+        threads = config["threads"],
+        bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+    shell:
+        '''
+        STAR \
+            --alignEndsType EndToEnd \
+            --genomeLoad LoadAndKeep \
+            --limitBAMsortRAM 50000000000 \
+            --runThreadN {params.threads} \
+            --genomeDir {input.index} \
+            --readFilesIn {input.R1} \
+            --quantMode TranscriptomeSAM \
+            --scoreDelOpen -10000 \
+            --scoreInsOpen -10000 \
+            --outFilterMultimapNmax 1 \
+            --outFilterMismatchNmax 2 \
+            --outSAMunmapped Within \
+            --readFilesCommand zcat \
+            --outFileNamePrefix {params.bam_prefix} \
+            --outSAMtype BAM SortedByCoordinate
+        '''
+
+##################
+# Index Samtools #
+##################
+
+rule index_all:
+    input:
+        expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
+
+
+rule samtools_index:
+    input:
+        aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+    output:
+        index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai",
+    shell:
+        '''
+        samtools index {input.aligned}
+        '''
+
+
+########################
+# Quantification QuasR #
+########################
+
+rule quantification_input:
+    input:
+        list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES)),
+    output:
+        samplefile = processed_dir / "samplefile.txt"
+    run:
+        print("samples: " + str(SAMPLES))
+        print("filenames: " + str(input))
+        df = pd.DataFrame({"FileName": input, "SampleName": SAMPLES})
+        df.to_csv(output.samplefile, index=False, sep='\t')
+
+rule quantification:
+    input:
+        aligned = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES),
+        index = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES),
+        samplefile = processed_dir / "samplefile.txt"
+    params:
+        annotfile = str(genome_dir / config["annotation_filename"]),
+        genome = str(genome_dir / config["genome_filename"]),
+    output:
+        count_table = processed_dir / "count_table.csv",
+        mapped_unmapped = processed_dir / "mapped_unmapped.csv",
+    shell:
+        '''
+        Rscript {temposeq_quantification_script} {input.samplefile} {params.genome} {params.annotfile} {output.count_table} {output.mapped_unmapped}
+        '''
+
 
 
 
