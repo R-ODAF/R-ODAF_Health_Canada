@@ -86,6 +86,8 @@ params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG
 ```
 
 
+# TODO: R-ODAF filtering stats should be reported here
+
 ## load functions
 ```{r load_functions}
 

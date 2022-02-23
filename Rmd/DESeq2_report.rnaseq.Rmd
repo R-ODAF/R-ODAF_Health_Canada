@@ -7,8 +7,8 @@ params:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   batch_var: !r NA                 # "Batch" To remove batch effects for PCA/Heatmaps visualiziations
   platform: "TempO-Seq"            # RNA-Seq or TempO-Seq
-  group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  "BitA"       # null # Which group will this report be done on?
+  group_facet:  !r NA        #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  group_filter:   !r NA        # null # Which group will this report be done on?
   dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
   sortcol: "dose"   # Column used to sort the data
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -23,7 +23,7 @@ params:
   wikipathways_directory: "~/shared/dbs/wikipathways"
   wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
   biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file: "190603 Mouse Whole Transcriptome 1.1 Manifest.txt"
+  biospyder_manifest_file: "Human_S1500_1.2_standardized.csv"
   nBestFeatures: 20 # The number of best features to make plots of their counts
   nBest: 100 # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50 # Number of most variable genes for heatmap
