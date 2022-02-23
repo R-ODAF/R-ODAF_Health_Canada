@@ -157,7 +157,7 @@ if (species == "human") {
   library('org.Hs.eg.db')
   orgdb <- "org.Hs.eg.db"
   species_sci <- "Homo sapiens"
-  wiki <- "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  wiki <- params$wikipathways_filename
   ensembl_species <- "hsapiens_gene_ensembl"
   species_gene_symbol <- "external_gene_name"
   kegg_organism <- "hsa"
@@ -172,7 +172,7 @@ if (species == "human") {
     library('org.Mm.eg.db')
     orgdb <- "org.Mm.eg.db"
     species_sci <- "Mus musculus"
-    wiki <- "wikipathways-20210810-gmt-Mus_musculus.gmt"
+    wiki <- params$wikipathways_filename
     ensembl_species <- "mmusculus_gene_ensembl"
     species_gene_symbol <- "mgi_symbol"
     kegg_organism <- "mmu"
@@ -183,7 +183,7 @@ if (species == "human") {
     library('org.Rn.eg.db')
     orgdb <- "org.Rn.eg.db"
     species_sci <- "Rattus norvegicus"
-    wiki <- "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+    wiki <- params$wikipathways_filename
     ensembl_species <- "rnorvegicus_gene_ensembl"
     species_gene_symbol <- "rgd_symbol"
     kegg_organism <- "rno"
