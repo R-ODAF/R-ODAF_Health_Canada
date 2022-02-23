@@ -46,6 +46,7 @@ library('data.table')
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
+source(here::here("scripts","data_functions.R"))
 
 #########################################
 # to delete, should all be done by the render_DEseq2_reports.R script. Just in here to help with development
@@ -101,12 +102,70 @@ bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
 load(params$dataFile) # metadata, contrasts, counts, resultsList
 
 # reformat data based on group_facet and display_group_facet
+
+# case 1: no facet, no display facet
 if(is.na(params$group_facet) && is.na(params$display_group_facet)){
     dds <- ddsList[['all']]
-    resultsList <- overallResList[['all']]
+    resultsListAll <- overallResListAll[['all']]
+    resultsListDEGs <- overallResListDEGs[['all']]
     rld <- rldList[['all']]
+    mergedDEGs <- mergedDEGsList[['all']]
+
+# case 2: no facet, yes display facet
+} else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
+  # the data isn't already faceted but we need to extract the facet we need
+    display_group_filter <- params$display_group_filter
+  
+    dds_all <- ddsList[['all']]
+    resultsListAll_all <- overallResListAll[['all']]
+    resultsListDEGs_all <- overallResListDEGs[['all']]
+    rld_all <- rldList[['all']]
+    mergedDEGs_all <- mergedDEGsList[['all']]
+    
+    metadata_subset <- subset_metadata(designList[['all']], design_to_use, contrasts, params$display_group_facet, display_group_filter)
+    DESeqDesign_subset <- metadata_subset$DESeqDesign
+    contrasts_subset <- metadata_subset$contrasts
+    
+    dds_subset <- subset_data(dds_all, DESeqDesign_subset)
+    rld_subset <- subset_data(rld_all, DESeqDesign_subset)
+    
+    contrast_strings <- contrasts_subset %>% mutate(contrast_string = paste(V1,V2,sep="_vs_")) %>% pull(contrast_string)
+    resultsListAll_subset <- resultsListAll_all[contrast_strings]
+    resultsListDEGs_subset <- resultsListDEGs_all[contrast_strings]
+
+    # note, in this case the merged DEGs will be for the whole experiment, not the display facet
+    DESeqDesign <- DESeqDesign_subset
+    contrasts <- contrasts_subset
+    dds <- dds_subset
+    resultsListAll <- resultsListAll_subset
+    resultsListDEGs <- resultsListDEGs_subset
+    rld <- rld_subset
+    mergedDEGs <- mergedDEGs_all
+    
+    # TODO: add some tests here to make sure everything worked properly
+    
+# case 3: yes facet, yes display facet
+} else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
+    display_group_filter <- params$display_group_filter
+    
+    dds <- ddsList[[display_group_filter]]
+    resultsListAll <- overallResListAll[[display_group_filter]]
+    resultsListDEGs <- overallResListDEGs[[display_group_filter]]
+    rld <- rldList[[display_group_filter]]
+    mergedDEGs <- mergedDEGsList[[display_group_filter]]
+  
+# case 4: yes facet, no display facet, this one doesn't make sense
+} else {
+  stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
+
+# filter the regularized data a couple ways for different displays    
+rld_DEGs <- rld[row.names(assay(rld)) %in% mergedDEGs]
+
+rv = rowVars(assay(rld))
+select = order(rv, decreasing = TRUE)[1:params$nBest]
+rld_top <- rld[select,]
 ```
 
 
@@ -114,7 +173,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
 ```{r tables, collapse=TRUE}
 
 # table of sample metadata
-metadata_table <- DESeqDesign %>% arrange(!!sym(design_to_use))
+metadata_table <- DESeqDesign %>% arrange(!!sym(params$design))
 knitr::kable(metadata_table,
              row.names =  F,
              caption = "Sample metadata") %>%
@@ -138,9 +197,9 @@ knitr::kable(nSamples_table,
 
 # table of #DEGs/contrast 
 summary_counts <- data.frame()
-comparisons <- names(resultsList)
+comparisons <- names(resultsListDEGs)
 for(comp in comparisons){ # by comparison
-    res <- resultsList[[comp]]
+    res <- resultsListDEGs[[comp]]
     c <- nrow(res)
     row <- data.frame(comparison=comp, DEG=c)
     summary_counts <- rbind(summary_counts, row)
@@ -178,31 +237,38 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 
 # sample-to-sample heatmaps
 ```{r sample-to-sample_heatmaps}
-## Obtain the sample euclidean distances
-sampleDists <- stats::dist(t(assay(rld)))
-sampleDists <- dendextend::sort_dist_mat(sampleDists)
-sampleDistMatrix <- as.matrix(sampleDists)
 
-distances_df <- as.data.frame(colData(rld)[, intgroup, drop = F])
-
-## Define colors to use for the heatmap
-colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
-
-## Make the heatmap
-pheatmap(sampleDistMatrix,
-         clustering_distance_rows = sampleDists,
-         clustering_distance_cols = sampleDists,
-         color = colors,
-         annotation_col = distances_df)
+plot_sample_heatmap <- function(current_rld){
+  ## Obtain the sample euclidean distances
+  sampleDists <- stats::dist(t(assay(current_rld)))
+  sampleDists <- dendextend::sort_dist_mat(sampleDists)
+  sampleDistMatrix <- as.matrix(sampleDists)
+  
+  distances_df <- as.data.frame(colData(current_rld)[, intgroup, drop = F])
+  
+  ## Define colors to use for the heatmap
+  colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+  
+  ## Make the heatmap
+  return( pheatmap(sampleDistMatrix,
+           clustering_distance_rows = sampleDists,
+           clustering_distance_cols = sampleDists,
+           color = colors,
+           annotation_col = distances_df) )
+}
+# all genes
+plot_sample_heatmap(rld)
 
 # DEGs only
+plot_sample_heatmap(rld_DEGs)
 
 # 100 most variable genes
+plot_sample_heatmap(rld_top)
 ```
 
 # P-value distributions
 ```{r pvalue_distribution}
-allResults <- annotate_deseq_table(resultsList, params, bs, filter_results = F)
+allResults <- annotate_deseq_table(resultsListAll, params, bs, filter_results = F)
 ggplot(data.frame(allResults), aes(x = pvalue)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of unadjusted p-values') +
@@ -216,14 +282,14 @@ foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
 ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
 
 
-for (i in seq_along(resultsList)) {
+for (i in seq_along(resultsListAll)) {
   contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
                   replacement =  "",
-                  x = resultsList[[i]]@elementMetadata[[2]][2])
+                  x = resultsListAll[[i]]@elementMetadata[[2]][2])
   cat("###", contrast, "  \n\n")
-  MA_title <- paste0('MA plot, alpha = ', metadata(resultsList[[i]])$alpha,', ', contrast)
-  DESeq2::plotMA(resultsList[[i]],
-                 alpha = metadata(resultsList[[i]])$alpha,
+  MA_title <- paste0('MA plot, alpha = ', metadata(resultsListAll[[i]])$alpha,', ', contrast)
+  DESeq2::plotMA(resultsListAll[[i]],
+                 alpha = metadata(resultsListAll[[i]])$alpha,
                  main = str_wrap(MA_title, width = 40),
                  ylim = ylims_for_ma_plots)
   cat('  \n\n')

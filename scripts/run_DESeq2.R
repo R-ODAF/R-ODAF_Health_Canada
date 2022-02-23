@@ -149,23 +149,28 @@ stopifnot((is.na(params$group_facet) || length(facets) > 0))
 
 ddsList <- list()
 designList <- list()
-overallResList <- list()
+overallResListAll <- list()
+overallResListFiltered <- list()
+overallResListDEGs <- list()
 rldList <- list()
+mergedDEGsList <- list()
 
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
     dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, design_to_use, params)
     rld <- regularize_data(dds, original_design, covariates, params$batch_var)
     DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, design_to_use, params, NA, paths$DEG_output)
-    resList <- DESeq_results$resList
     ddsList[['all']] <- dds
-    overallResList[['all']] <- DESeq_results$resList
+    overallResListAll[['all']] <- DESeq_results$resListAll
+    overallResListFiltered[['all']] <- DESeq_results$resListFiltered
+    overallResListDEGs[['all']] <- DESeq_results$resListDEGs
     designList[['all']] <- DESeqDesign
     rldList[['all']] <- rld
+    mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
 } else {
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
-        metadata_subset <- subset_metadata(DESeqDesign, design_to_use, contrasts, current_filter)
+        metadata_subset <- subset_metadata(DESeqDesign, design_to_use, contrasts, params$group_facet, current_filter)
         DESeqDesign_subset <- metadata_subset$DESeqDesign
         contrasts_subset <- metadata_subset$contrasts
         sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
@@ -174,14 +179,18 @@ if(is.na(params$group_facet)){
 
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
-        rldList[[current_filter]] <- regularize_data(dds, original_design, covariates, params$batch_var)
+        rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
         DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
-        overallResList[[current_filter]] <- DESeq_results$resList
+        overallResListAll[[current_filter]] <- DESeq_results$resListAll
+        overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
+        overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
+        mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
     }
 }
 
 summary_counts <- data.frame()
 if(is.na(params$group_facet)){
+    resList <- overallResListDEGs[['all']]
     comparisons <- names(resList)
     for(comp in comparisons){ # by comparison
         res <- resList[[comp]]
@@ -191,7 +200,7 @@ if(is.na(params$group_facet)){
     }
 } else {
     for (current_filter in facets) {
-        resList <- overallResList[[current_filter]]
+        resList <- overallResListDEGs[[current_filter]]
         comparisons <- names(resList)
         for(comp in comparisons){ # by comparison
             res <- resList[[comp]]
@@ -201,6 +210,9 @@ if(is.na(params$group_facet)){
         }
     }
 }
+
+# 3 lists--all genes, filtered for BMDexpress input (R-ODAF filtering only), and DEGs (p-value, fold-change, and R-ODAF filtering), 
+
 
 message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows indicate 0 DEGs passed filters"))
 message(paste(capture.output(summary_counts), collapse="\n"))
@@ -213,4 +225,4 @@ write.table(summary_counts,
 
 # save DESeq results to a file
 
-save(ddsList, designList, overallResList, rldList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))
+save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))

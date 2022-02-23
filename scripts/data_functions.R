@@ -109,9 +109,9 @@ load_count_data <- function(SampleDataFile, sampledata_sep){
 }
 
 # subset metadata based on facet + filter
-subset_metadata <- function(DESeqDesign, design, contrasts, current_filter){
+subset_metadata <- function(DESeqDesign, design, contrasts, current_facet, current_filter){
     contrasts_to_filter <- DESeqDesign %>%
-        dplyr::filter(!!sym(params$group_facet) %in% current_filter) %>% # NOTE: Not sure if %in% or == is better here.
+        dplyr::filter(!!sym(current_facet) %in% current_filter) %>% # NOTE: Not sure if %in% or == is better here.
         pull(design) %>% 
         unique()
     contrasts_subset <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
@@ -129,4 +129,12 @@ subset_data <- function(sampleData, DESeqDesign){
     DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
     sampleData_subset <- sampleData[,DESeqDesign_sorted$original_names]
     return(sampleData_subset)
+}
+
+subset_results <- function(res, DESeqDesign){
+  # Reorder the metadata table to correspond to the order of columns in the count data
+  DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
+  sampleData_subset <- sampleData[,DESeqDesign_sorted$original_names]
+  return(sampleData_subset)
+  
 }
