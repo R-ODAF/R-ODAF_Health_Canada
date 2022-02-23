@@ -12,7 +12,7 @@ annotation_filename: humansurrogate2_0.gtf
 # used for labeling genome index files
 genome_name: "S1500_2.0"
 
-# header for the column for 'sample id'. Fasta files should be named sampleid.fa.gz
+# header for the column for 'sample id'. Fasta files should be named sampleid.fastq.gz 
 sample_id: "sample_id"
 # one of 'rnaseq' or 'temposeq'
 seqtype: temposeq
