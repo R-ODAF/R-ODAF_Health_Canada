@@ -227,7 +227,7 @@ rule quantification:
 rule multiqc:
     message: "running multiqc for temposeq data"
     input:
-        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
     output:
         qc_dir / "MultiQC_Report.html"
