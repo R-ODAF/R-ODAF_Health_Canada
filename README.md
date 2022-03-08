@@ -1,6 +1,6 @@
 # Omics Data Analysis Frameworks for Regulatory application (R-ODAF)
 
-## What is the R-ODAF?
+## What is the [R-ODAF](https://www.sciencedirect.com/science/article/pii/S0273230022000307)?
 
 It is an analysis framework geared toward the use of 'omics data in toxicology experiments. It aims to use commonly available open-source tools for analysis of transcriptomic data, specifically using DESeq2 for the determination of differentially expressed genes (DEGs).
 
