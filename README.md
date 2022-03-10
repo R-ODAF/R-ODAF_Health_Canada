@@ -118,9 +118,9 @@ There are also numerous dependencies in R. This list might be complete:
 
 ## "Installing" the pipeline
 
-In the top level directory of the cloned repository, you can run the small utility install.sh (i.e., in a bash terminal, you can run `bash ./install.sh`). This will copy the default configuration file
+In the top level directory of the cloned repository, you can run the small utility install.sh (i.e., in a bash terminal, you can run `bash ./install.sh`). This will copy the default configuration file and populate some parameters.
 
-The “install.sh” script will create a config.yaml file, which you will need to customize (see below).
+Once `config.yaml` has been created, you will need to customize the parameters for your study.
 
 ## Setting up your configuration
 
