@@ -12,7 +12,7 @@ annotation_filename: humansurrogate2_0.gtf
 # used for labeling genome index files
 genome_name: "S1500_2.0"
 
-# header for the column for 'sample id'. Fasta files should be named sampleid.fa.gz
+# header for the column for 'sample id'. Fasta files should be named sampleid.fastq.gz 
 sample_id: "sample_id"
 # one of 'rnaseq' or 'temposeq'
 seqtype: temposeq
@@ -73,6 +73,9 @@ DESeq2:
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  # "wikipathways-20210810-gmt-Mus_musculus.gmt"
+  # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
   nBestFeatures: 20              # The number of best features to make plots of their counts
   nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50                   # Number of most variable genes for heatmap

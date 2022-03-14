@@ -6,7 +6,7 @@ load_species <- function(species){
     library('org.Hs.eg.db')
     species_data$orgdb <- "org.Hs.eg.db"
     species_data$species_sci <- "Homo sapiens"
-    species_data$wiki <- "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+    species_data$wiki <- params$wikipathways_filename
     species_data$ensembl_species <- "hsapiens_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
     species_data$kegg_organism <- "hsa"
@@ -21,7 +21,7 @@ load_species <- function(species){
     library('org.Mm.eg.db')
     species_data$orgdb <- "org.Mm.eg.db"
     species_data$species_sci <- "Mus musculus"
-    species_data$wiki <- "wikipathways-20210810-gmt-Mus_musculus.gmt"
+    species_data$wiki <- params$wikipathways_filename
     species_data$ensembl_species <- "mmusculus_gene_ensembl"
     species_data$species_gene_symbol <- "mgi_symbol"
     species_data$kegg_organism <- "mmu"
@@ -32,7 +32,7 @@ load_species <- function(species){
     library('org.Rn.eg.db')
     species_data$orgdb <- "org.Rn.eg.db"
     species_data$species_sci <- "Rattus norvegicus"
-    species_data$wiki <- "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+    species_data$wiki <- params$wikipathways_filename
     species_data$ensembl_species <- "rnorvegicus_gene_ensembl"
     species_data$species_gene_symbol <- "rgd_symbol"
     species_data$kegg_organism <- "rno"
