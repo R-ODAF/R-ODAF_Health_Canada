@@ -76,15 +76,11 @@ rule all:
 # add to R1: --trim_front1 {amount_bases} and/or --trim_tail1 {amount_bases}
 
 
-rule fastp_all:
-    input:
-        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
-
 rule fastp:
     input:
         R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
     output:
-        R1 = trim_dir / "{sample}.fastq.gz",
+        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
     log:
