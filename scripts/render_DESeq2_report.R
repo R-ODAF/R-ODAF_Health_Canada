@@ -35,8 +35,6 @@ paths <- set_up_paths(params)
 
 skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 
-# Input file - Rmd
-inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
 
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
@@ -59,37 +57,52 @@ deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
 if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
-# Run DESeq2 and make reports
+# convenience function
+make_reports <- function(file_prefix,pars){
+  # Input files - Rmd
+  main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+  extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
+  
+  main_file <- file.path(report_dir, paste0(file_prefix,".html"))
+  extra_stats_file <- file.path(report_dir, paste0("extra_stats_",file_prefix,".html"))
+  
+  rmarkdown::render(input = main_report,
+                    encoding = "UTF-8",
+                    output_file = main_file,
+                    params = pars,
+                    envir = new.env())
+  rmarkdown::render(input = extra_stats_report,
+                    encoding = "UTF-8",
+                    output_file = extra_stats_file,
+                    params = pars,
+                    envir = new.env())
+}
+
+
+# make reports
 if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
-  # Output file - HTML
-  filename <- paste0(params$platform, "_",
-                     params$project_name, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'),
-                     ".html")
+  # input data file
   params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
-  outFile <- file.path(report_dir, filename)
-  rmarkdown::render(input = inputFile,
-                    encoding = "UTF-8",
-                    output_file = outFile,
-                    params = params,
-                    envir = new.env())
+
+  # output file prefix
+  prefix <- paste0(params$platform, "_",
+                    params$project_name, "_",
+                    format(Sys.time(),'%d-%m-%Y.%H.%M'))
+  
+  make_reports(prefix,params)
 } else if (any(!is.na(params$display_group_filter))) {
   message(paste0("The group(s) of interest is (are) ",
                  paste(params$display_group_filter, collapse = " and "),".\n",
                  "Writing a single report for that (those) groups."))
-  # Output file - HTML
-  filename <- paste0(params$platform, "_",
-                     params$project_name, "_",
-                     paste(params$display_group_filter, collapse = "_"), "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'),
-                     ".html")
-  outFile <- file.path(report_dir, filename)
-  rmarkdown::render(input = inputFile,
-                    encoding = "UTF-8",
-                    output_file = outFile,
-                    params = params,
-                    envir = new.env())
+  # output file prefix
+  prefix <- paste0(params$platform, "_",
+                   params$project_name, "_",
+                   paste(params$display_group_filter, collapse = "_"), "_",
+                   format(Sys.time(),'%d-%m-%Y.%H.%M'))  
+  
+  make_reports(prefix,params)
+  
 } else {
   # Remove params$exclude_groups
   facets <- DESeqDesign %>%
@@ -100,28 +113,24 @@ if (is.na(params$display_group_facet)) {
   facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
-  print(facets)
+
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
-    filename <- paste0(params$platform, "_",
-                       params$project_name, "_",
-                       i, "_",
-                       format(Sys.time(),'%d-%m-%Y.%H.%M'),
-                       ".html")
-    outFile <- file.path(report_dir, filename)
-    rmarkdown::render(input = inputFile,
-                      encoding = "UTF-8",
-                      output_file = outFile,
-                      params = params,
-                      envir = new.env())
+    prefix <- paste0(params$platform, "_",
+                     params$project_name, "_",
+                     i, "_",
+                     format(Sys.time(),'%d-%m-%Y.%H.%M'))  
+    
+    make_reports(prefix,params)
   }
-  deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
-  # This depends on 'cat' being available on the command line (i.e., linux-specific)
-  # Also some insane quoting going on here, but I don't see an easier way
-  system(paste0('cat "', paste(deg_files, collapse='"  "'),
-                '"  >  ', file.path(deglist_dir, "DEG_summary.txt")))
-  
+  # TODO: reproduce these files
+  # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
+  # # This depends on 'cat' being available on the command line (i.e., linux-specific)
+  # # Also some insane quoting going on here, but I don't see an easier way
+  # system(paste0('cat "', paste(deg_files, collapse='"  "'),
+  #               '"  >  ', file.path(deglist_dir, "DEG_summary.txt")))
+  # 
   # This would probably fail in cases where different numbers of contrasts exists across facets.
   # But could otherwise be useful?
   # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 

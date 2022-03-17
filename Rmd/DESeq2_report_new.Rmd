@@ -43,6 +43,8 @@ library('tidyverse')
 library('knitr')
 library('kableExtra')
 library('DESeq2')
+library('data.table')
+library('pheatmap')
 
 ```
 
@@ -93,7 +95,8 @@ params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","data_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
 
 species_data <- load_species(params$species)
 
@@ -112,21 +115,26 @@ config <- yaml::read_yaml(file.path(here::here(),
 ```
 
 
-```{r load_data}
-load(params$dataFile) # metadata, contrasts, counts, resultsList
-
-# reformat data based on group_facet and display_group_facet
-if(is.na(params$group_facet) && is.na(params$display_group_facet)){
-    dds <- ddsList[['all']]
-    resultsList <- overallResList[['all']]
-    rld <- rldList[['all']]
-}
-
+```{r load_data, include=FALSE}
+source("load-facet-data.R", local = knitr::knit_global())
 ```
 
 # descriptive plots
 
 # Volcano plots (14) -- gives a good high level summary at a glance
+```{r 'volcano-plot', fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(size = 0.5, alpha = 0.3) +
+  #geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
+  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
+  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
+  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) + 
+  facet_wrap(~contrast, ncol = 4, labeller = labeller(
+    .default = label_wrap_gen(15)))
+```
+
+
 
 # PCA plots (all genes, DEGs only, top 1000 most variable genes)
 ```{r PCA, collapse=TRUE}
@@ -135,13 +143,11 @@ plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) +
   theme(legend.position = "bottom") +
   guides(color = guide_legend(ncol = 3))
 # DEGs only
-plotPCA(rld[rownames(res)], intgroup = params$design, ntop = nrow(assay(rld))) +
+plotPCA(rld_DEGs, intgroup = params$design, ntop = nrow(assay(rld))) +
     theme(legend.position = "bottom") +
     guides(color = guide_legend(ncol = 3))
 # top N most variable
-topN <- 100
-most_variable <- res[order(-abs(res$log2FoldChange)),]
-plotPCA(rld[rownames(most_variable[1:topN,])], intgroup = params$design, ntop = nrow(assay(rld))) +
+plotPCA(rld_top, intgroup = params$design, ntop = nrow(assay(rld))) +
     theme(legend.position = "bottom") +
     guides(color = guide_legend(ncol = 3))
 
@@ -152,13 +158,11 @@ plotPCA(rld[rownames(most_variable[1:topN,])], intgroup = params$design, ntop = 
 # Heatmaps (18) -- I also like these but would consider dropping the row variance based one entirely, because I think it can be misleading
 
 ```{r DEG_heatmaps}
-mat <- assay(rld)[row.names(assay(rld)) %in%
-                                          res[[bs$biomart_filter]],
-                  , drop = F] # Otherwise will return numeric for 1 row matrix
+mat <- assay(rld_DEGs)
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
   pheatmap(mat,
-           annotation_col = heatmap_df,
+           annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
            show_rownames = FALSE,
            border_color = NA,
            scale = "row")
