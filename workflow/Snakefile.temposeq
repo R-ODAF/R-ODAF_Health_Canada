@@ -55,7 +55,6 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
@@ -74,20 +73,13 @@ rule all:
 
 #### If additional trimming is needed (see multiQCreport): 
 # add to R1: --trim_front1 {amount_bases} and/or --trim_tail1 {amount_bases}
-# add to R2: --trim_front2 {amount_bases} and/or --trim_tail2 {amount_bases}
-
-
-rule fastp_all:
-    input:
-        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
-    log: log_dir / "bbduk_all.log"
 
 
 rule fastp:
     input:
         R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
     output:
-        R1 = trim_dir / "{sample}.fastq.gz",
+        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
     log:
@@ -110,6 +102,7 @@ rule fastp:
         --json {output.json} \
         --html {output.html} \
         --cut_front \
+        --disable_adapter_trimming \
         --cut_front_window_size {params.front_size} \
         --cut_front_mean_quality {params.front_quality} \
         --cut_tail \
