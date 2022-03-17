@@ -74,7 +74,6 @@ rule all:
 
 #### If additional trimming is needed (see multiQCreport): 
 # add to R1: --trim_front1 {amount_bases} and/or --trim_tail1 {amount_bases}
-# add to R2: --trim_front2 {amount_bases} and/or --trim_tail2 {amount_bases}
 
 
 rule fastp_all:
@@ -110,6 +109,7 @@ rule fastp:
         --json {output.json} \
         --html {output.html} \
         --cut_front \
+        --disable_adapter_trimming \
         --cut_front_window_size {params.front_size} \
         --cut_front_mean_quality {params.front_quality} \
         --cut_tail \
