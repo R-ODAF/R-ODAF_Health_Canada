@@ -79,8 +79,6 @@ rule all:
 rule fastp_all:
     input:
         expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
-    log: log_dir / "bbduk_all.log"
-
 
 rule fastp:
     input:
