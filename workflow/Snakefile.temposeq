@@ -55,7 +55,6 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        expand(str(trim_dir / "{sample}.fastq.gz"), sample=SAMPLES),
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.csv",
         processed_dir / "mapped_unmapped.csv"
