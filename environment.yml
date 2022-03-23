@@ -1,0 +1,13 @@
+name: rnaseq
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - anaconda-clean
+  - rsem
+  - fastp
+  - star
+  - multiqc
+prefix: /home/kcook/.conda/envs/rnaseq
+
