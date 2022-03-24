@@ -1,4 +1,4 @@
-name: rnaseq
+name: R-ODAF
 channels:
   - conda-forge
   - bioconda
@@ -9,5 +9,5 @@ dependencies:
   - fastp
   - star
   - multiqc
-prefix: /home/kcook/.conda/envs/rnaseq
+  - snakemake
 
