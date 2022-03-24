@@ -50,7 +50,7 @@ Therefore, it is a good idea to open the cloned repository in RStudio as a proje
 
 There are many R scripts in this repository, each with different purposes, as well as a portion of the pipeline that is run using [Snakemake](https://snakemake.readthedocs.io/en/stable/). I suggest reading over that documentation if you are not already familiar with it, as it is beyond the scope of this documentation.
 
-# Installation and dependencies
+## Dependencies and installation
 
 R and [conda](https://docs.conda.io/en/latest/) are required dependencies. The R-ODAF software also has a number of standalone and R dependencies.
 
