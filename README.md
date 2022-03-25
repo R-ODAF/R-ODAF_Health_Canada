@@ -50,77 +50,27 @@ Therefore, it is a good idea to open the cloned repository in RStudio as a proje
 
 There are many R scripts in this repository, each with different purposes, as well as a portion of the pipeline that is run using [Snakemake](https://snakemake.readthedocs.io/en/stable/). I suggest reading over that documentation if you are not already familiar with it, as it is beyond the scope of this documentation.
 
-### List of dependencies
+## Dependencies and installation
+
+R and [conda](https://docs.conda.io/en/latest/) are required dependencies. The R-ODAF software also has a number of standalone and R dependencies.
 
 The following software is required to pre-process high-throughput sequencing data:
 
+* Snakemake
 * samtools
 * STAR
 * MultiQC
 * fastp
 
-It is a good strategy to manage these particular software dependencies, required on your path, by setting up a Conda environment with them installed. 
+It is a good strategy to manage these particular software dependencies, required on your path, by setting up a Conda environment with them installed. For convenience, we have included an `environment.yml` file that can be used with conda to install these. By default this file creates a conda environment named 'R-ODAF'; you can [edit environment.yml](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually) to change this.
 
-There are also numerous dependencies in R. This list might be complete: 
-
-* AnnotationHub
-* BiocParallel
-* biomaRt
-* Cairo
-* cellWise
-* cluster
-* clusterProfiler
-* ComplexHeatmap
-* conflicted
-* crosstalk
-* crosstool
-* data.table
-* dendextend
-* dendsort
-* DESeq2
-* doParallel
-* DT
-* edgeR
-* enrichplot
-* fields
-* foreach
-* GGally
-* ggplot2
-* ggridges
-* gtools
-* heatmap3
-* kableExtra
-* knitr
-* lattice
-* limma
-* magrittr
-* manipulateWidget
-* openxlsx
-* org.(YourFavoriteGenomeHere).eg.db
-* ~~OUTRIDER (not currently used)~~
-* pheatmap
-* plotly
-* RColorBrewer
-* RMariaDB
-* rrcov
-* rWikiPathways
-* sessioninfo
-* sfsmisc
-* tidytext
-* tidyverse
-* UpSetR
-* viridis
-* vsn
-* vtree
-* yaml
-
-# Running the data analysis
-
-## "Installing" the pipeline
+There are also numerous dependencies in R (a full list would take up a lot of space and would likely be incmoplete). Run `install.R` within R or using [Rscript](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/Rscript) to install them.
 
 In the top level directory of the cloned repository, you can run the small utility install.sh (i.e., in a bash terminal, you can run `bash ./install.sh`). This will copy the default configuration file and populate some parameters.
 
 Once `config.yaml` has been created, you will need to customize the parameters for your study.
+
+# Running the data analysis
 
 ## Setting up your configuration
 
