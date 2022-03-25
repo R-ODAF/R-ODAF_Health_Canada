@@ -64,7 +64,7 @@ The following software is required to pre-process high-throughput sequencing dat
 
 It is a good strategy to manage these particular software dependencies, required on your path, by setting up a Conda environment with them installed. For convenience, we have included an `environment.yml` file that can be used with conda to install these. By default this file creates a conda environment named 'R-ODAF'; you can [edit environment.yml](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually) to change this.
 
-There are also numerous dependencies in R (a full list would take up a lot of space and would likely be incmoplete). Run `install.R` within R or using [Rscript](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/Rscript) to install them.
+There are also numerous dependencies in R (a full list would take up a lot of space and would likely be incomplete). Run `install.R` within R or using [Rscript](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/Rscript) to install them.
 
 In the top level directory of the cloned repository, you can run the small utility install.sh (i.e., in a bash terminal, you can run `bash ./install.sh`). This will copy the default configuration file and populate some parameters.
 
