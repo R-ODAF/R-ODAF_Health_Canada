@@ -59,6 +59,7 @@ reports
 paths.txt
 *metadata.txt
 *contrasts.txt
+count_table*.csv
 ./data/raw
 ./data/processed
 /data/metadata/metadata.txt
@@ -75,3 +76,9 @@ preprocessing.txt
 config/config.yaml
 config/config.new.yaml
 config/config.qc.yaml
+*.out
+*.out.tab
+*.bam
+*.bai
+*_fastp.json
+*_fastp.html
