@@ -23,7 +23,6 @@ if config["seqtype"] =="temposeq":
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
 sample_id_col = config["sample_id"]
 
-
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
 
