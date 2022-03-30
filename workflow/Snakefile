@@ -240,6 +240,7 @@ rule STAR_se:
             --genomeDir {params.index} \
             --readFilesIn {input.R1} \
             --quantMode TranscriptomeSAM \
+            --limitBAMsortRAM=10737418240 \
             --scoreDelOpen {params.penalty} \
             --scoreInsOpen {params.penalty} \
             --outFilterMultimapNmax {params.multimap_nmax} \
