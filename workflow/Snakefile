@@ -210,6 +210,7 @@ rule STAR_load:
         '''STAR \
         --genomeLoad LoadAndExit \
         --genomeDir {params.index}
+        touch {output}
         '''
 
 rule STAR_all:
