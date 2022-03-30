@@ -78,7 +78,7 @@ rule fastp_se:
     input:
         R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
     output:
-        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
+        R1 = trim_dir / "{sample}.fastq.gz",
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
     params:
