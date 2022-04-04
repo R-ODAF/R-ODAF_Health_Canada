@@ -314,12 +314,8 @@ if (!is.na(params$group_facet)) {
   pull(params$design) %>% 
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
-  if (params$lenient_contrasts == T) {
-    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
-                                             V1 %in% contrasts_to_filter  )
-  }
   if (params$strict_contrasts == T) {
-    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter &
+    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
                                              V1 %in% contrasts_to_filter  )
   }
   DESeqDesign <- DESeqDesign %>% dplyr::filter(!!sym(params$design) %in% (unlist(contrasts) %>% unique()) )
@@ -334,18 +330,12 @@ if (any(!is.na(params$exclude_groups))) {
   pull(params$design) %>% 
   unique()
   contrasts <- contrasts %>% dplyr::filter(V1 %in% contrasts_to_filter)
-  if (params$lenient_contrasts == T) {
+  if (params$strict_contrasts == T) {
     contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter |
                                              V1 %in% contrasts_to_filter  )
   }
-  if (params$strict_contrasts == T) {
-    contrasts <- contrasts %>% dplyr::filter(V2 %in% contrasts_to_filter &
-                                             V1 %in% contrasts_to_filter  )
   }
-}
-
-
-if (!is.na(params$include_only_column) & any(!is.na(params$include_only_group))) {
+if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
   DESeqDesign <- DESeqDesign %>%
     dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
   limit_contrasts <- DESeqDesign %>%
@@ -704,7 +694,7 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 	
 	condition1 <- contrasts[x, 2] # Control
 	condition2 <- contrasts[x, 1] # Experimental
-	message(paste(condition2, " vs ", condition1, ":", NORM_TYPE))
+	print(paste(condition2, " vs ", condition1, ":", NORM_TYPE))
 	
 	DE_Design <- matrix(data = NA, ncol = 2)
 	DE_Design <- as.matrix(DESeqDesign[DESeqDesign[, DESIGN] %in% c(condition1,
@@ -857,7 +847,6 @@ for (x in 1:nrow(contrasts)) {	# For all comparisons to be done
 
 	resListSig[[x]] <- DECounts_all_filters
 	resListFiltered[[x]] <- allCounts_all_filters
-
 }
 # If there are no significant results - remove the empty contrast from the list:
 # Can this be moved later? Need to list "0" for DEG summary where contrasts have nothing.
@@ -2366,7 +2355,7 @@ if (!is.null(enrich_go_cc)) {
 
 Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.  
 
-There were `r samples_before` samples for which data was collected. A count matrix containing the $`r initialSampleDataCount`$ samples sequenced in this experiment was imported into R for statistical analysis. After removing samples with less than $`r threshold`$ reads, `r filteredSampleDataCount` samples were left. Following the exclusion of other samples *(which ones? Why? Please explain for your experiment, if applicable.)*, there were `r samples_after` samples remaining. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines, genes were filtered to include only those where 75% of at least one experimental group were above `r MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). The samples excluded from analysis are shown in the table below. We used DESeq2 `r packageVersion("DESeq2")` [@pmid:25516281] to test for differentially abundant genes within the `r Platform` data. The log2FoldChange shrinkage procedure used was `r resListSig[[1]]@priorInfo$type`. An alpha of `r resListSig[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resListSig[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resListSig[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis. Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r linear_fc_filter` and adjusted p-value of `r alpha`.  
+There were `r samples_before` samples for which data was collected. A count matrix containing the $`r initialSampleDataCount`$ samples sequenced in this experiment was imported into R for statistical analysis. After removing samples with less than $`r threshold`$ reads, `r filteredSampleDataCount` samples were left. Following the exclusion of other samples *(which ones? Why? Please explain for your experiment, if applicable.)*, there were `r samples_after` samples remaining. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines, genes were filtered to include only those where 75% of at least one experimental group were above `r MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). The samples excluded from analysis are shown in the table below. We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r Platform` data. The log2FoldChange shrinkage procedure used was `r resListSig[[1]]@priorInfo$type`. An alpha of `r resListSig[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resListSig[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resListSig[[1]])$description[5]` are reported. Cook's cutoff was set to `r cooks` in this analysis. Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r linear_fc_filter` and adjusted p-value of `r alpha`.  
 
 ## References {-}
 

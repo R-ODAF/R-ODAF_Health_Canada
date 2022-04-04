@@ -1,24 +1,23 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "Test"        # Change depending on your project name
+  project_name: "2021_Chauhan_lymphocyte_radiation"        # Change depending on your project name
   clust_method: "spearman" # For clustering
-  tree_height_cutoff: 0.1  # For clustering
-  dendro_color_by: "chemical" # Specify how you would like to color the dendrograms
+  tree_height_cutoff: 0.5  # For clustering
+  dendro_color_by: "group" # Specify how you would like to color the dendrograms
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
-  align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
+  align_threshold: 0.3     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
-  groups:
     value:
-    one: ["chemical", "dose"]
+    one: ["dose_rate", "dose"]
     two: ["I7_Index_ID", "I5_Index_ID"] 
     three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
-  batch_var: "batch"          # "batch"
+  batch_var: "Sample_Plate"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "chemical"
+  treatment_var: "dose_rate"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
@@ -692,10 +691,10 @@ d %>%
 This one throws a segfault and doesn't work. Ignore this.
 
 ```{bash, eval = F}
-<!-- conda activate outpyr -->
-<!-- cd ./data/processed/ -->
-<!-- cat count_table.csv | tr , '\t' | tr -d '"' > count_table.tsv -->
-<!-- outpyr -j 39 count_table.tsv -->
+conda activate outpyr
+cd ./data/processed/
+cat count_table.csv | tr , '\t' | tr -d '"' > count_table.tsv
+outpyr -j 39 count_table.tsv
 ```
 
 #### OUTRIDER
@@ -703,50 +702,50 @@ This one throws a segfault and doesn't work. Ignore this.
 Not used - under development.
 
 ```{r, eval = F}
-library(OUTRIDER)
-# Filter data to remove genes with zero
-sampleDataFilt <- sampleData %>% dplyr::select(all_of(sample_names))
-sampleDataFilt <- sampleDataFilt[rowSums(sampleDataFilt) > ncol(sampleData),]
-sampleDataFilt <- sampleDataFilt + 1 # Pseudocount
-DESeqDesignOUTRIDER <- DESeqDesign %>% dplyr::filter(original_names %in% sample_names)
-
-# Create OutriderDataSet object
-ods <- OutriderDataSet(countData = sampleDataFilt, colData = DESeqDesignOUTRIDER )
-plotCountCorHeatmap(ods, colGroups = unlist(groups[[1]]), normalized = FALSE, nRowCluster = 4)
-plotCountGeneSampleHeatmap(ods, colGroups = unlist(groups[[1]]), normalized = FALSE, nRowCluster = 4)
-
-# Confounders
-ods <- OUTRIDER::estimateSizeFactors(ods)
-small <- which(sizeFactors(ods) < 0.3)
-small
-ods <- ods[,ods$sizeFactor > 0.3]
-BPPARAM = MulticoreParam(workers = 41)
-# findEncodingDim(ods, BPPARAM = BPPARAM) # slow... crashes sometimes
-ods <- OUTRIDER::controlForConfounders(ods, BPPARAM = BPPARAM) # set q?
-
-ods <- fit(ods, BPPARAM = BPPARAM)
-ods <- computePvalues(ods, BPPARAM = BPPARAM)
-ods <- computeZscores(ods)
-res <- results(ods)
-
-plotQQ(ods, res[2, geneID])
-hist(theta(ods))
-tail(sort(aberrant(ods, by = "sample")))
-plotAberrantPerSample(ods, padjCutoff = 0.05)
-plotPowerAnalysis(ods)
-plotExpectedVsObservedCounts(ods, "CYP2C19_22478", basePlot = TRUE)
-
-# Plot again
-plotCountCorHeatmap(ods, normalized = TRUE, colGroups = unlist(groups[[1]]))
-
-potential_bad_samples <- res %>% dplyr::filter(AberrantBySample >1)
-potential_bad_samples
-potential_bad_samples %>% pull(sampleID) %>% unique()
-
-potential_bad_genes <- res %>% dplyr::filter(AberrantByGene >1)
-potential_bad_genes
-potential_bad_genes %>% pull(geneID) %>% unique()
-detach("package:OUTRIDER", unload = TRUE)
+# library(OUTRIDER)
+# # Filter data to remove genes with zero
+# sampleDataFilt <- sampleData %>% dplyr::select(all_of(sample_names))
+# sampleDataFilt <- sampleDataFilt[rowSums(sampleDataFilt) > ncol(sampleData),]
+# sampleDataFilt <- sampleDataFilt + 1 # Pseudocount
+# DESeqDesignOUTRIDER <- DESeqDesign %>% dplyr::filter(original_names %in% sample_names)
+# 
+# # Create OutriderDataSet object
+# ods <- OutriderDataSet(countData = sampleDataFilt, colData = DESeqDesignOUTRIDER )
+# plotCountCorHeatmap(ods, colGroups = unlist(groups[[1]]), normalized = FALSE, nRowCluster = 4)
+# plotCountGeneSampleHeatmap(ods, colGroups = unlist(groups[[1]]), normalized = FALSE, nRowCluster = 4)
+# 
+# # Confounders
+# ods <- OUTRIDER::estimateSizeFactors(ods)
+# small <- which(sizeFactors(ods) < 0.3)
+# small
+# ods <- ods[,ods$sizeFactor > 0.3]
+# BPPARAM = MulticoreParam(workers = 41)
+# # findEncodingDim(ods, BPPARAM = BPPARAM) # slow... crashes sometimes
+# ods <- OUTRIDER::controlForConfounders(ods, BPPARAM = BPPARAM) # set q?
+# 
+# ods <- fit(ods, BPPARAM = BPPARAM)
+# ods <- computePvalues(ods, BPPARAM = BPPARAM)
+# ods <- computeZscores(ods)
+# res <- results(ods)
+# 
+# plotQQ(ods, res[2, geneID])
+# hist(theta(ods))
+# tail(sort(aberrant(ods, by = "sample")))
+# plotAberrantPerSample(ods, padjCutoff = 0.05)
+# plotPowerAnalysis(ods)
+# plotExpectedVsObservedCounts(ods, "CYP2C19_22478", basePlot = TRUE)
+# 
+# # Plot again
+# plotCountCorHeatmap(ods, normalized = TRUE, colGroups = unlist(groups[[1]]))
+# 
+# potential_bad_samples <- res %>% dplyr::filter(AberrantBySample >1)
+# potential_bad_samples
+# potential_bad_samples %>% pull(sampleID) %>% unique()
+# 
+# potential_bad_genes <- res %>% dplyr::filter(AberrantByGene >1)
+# potential_bad_genes
+# potential_bad_genes %>% pull(geneID) %>% unique()
+# detach("package:OUTRIDER", unload = TRUE)
 ```
 
 
