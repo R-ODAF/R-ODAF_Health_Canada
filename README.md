@@ -110,6 +110,10 @@ Once you have run the study-wide QC, it will output a new metadata file (`metada
 
 Again, rather than using the `./Rmd/DESeq2_report.rnaseq.Rmd` file interactively or knitting it in RStudio, it is preferable to wrap the rendering of reports using `./scripts/render_DESeq2_report.R`, which will also handle splitting things up for large experiments. For example, if you have a study with 10 chemicals, each of which produces gene expression profiles that are vastly different, then you likely want to analyze these chemicals separately. You might want a report showing all chemicals. You might want a report showing only one chemical. These options are both possible by specifying parameters in the `config.yaml` file.
 
+### Parameters (this section is under construction)
+
+* **Strict and Lenient contrasts** During an analysis in which experiments are faceted with `group_facet` and filtered with `group_filter`, contrasts are filtered to match the entries in `group_filter`. If neither `strict_contrasts` or `lenient_contrasts` is true, then only the experimental element of a contrast is tested for membership in `group_filter`. If `strict_contrasts` is `TRUE`, both the experimental and control elements of a contrast must be in `group_filter` for that contrast to be examined. If `lenient_contrasts` is `TRUE`, either one of the experimental or control elements is enough for a contrast to be included.
+
 ## Questions?
 
 I'm not surprised if you have questions. This is very much a draft of the workflow, and is incomplete except for serving highly experienced users. Please reach out if you have questions or issues, and feel free to submit an [issue](https://github.com/R-ODAF/R-ODAF_Health_Canada/issues) or PR with any suggestions you might have.
