@@ -60,8 +60,8 @@ shell("cp -rf config {log_dir}")
 rule all:
     input:
         qc_dir / "MultiQC_Report.html",
-        processed_dir / "count_table.csv",
-        processed_dir / "mapped_unmapped.csv"
+        processed_dir / "count_table.tsv",
+        processed_dir / "mapped_unmapped.tsv"
     log: log_dir / "temposeq.log"
     benchmark: log_dir / "benchmark.all.txt"
 
@@ -327,8 +327,8 @@ if config["seqtype"] =="temposeq":
             annotfile = str(genome_dir / config["annotation_filename"]),
             genome = str(genome_dir / config["genome_filename"]),
         output:
-            count_table = processed_dir / "count_table.csv",
-            mapped_unmapped = processed_dir / "mapped_unmapped.csv",
+            count_table = processed_dir / "count_table.tsv",
+            mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
         shell:
             '''
             Rscript {temposeq_quantification_script} {input.samplefile} {params.genome} {params.annotfile} {output.count_table} {output.mapped_unmapped}
@@ -406,8 +406,8 @@ if config["seqtype"] =="rnaseq":
             genes = expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
             isoforms = expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
         output:
-            genes = processed_dir / "genes.data.tsv",
-            isoforms = processed_dir / "isoforms.data.tsv"
+            genes = processed_dir / "count_table.tsv",
+            isoforms = processed_dir / "isoforms_table.tsv"
         shell:
             '''
             rsem-generate-data-matrix {input.genes} > {output.genes}

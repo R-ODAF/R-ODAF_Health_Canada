@@ -48,8 +48,8 @@ if (params$platform == "RNA-Seq") {
   params$linear_fc_filter <- 1.5
   params$biomart_filter <- "ensembl_gene_id"
 } else if (params$platform == "TempO-Seq") {
-  SampleDataFile <- file.path(paths$processed, "count_table.csv")
-  params$sampledata_sep = ","
+  SampleDataFile <- file.path(paths$processed, "count_table.tsv")
+  params$sampledata_sep = "\t"
 
   params$threshold = 100000 # Number of aligned reads per sample required
   params$MinCount <- 0.5
