@@ -21,7 +21,8 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 if config["seqtype"] =="temposeq":
     temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
-    sample_id_col = config["sample_id"]
+sample_id_col = config["sample_id"]
+
 
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
@@ -33,8 +34,10 @@ processed_dir.mkdir(parents=True, exist_ok=True)
 
 trim_dir = processed_dir / "trimmed"
 align_dir = processed_dir / "aligned"
+quant_dir = processed_dir / "quant"
 trim_dir.mkdir(parents=True, exist_ok=True)
 align_dir.mkdir(parents=True, exist_ok=True)
+quant_dir.mkdir(parents=True, exist_ok=True)
 
 analysis_dir = main_dir / "analysis"
 analysis_dir.mkdir(parents=True, exist_ok=True)
