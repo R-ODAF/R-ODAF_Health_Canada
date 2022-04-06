@@ -133,12 +133,12 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 
 # A. File with read counts
 if (Platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$processed,"count_table.csv")
-    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.csv")
-    sampledata_sep <- ","
+    SampleDataFile <- file.path(paths$processed,"count_table.tsv")
+    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.tsv")
+    sampledata_sep <- "\t"
     collapse_reps <- function(filepath){
       df <- read.table(file = filepath,
-                       sep = ",",
+                       sep = "\t",
                        header = T)
       names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
       df <- df %>% pivot_longer(cols = -c("X"),
@@ -152,26 +152,26 @@ if (Platform == "TempO-Seq") {
     if (params$collapse_replicates == T) {
       sampleData <- collapse_reps(SampleDataFile)
       write.table(sampleData,
-                  file = file.path(paths$processed,"count_table_collapsed.csv"),
-                  sep = ",",
+                  file = file.path(paths$processed,"count_table_collapsed.tsv"),
+                  sep = "\t",
                   quote = F,
                   row.names = F)
       mu <- collapse_reps(MappedUnmapped)
       write.table(mu,
-                  file = file.path(paths$processed,"mapped_unmapped_collapsed.csv"),
-                  sep = ",",
+                  file = file.path(paths$processed,"mapped_unmapped_collapsed.tsv"),
+                  sep = "\t",
                   quote = F,
                   row.names = F)
     } else {
-      sampleData <- read.table(file.path(paths$processed,"count_table.csv"),
+      sampleData <- read.table(file.path(paths$processed,"count_table.tsv"),
                              sep = sampledata_sep,
                              stringsAsFactors = FALSE,
                              header = TRUE,
                              quote = "\"",
                              row.names = 1,
                              check.names = FALSE)
-      mu <- read.table(file.path(paths$processed,"mapped_unmapped.csv"),
-                     sep = ",",
+      mu <- read.table(file.path(paths$processed,"mapped_unmapped.tsv"),
+                     sep = "\t",
                      header = T,
                      row.names = 1,
                      stringsAsFactors = F,
