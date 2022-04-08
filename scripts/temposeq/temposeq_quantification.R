@@ -47,5 +47,5 @@ three       <- data.frame(two, check.names=FALSE)
 three$width <- NULL 
 ll          <- rbind(unmapped=unmapped, mapped=three)
 
-write.table(as.matrix(ll), mapped_unmapped_file, sep='\t', quote=F, row.names=F))
+write.table(as.matrix(ll), mapped_unmapped_file, sep='\t', quote=F, row.names=F)
 message("Mapped/Unmapped Table Completed\n")
