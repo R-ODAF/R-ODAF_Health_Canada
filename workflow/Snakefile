@@ -61,7 +61,6 @@ rule all:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-        processed_dir / "mapped_unmapped.tsv"
     log: log_dir / "temposeq.log"
     benchmark: log_dir / "benchmark.all.txt"
 
