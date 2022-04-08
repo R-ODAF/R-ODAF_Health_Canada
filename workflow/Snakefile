@@ -61,7 +61,6 @@ rule all:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-    log: log_dir / "temposeq.log"
     benchmark: log_dir / "benchmark.all.txt"
 
 ##################################
@@ -93,6 +92,7 @@ rule fastp_se:
         length_required = length_required_fastp,
         trim_tail1 = trim_tail1_fastp,
         threads = config["threads"],
+    benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
     shell:
         '''
         fastp \
@@ -134,6 +134,7 @@ rule fastp_pe:
         right_quality = 15,
         length_required = length_required_fastp,
         threads = config["threads"],
+    benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
     shell:
         '''
         fastp \
@@ -185,6 +186,7 @@ rule STAR_make_index:
         genomeChrBinNbits = 12, # might need to mess with this for different genomes
     output:
         directory(genome_dir / "STAR_index"),
+    benchmark: log_dir / "benchmark.STAR_make_index.txt"
     shell:
         '''
 		STAR \
@@ -208,6 +210,7 @@ rule STAR_load:
         service("genome.fasta.index")
     params:
         index = STAR_index,
+    benchmark: log_dir / "benchmark.STAR_load.txt"
     shell:
         '''STAR \
         --genomeLoad LoadAndExit \
@@ -235,6 +238,7 @@ if config["mode"] == "se":
             annotations = genome_dir / config["annotation_filename"],
             threads = config["threads"],
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+        benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         shell:
             '''
             STAR \
@@ -270,6 +274,7 @@ if config["mode"] == "pe":
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         resources:
             load=100
+        benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
         shell:
             '''
             STAR \
@@ -300,6 +305,7 @@ if config["seqtype"] =="temposeq":
             aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
         output:
             index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai",
+        benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
         shell:
             '''
             samtools index {input.aligned}
@@ -311,6 +317,7 @@ if config["seqtype"] =="temposeq":
             list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES)),
         output:
             samplefile = processed_dir / "samplefile.txt"
+        benchmark: log_dir / "benchmark.quantification_input.txt"
         run:
             print("samples: " + str(SAMPLES))
             print("filenames: " + str(input))
@@ -328,6 +335,7 @@ if config["seqtype"] =="temposeq":
         output:
             count_table = processed_dir / "count_table.tsv",
             mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
+        benchmark: log_dir / "benchmark.quantification.txt"
         shell:
             '''
             Rscript {temposeq_quantification_script} {input.samplefile} {params.genome} {params.annotfile} {output.count_table} {output.mapped_unmapped}
@@ -349,6 +357,7 @@ if config["seqtype"] =="rnaseq":
             genome_name = config["genome_name"],
         output:
             directory(genome_dir / "RSEM_index"),
+        benchmark: log_dir / "benchmark.RSEM_make_index.txt"
         shell:
             '''
             mkdir RSEM_index
@@ -367,6 +376,7 @@ if config["seqtype"] =="rnaseq":
                 threads = config["threads"],
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = config["genome_name"],
+            benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
             shell:
                 '''
                 rsem-calculate-expression \
@@ -390,6 +400,7 @@ if config["seqtype"] =="rnaseq":
                 threads = config["threads"],
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = config["genome_name"],
+            benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
             shell:
                 '''
                 rsem-calculate-expression \
@@ -407,6 +418,7 @@ if config["seqtype"] =="rnaseq":
         output:
             genes = processed_dir / "count_table.tsv",
             isoforms = processed_dir / "isoforms_table.tsv"
+        benchmark: log_dir / "benchmark.{sample}.counts_matrix.txt"
         shell:
             '''
             rsem-generate-data-matrix {input.genes} > {output.genes}
@@ -434,7 +446,7 @@ rule multiqc:
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
     output:
         qc_dir / "MultiQC_Report.html"
-    log: log_dir / "multiqc.log" 
+    benchmark: log_dir / "benchmark.multiqc.txt"
     shell:
         '''
         multiqc \
@@ -453,9 +465,9 @@ rule multiqc:
 ###############
 
 onsuccess:
-    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}")
+    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
     print("Workflow finished, no error")
 
 onerror:
-    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}")
+    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
     print("An error occurred")
