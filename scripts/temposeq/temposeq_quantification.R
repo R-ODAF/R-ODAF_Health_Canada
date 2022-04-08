@@ -35,7 +35,7 @@ cnt <- qCount(proj2, txStart)
 cnmat           <- as.data.frame(cnt, header=TRUE)
 #colnames(cnmat) <- gsub("fastqs/", "", colnames(cnmat))
 cnmat$width     <- NULL
-write.table(cnmat, count_table_file, sep='\t', quote=F row.names=F)
+write.table(cnmat, count_table_file, sep='\t', quote=F, row.names=F)
 cat("Counts Table Completed\n")
 
 # Get Mapped/Unmapped Counts and Output
