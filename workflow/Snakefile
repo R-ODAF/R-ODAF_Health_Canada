@@ -446,3 +446,16 @@ rule multiqc:
         -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
         mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
         '''
+
+
+###############
+### Cleanup ###
+###############
+
+onsuccess:
+    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}")
+    print("Workflow finished, no error")
+
+onerror:
+    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}")
+    print("An error occurred")
