@@ -61,6 +61,7 @@ rule all:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
+        "genome.removed",
     benchmark: log_dir / "benchmark.all.txt"
 
 ##################################
@@ -93,6 +94,7 @@ rule fastp_se:
         trim_tail1 = trim_tail1_fastp,
         threads = config["threads"],
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
+    threads: config["threads"],
     shell:
         '''
         fastp \
@@ -135,6 +137,7 @@ rule fastp_pe:
         length_required = length_required_fastp,
         threads = config["threads"],
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
+    threads: config["threads"],
     shell:
         '''
         fastp \
@@ -187,6 +190,7 @@ rule STAR_make_index:
     output:
         directory(genome_dir / "STAR_index"),
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
+    threads: config["threads"],
     shell:
         '''
 		STAR \
@@ -207,25 +211,24 @@ rule STAR_make_index:
 # https://github.com/snakemake/snakemake/pull/1413
 rule STAR_load:
     output:
-        service("genome.fasta.index")
+        touch("genome.loaded")
     params:
         index = STAR_index,
     benchmark: log_dir / "benchmark.STAR_load.txt"
-    shell:
-        '''STAR \
-        --genomeLoad LoadAndExit \
-        --genomeDir {params.index}
-        touch {output}
-        '''
+    run:
+        shell("STAR --genomeLoad LoadAndExit --genomeDir {params.index}")
+        shell("rm -f genome.removed")
+
 
 rule STAR_all:
     input:
-        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
+        "genome.removed",
 
 if config["mode"] == "se":
     rule STAR:
         input:
-            loaded_index = "genome.fasta.index",
+            loaded_index = "genome.loaded",
             R1 = trim_dir / "{sample}.fastq.gz",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
@@ -239,6 +242,7 @@ if config["mode"] == "se":
             threads = config["threads"],
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
+        threads: config["threads"],
         shell:
             '''
             STAR \
@@ -261,7 +265,7 @@ if config["mode"] == "se":
 if config["mode"] == "pe":
     rule STAR:
         input:
-            loaded_index = "genome.fasta.index",
+            loaded_index = "genome.loaded",
             R1 = trim_dir / "{sample}.R1.fastq.gz",
             R2 = trim_dir / "{sample}.R2.fastq.gz",
         output:
@@ -275,6 +279,7 @@ if config["mode"] == "pe":
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
+        threads: config["threads"],
         shell:
             '''
             STAR \
@@ -287,6 +292,20 @@ if config["mode"] == "pe":
             --outFileNamePrefix {params.bam_prefix} \
             --outSAMtype BAM SortedByCoordinate
             '''
+
+rule STAR_unload:
+    input:
+        idx = "genome.loaded",
+        bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+    output:
+        touch("genome.removed")
+    params:
+        genome_dir = STAR_index
+    run:
+        shell("STAR --genomeLoad Remove --genomeDir {params.genome_dir}")
+        shell("rm genome.loaded")
+
+
 
 
 ########################
@@ -377,6 +396,7 @@ if config["seqtype"] =="rnaseq":
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
+            threads: config["threads"],
             shell:
                 '''
                 rsem-calculate-expression \
@@ -401,6 +421,7 @@ if config["seqtype"] =="rnaseq":
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
+            threads: config["threads"]
             shell:
                 '''
                 rsem-calculate-expression \
@@ -463,11 +484,6 @@ rule multiqc:
 ###############
 ### Cleanup ###
 ###############
-
-onsuccess:
-    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
-    print("Workflow finished, no error")
-
 onerror:
+    print("An error occurred. Attempting to unload genome")
     shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
-    print("An error occurred")

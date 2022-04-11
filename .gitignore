@@ -100,3 +100,5 @@ extra_stats_report.html
 *.out.tab
 *.bam
 *.bai
+genome.loaded
+genome.removed
