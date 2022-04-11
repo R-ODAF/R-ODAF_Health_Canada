@@ -82,3 +82,5 @@ config/config.qc.yaml
 *.bai
 *_fastp.json
 *_fastp.html
+genome.loaded
+genome.removed
