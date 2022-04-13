@@ -80,6 +80,7 @@ preprocessing.txt
 config/config.yaml
 config/config.new.yaml
 config/config.qc.yaml*Log.out
+*Log.out
 *Log.progress.out
 *Log.final.out
 *out.tab
