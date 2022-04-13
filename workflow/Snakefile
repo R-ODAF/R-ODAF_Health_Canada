@@ -439,7 +439,7 @@ if config["seqtype"] =="rnaseq":
         output:
             genes = processed_dir / "count_table.tsv",
             isoforms = processed_dir / "isoforms_table.tsv"
-        benchmark: log_dir / "benchmark.{sample}.counts_matrix.txt"
+        benchmark: log_dir / "benchmark.counts_matrix.txt"
         shell:
             '''
             rsem-generate-data-matrix {input.genes} > {output.genes}
