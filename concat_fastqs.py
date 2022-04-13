@@ -15,4 +15,4 @@ for sample in metadata["Sample_ID"]:
     for i in indirs:
         file = indir + "/" + i + "/" + sample + "_S*_R1_001.fastq.gz"
         print(file)
-        #os.system("cat {} >> {}".format(file, outfile))
+        os.system("cat {} >> {}".format(file, outfile))
