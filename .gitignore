@@ -43,6 +43,10 @@ vignettes/*.pdf
 .snakemake
 *.log
 
+# Python stuff
+*.pyc
+
+
 # Custom
 *fq
 *fq.gz
@@ -60,18 +64,34 @@ paths.txt
 *metadata.txt
 *contrasts.txt
 ./data/raw
-./data/processed
-/data/metadata/metadata.txt
-/data/metadata/contrasts.txt
-/data/metadata/metadata.QC_applied.txt
-/data/processed/genes.data.tsv
-/data/processed
+./data/processed/*
+data/metadata/metadata.txt
+data/metadata/contrasts.txt
+data/metadata/metadata.QC_applied.txt
+data/processed/genes.data.tsv
+data/processed/*
 /logs/
 *metadata.QC_applied.txt
 TODO.txt
 data/metadata/metadata.QC_applied.txt
 run.sh
 preprocessing.txt
-config/config.yaml
-config/config.new.yaml
-config/config.qc.yaml
+config.yaml
+*Log.out
+*Log.progress.out
+*Log.final.out
+*out.tab
+*.theta
+*.model
+*.cnt
+*_table.txt
+.~lock*
+count_table.tsv
+isoforms_table.tsv
+MultiQC_Report.html
+MultiQC_Report_data.zip
+*fastp.html
+*fastp.json
+DESeq2_report_new.html
+extra_stats_report.html
+*.png
