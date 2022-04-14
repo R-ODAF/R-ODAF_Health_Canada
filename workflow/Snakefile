@@ -3,14 +3,22 @@ import pandas as pd
 from glob import glob
 import pathlib
 from snakemake.utils import validate
+import os
 
 # load and validate config stuff
 configfile: "config/config.yaml"
 
-# set up directories
-main_dir = Path(config["prefix"])
+common_config = config["common"]
+pipeline_config = config["pipeline"]
 
-genome_dir = Path(config["genomedir"])
+# set up directories
+main_dir = common_config["projectdir"]
+if main_dir is None:
+    main_dir = os.getcwd()
+main_dir = Path(main_dir)
+
+
+genome_dir = Path(pipeline_config["genomedir"])
 
 data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist
@@ -18,10 +26,10 @@ metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
-if config["seqtype"] =="temposeq":
+if common_config["platform"] =="TempO-Seq":
     temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
-sample_id_col = config["sample_id"]
+sample_id_col = pipeline_config["sample_id"]
 
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
@@ -67,7 +75,7 @@ rule all:
 ### Trimming raw reads : Fastp ###
 ##################################
 
-if config["seqtype"] =="temposeq":
+if common_config["platform"] =="TempO-Seq":
     length_required_fastp = 50
     trim_tail1_fastp = 1
 else:
@@ -91,9 +99,9 @@ rule fastp_se:
         right_quality = 15,
         length_required = length_required_fastp,
         trim_tail1 = trim_tail1_fastp,
-        threads = config["threads"],
+        threads = pipeline_config["threads"],
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
-    threads: config["threads"],
+    threads: pipeline_config["threads"],
     shell:
         '''
         fastp \
@@ -134,9 +142,9 @@ rule fastp_pe:
         right_size = 4,
         right_quality = 15,
         length_required = length_required_fastp,
-        threads = config["threads"],
+        threads = pipeline_config["threads"],
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
-    threads: config["threads"],
+    threads: pipeline_config["threads"],
     shell:
         '''
         fastp \
@@ -163,7 +171,7 @@ rule fastp_pe:
 ### Alignment of reads: STAR ###
 ################################
 
-if config["seqtype"] =="temposeq":
+if common_config["platform"] =="TempO-Seq":
     STAR_index = genome_dir
     STAR_insertion_deletion_penalty = -1000000 # STAR scoring penalty for deletion/insertion, set by biospyder
     STAR_multimap_nmax = 1
@@ -178,18 +186,18 @@ else:
 # this rule is only used in RNA-seq jobs (not temposeq)
 rule STAR_make_index:
     input:
-        genome = ancient(genome_dir / config["genome_filename"])
+        genome = ancient(genome_dir / pipeline_config["genome_filename"])
     params:
         index_dir = genome_dir / "STAR_index",
-        annotations = genome_dir / config["annotation_filename"],
+        annotations = genome_dir / pipeline_config["annotation_filename"],
         overhang = 100,
-        threads = config["threads"],
+        threads = pipeline_config["threads"],
         suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
         genomeChrBinNbits = 12, # might need to mess with this for different genomes
     output:
         directory(genome_dir / "STAR_index"),
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
-    threads: config["threads"],
+    threads: pipeline_config["threads"],
     shell:
         '''
 		STAR \
@@ -224,7 +232,7 @@ rule STAR_all:
         expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
         "genome.removed",
 
-if config["mode"] == "se":
+if pipeline_config["mode"] == "se":
     rule STAR:
         input:
             loaded_index = "genome.loaded",
@@ -237,11 +245,11 @@ if config["mode"] == "se":
             penalty = STAR_insertion_deletion_penalty,
             multimap_nmax = STAR_multimap_nmax,
             mismatch_nmax = STAR_mismatch_nmax,
-            annotations = genome_dir / config["annotation_filename"],
-            threads = config["threads"],
+            annotations = genome_dir / pipeline_config["annotation_filename"],
+            threads = pipeline_config["threads"],
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: config["threads"],
+        threads: pipeline_config["threads"],
         shell:
             '''
             STAR \
@@ -261,7 +269,7 @@ if config["mode"] == "se":
                 --outSAMtype BAM SortedByCoordinate
             '''
 
-if config["mode"] == "pe":
+if pipeline_config["mode"] == "pe":
     rule STAR:
         input:
             loaded_index = "genome.loaded",
@@ -272,13 +280,13 @@ if config["mode"] == "pe":
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
         params:
             index = STAR_index,
-            annotations = genome_dir / config["annotation_filename"],
-            threads = config["threads"],
+            annotations = genome_dir / pipeline_config["annotation_filename"],
+            threads = copipeline_configfig["threads"],
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: config["threads"],
+        threads: pipeline_config["threads"],
         shell:
             '''
             STAR \
@@ -312,7 +320,7 @@ rule STAR_unload:
 #   (TempOSeq only)    #
 ########################
 
-if config["seqtype"] =="temposeq":
+if common_config["platform"] =="TempO-Seq":
     rule index_all:
         input:
             expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
@@ -348,8 +356,8 @@ if config["seqtype"] =="temposeq":
             index = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES),
             samplefile = processed_dir / "samplefile.txt"
         params:
-            annotfile = str(genome_dir / config["annotation_filename"]),
-            genome = str(genome_dir / config["genome_filename"]),
+            annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
+            genome = str(genome_dir / pipeline_config["genome_filename"]),
         output:
             count_table = processed_dir / "count_table.tsv",
             mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
@@ -366,13 +374,13 @@ if config["seqtype"] =="temposeq":
 #   (RNA-seq only)    #
 #######################
 
-if config["seqtype"] =="rnaseq":
+if common_config["platform"] =="RNA-Seq":
     rule RSEM_make_index:
         input:
-            genome = genome_dir / config["genome_filename"]
+            genome = genome_dir / pipeline_config["genome_filename"]
         params:
-            annotations = genome_dir / config["annotation_filename"],
-            genome_name = config["genome_name"],
+            annotations = genome_dir / pipeline_config["annotation_filename"],
+            genome_name = pipeline_config["genome_name"],
         output:
             directory(genome_dir / "RSEM_index"),
         benchmark: log_dir / "benchmark.RSEM_make_index.txt"
@@ -382,7 +390,7 @@ if config["seqtype"] =="rnaseq":
             rsem-prepare-reference --gtf {params.annotations} {input.genome} {output}/{params.genome_name}
             '''
 
-    if config["mode"] == "pe":
+    if pipeline_config["mode"] == "pe":
         rule RSEM:
             input:
                 bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
@@ -391,11 +399,11 @@ if config["seqtype"] =="rnaseq":
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
             params:
-                threads = config["threads"],
+                threads = pipeline_config["threads"],
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = config["genome_name"],
+                index_name = pipeline_config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
-            threads: config["threads"],
+            threads: pipeline_config["threads"],
             shell:
                 '''
                 rsem-calculate-expression \
@@ -407,7 +415,7 @@ if config["seqtype"] =="rnaseq":
                 {params.output_prefix}
                 '''
 
-    if config["mode"] == "se":
+    if pipeline_config["mode"] == "se":
         rule RSEM:
             input:
                 bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
@@ -416,11 +424,11 @@ if config["seqtype"] =="rnaseq":
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
             params:
-                threads = config["threads"],
+                threads = pipeline_config["threads"],
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = config["genome_name"],
+                index_name = pipeline_config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
-            threads: config["threads"]
+            threads: pipeline_config["threads"]
             shell:
                 '''
                 rsem-calculate-expression \
