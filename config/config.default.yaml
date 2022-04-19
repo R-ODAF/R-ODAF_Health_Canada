@@ -1,34 +1,22 @@
 #### Main parameters
 
-# main project directory
-prefix: /your/folder/here
-
-# directory where genone information can be found (the files below should be in this directory)
-genomedir: /home/shared/genomes
-# filename for genome
-genome_filename: humansurrogate2_0.fa
-# filename for gene annotations
-annotation_filename: humansurrogate2_0.gtf
-# used for labeling genome index files
-genome_name: "S1500_2.0"
-
-# header for the column for 'sample id'. Fasta files should be named sampleid.fastq.gz 
-sample_id: "sample_id"
-# one of 'rnaseq' or 'temposeq'
-seqtype: temposeq
-# one of 'se' (single end) or 'pe' (paired end)
-mode: se
-
-# number of threads to use, for multi-threaded programs
-threads: 40
-
-###### Common parameters
 common:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_name: "Default"        # Change depending on your project name
+  project_name: "Default"    # Change depending on your project name
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+
+###### Alignment and processing pipeline parameters
+
+pipeline:
+  genomedir: ~/shared/dbs/biospyder/humansurrogate2_0/ # directory where genone information can be found (the files below should be in this directory)
+  genome_filename: humansurrogate2_0.fa # filename for genome
+  annotation_filename: humansurrogate2_0.gtf # filename for gene annotations
+  genome_name: "S1500_2.0" # used for labeling genome index files
+  sample_id: "Sample_ID" # header for the column for 'sample id' in the metadata file. Fasta files should be named sampleid.fa.gz
+  mode: se # one of 'se' (single end) or 'pe' (paired end)
+  threads: 8 # number of threads to use, for multi-threaded programs
 
 ###### QC parameters
 QC:
