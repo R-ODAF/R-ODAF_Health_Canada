@@ -10,4 +10,5 @@ dependencies:
   - star
   - multiqc
   - snakemake
+  - r-curl
 

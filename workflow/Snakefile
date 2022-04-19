@@ -1,0 +1,489 @@
+import re
+import pandas as pd
+from glob import glob
+import pathlib
+from snakemake.utils import validate
+
+# load and validate config stuff
+configfile: "config/config.yaml"
+
+# set up directories
+main_dir = Path(config["prefix"])
+
+genome_dir = Path(config["genomedir"])
+
+data_dir = main_dir / "data"
+raw_dir = data_dir / "raw" # should already exist
+metadata_dir = data_dir / "metadata" # should already exist
+metadata_file = metadata_dir / "metadata.txt" # should aready exist
+#TODO set up a check to make sure this stuff exists
+
+if config["seqtype"] =="temposeq":
+    temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
+    temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
+sample_id_col = config["sample_id"]
+
+
+SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
+print("samples: " + str(SAMPLES))
+
+# set up output dirs
+
+processed_dir = data_dir / "processed"
+processed_dir.mkdir(parents=True, exist_ok=True)
+
+trim_dir = processed_dir / "trimmed"
+align_dir = processed_dir / "aligned"
+quant_dir = processed_dir / "quant"
+trim_dir.mkdir(parents=True, exist_ok=True)
+align_dir.mkdir(parents=True, exist_ok=True)
+quant_dir.mkdir(parents=True, exist_ok=True)
+
+analysis_dir = main_dir / "analysis"
+analysis_dir.mkdir(parents=True, exist_ok=True)
+
+qc_dir = analysis_dir / "QC"
+qc_dir.mkdir(parents=True, exist_ok=True)
+
+log_dir = main_dir / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+
+print("using genome: " + str(genome_dir))
+
+shell("cp -rf workflow {log_dir}")
+shell("cp -rf config {log_dir}")
+
+##########################
+### run whole pipeline ###
+##########################
+
+rule all:
+    input:
+        qc_dir / "MultiQC_Report.html",
+        processed_dir / "count_table.tsv",
+        "genome.removed",
+    benchmark: log_dir / "benchmark.all.txt"
+
+##################################
+### Trimming raw reads : Fastp ###
+##################################
+
+if config["seqtype"] =="temposeq":
+    length_required_fastp = 50
+    trim_tail1_fastp = 1
+else:
+    length_required_fastp = 36
+    trim_tail1_fastp = 0
+
+
+rule fastp_se:
+    input:
+        R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
+    output:
+        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
+        json = trim_dir / "{sample}_fastp.json",
+        html = trim_dir / "{sample}_fastp.html",
+    params:
+        front_size = 1,
+        front_quality = 3,
+        tail_size = 1,
+        tail_quality = 3,
+        right_size = 4,
+        right_quality = 15,
+        length_required = length_required_fastp,
+        trim_tail1 = trim_tail1_fastp,
+        threads = config["threads"],
+    benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
+    threads: config["threads"],
+    shell:
+        '''
+        fastp \
+        --in1 {input.R1} \
+        --out1 {output.R1} \
+        --json {output.json} \
+        --html {output.html} \
+        --cut_front \
+        --disable_adapter_trimming \
+        --cut_front_window_size {params.front_size} \
+        --cut_front_mean_quality {params.front_quality} \
+        --cut_tail \
+        --cut_tail_window_size {params.tail_size} \
+        --cut_tail_mean_quality {params.tail_quality} \
+        --cut_right \
+        --cut_right_window_size {params.right_size} \
+        --cut_right_mean_quality {params.right_quality} \
+        --length_required {params.length_required} \
+        --trim_tail1 {params.trim_tail1} \
+        --thread {params.threads} \
+        '''
+
+
+rule fastp_pe:
+    input:
+        R1=ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
+        R2=ancient(str(raw_dir / "{sample}.R2.fastq.gz")),
+    output:
+        R1 = pipe(trim_dir / "{sample}.R1.fastq.gz"),
+        R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
+        json = trim_dir / "{sample}_fastp.json",
+        html = trim_dir / "{sample}_fastp.html",
+    params:
+        front_size = 1,
+        front_quality = 3,
+        tail_size = 1,
+        tail_quality = 3,
+        right_size = 4,
+        right_quality = 15,
+        length_required = length_required_fastp,
+        threads = config["threads"],
+    benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
+    threads: config["threads"],
+    shell:
+        '''
+        fastp \
+        --in1 {input.R1} \
+        --in2 {input.R2} \
+        --out1 {output.R1} \
+        --out2 {output.R2} \
+        --json {output.json} \
+        --html {output.html} \
+        --cut_front \
+        --cut_front_window_size {params.front_size} \
+        --cut_front_mean_quality {params.front_quality} \
+        --cut_tail \
+        --cut_tail_window_size {params.tail_size} \
+        --cut_tail_mean_quality {params.tail_quality} \
+        --cut_right \
+        --cut_right_window_size {params.right_size} \
+        --cut_right_mean_quality {params.right_quality} \
+        --length_required {params.length_required} \
+        --thread {params.threads} \
+        '''
+
+################################
+### Alignment of reads: STAR ###
+################################
+
+if config["seqtype"] =="temposeq":
+    STAR_index = genome_dir
+    STAR_insertion_deletion_penalty = -1000000 # STAR scoring penalty for deletion/insertion, set by biospyder
+    STAR_multimap_nmax = 1
+    STAR_mismatch_nmax = 2
+else:
+    STAR_index = genome_dir / "STAR_index"
+    STAR_insertion_deletion_penalty = -2 # STAR defaults
+    STAR_multimap_nmax = 20
+    STAR_mismatch_nmax = 999
+
+
+# this rule is only used in RNA-seq jobs (not temposeq)
+rule STAR_make_index:
+    input:
+        genome = ancient(genome_dir / config["genome_filename"])
+    params:
+        index_dir = genome_dir / "STAR_index",
+        annotations = genome_dir / config["annotation_filename"],
+        overhang = 100,
+        threads = config["threads"],
+        suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
+        genomeChrBinNbits = 12, # might need to mess with this for different genomes
+    output:
+        directory(genome_dir / "STAR_index"),
+    benchmark: log_dir / "benchmark.STAR_make_index.txt"
+    threads: config["threads"],
+    shell:
+        '''
+		STAR \
+        --runMode genomeGenerate \
+		--genomeDir {params.index_dir} \
+		--genomeFastaFiles {input.genome} \
+		--sjdbGTFfile {params.annotations} \
+		--sjdbOverhang {params.overhang} \
+		--runThreadN {params.threads} \
+		--genomeSAsparseD {params.suffix_array_sparsity} \
+		--genomeChrBinNbits {params.genomeChrBinNbits}
+        '''
+
+# this rule loads the genome into shared memory, and uses
+# the 'service' keyword introduced in v7.0.
+# Note that the genome.fasta.index is a dummy file
+# https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#service-rules-jobs
+# https://github.com/snakemake/snakemake/pull/1413
+rule STAR_load:
+    output:
+        touch("genome.loaded")
+    params:
+        index = STAR_index,
+    benchmark: log_dir / "benchmark.STAR_load.txt"
+    run:
+        shell("STAR --genomeLoad LoadAndExit --genomeDir {params.index}")
+        shell("rm -f genome.removed")
+
+
+rule STAR_all:
+    input:
+        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
+        "genome.removed",
+
+if config["mode"] == "se":
+    rule STAR:
+        input:
+            loaded_index = "genome.loaded",
+            R1 = trim_dir / "{sample}.fastq.gz",
+        output:
+            sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+            toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+        params:
+            index = STAR_index,
+            penalty = STAR_insertion_deletion_penalty,
+            multimap_nmax = STAR_multimap_nmax,
+            mismatch_nmax = STAR_mismatch_nmax,
+            annotations = genome_dir / config["annotation_filename"],
+            threads = config["threads"],
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+        benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
+        threads: config["threads"],
+        shell:
+            '''
+            STAR \
+                --alignEndsType EndToEnd \
+                --genomeLoad LoadAndKeep \
+                --runThreadN {params.threads} \
+                --genomeDir {params.index} \
+                --readFilesIn {input.R1} \
+                --quantMode TranscriptomeSAM \
+                --limitBAMsortRAM=10737418240 \
+                --scoreDelOpen {params.penalty} \
+                --scoreInsOpen {params.penalty} \
+                --outFilterMultimapNmax {params.multimap_nmax} \
+                --outFilterMismatchNmax {params.mismatch_nmax} \
+                --readFilesCommand zcat \
+                --outFileNamePrefix {params.bam_prefix} \
+                --outSAMtype BAM SortedByCoordinate
+            '''
+
+if config["mode"] == "pe":
+    rule STAR:
+        input:
+            loaded_index = "genome.loaded",
+            R1 = trim_dir / "{sample}.R1.fastq.gz",
+            R2 = trim_dir / "{sample}.R2.fastq.gz",
+        output:
+            sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+            toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+        params:
+            index = STAR_index,
+            annotations = genome_dir / config["annotation_filename"],
+            threads = config["threads"],
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+        resources:
+            load=100
+        benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
+        threads: config["threads"],
+        shell:
+            '''
+            STAR \
+            --genomeLoad LoadAndKeep \
+            --runThreadN {params.threads} \
+            --genomeDir {params.index} \
+            --readFilesIn {input.R1} {input.R2} \
+            --quantMode TranscriptomeSAM \
+            --readFilesCommand zcat \
+            --outFileNamePrefix {params.bam_prefix} \
+            --outSAMtype BAM SortedByCoordinate
+            '''
+
+rule STAR_unload:
+    input:
+        idx = "genome.loaded",
+        bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+    output:
+        touch("genome.removed")
+    params:
+        genome_dir = STAR_index
+    run:
+        shell("STAR --genomeLoad Remove --genomeDir {params.genome_dir}")
+        shell("rm genome.loaded")
+
+
+
+
+########################
+# Quantification QuasR #
+#   (TempOSeq only)    #
+########################
+
+if config["seqtype"] =="temposeq":
+    rule index_all:
+        input:
+            expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
+
+
+    rule samtools_index:
+        input:
+            aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+        output:
+            index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai",
+        benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
+        shell:
+            '''
+            samtools index {input.aligned}
+            '''
+
+
+    rule quantification_input:
+        input:
+            list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES)),
+        output:
+            samplefile = processed_dir / "samplefile.txt"
+        benchmark: log_dir / "benchmark.quantification_input.txt"
+        run:
+            print("samples: " + str(SAMPLES))
+            print("filenames: " + str(input))
+            df = pd.DataFrame({"FileName": input, "SampleName": SAMPLES})
+            df.to_csv(output.samplefile, index=False, sep='\t')
+
+    rule quantification:
+        input:
+            aligned = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES),
+            index = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES),
+            samplefile = processed_dir / "samplefile.txt"
+        params:
+            annotfile = str(genome_dir / config["annotation_filename"]),
+            genome = str(genome_dir / config["genome_filename"]),
+        output:
+            count_table = processed_dir / "count_table.tsv",
+            mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
+        benchmark: log_dir / "benchmark.quantification.txt"
+        shell:
+            '''
+            Rscript {temposeq_quantification_script} {input.samplefile} {params.genome} {params.annotfile} {output.count_table} {output.mapped_unmapped}
+            '''
+
+
+
+#######################
+# QUANTIFICATION RSEM #
+#   (RNA-seq only)    #
+#######################
+
+if config["seqtype"] =="rnaseq":
+    rule RSEM_make_index:
+        input:
+            genome = genome_dir / config["genome_filename"]
+        params:
+            annotations = genome_dir / config["annotation_filename"],
+            genome_name = config["genome_name"],
+        output:
+            directory(genome_dir / "RSEM_index"),
+        benchmark: log_dir / "benchmark.RSEM_make_index.txt"
+        shell:
+            '''
+            mkdir RSEM_index
+            rsem-prepare-reference --gtf {params.annotations} {input.genome} {output}/{params.genome_name}
+            '''
+
+    if config["mode"] == "pe":
+        rule RSEM:
+            input:
+                bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
+                index = genome_dir / "RSEM_index" 
+            output:
+                isoforms = quant_dir / "{sample}.isoforms.results",
+                genes = quant_dir / "{sample}.genes.results",
+            params:
+                threads = config["threads"],
+                output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
+                index_name = config["genome_name"],
+            benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
+            threads: config["threads"],
+            shell:
+                '''
+                rsem-calculate-expression \
+                -p {params.threads} \
+                --paired-end \
+                --bam {input.bam} \
+                --no-bam-output \
+                {input.index}/{params.index_name} \
+                {params.output_prefix}
+                '''
+
+    if config["mode"] == "se":
+        rule RSEM:
+            input:
+                bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
+                index = genome_dir / "RSEM_index" 
+            output:
+                isoforms = quant_dir / "{sample}.isoforms.results",
+                genes = quant_dir / "{sample}.genes.results",
+            params:
+                threads = config["threads"],
+                output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
+                index_name = config["genome_name"],
+            benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
+            threads: config["threads"]
+            shell:
+                '''
+                rsem-calculate-expression \
+                -p {params.threads} \
+                --bam {input.bam} \
+                --no-bam-output \
+                {input.index}/{params.index_name} \
+                {params.output_prefix}
+                '''
+
+    rule counts_matrix:
+        input:
+            genes = expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
+            isoforms = expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
+        output:
+            genes = processed_dir / "count_table.tsv",
+            isoforms = processed_dir / "isoforms_table.tsv"
+        benchmark: log_dir / "benchmark.counts_matrix.txt"
+        shell:
+            '''
+            rsem-generate-data-matrix {input.genes} > {output.genes}
+            sed -i 's/\.genes.results//g' {output.genes}
+            sed -i 's|{quant_dir}/||g' {output.genes}
+            sed -i 's/"//g' {output.genes}
+            rsem-generate-data-matrix {input.isoforms} > {output.isoforms}
+            sed -i 's/\.isoforms.results//g' {output.isoforms}
+            sed -i 's|{quant_dir}/||g' {output.isoforms}
+            sed -i 's/"//g' {output.isoforms}
+            '''
+
+
+
+
+###############
+### MultiQC ###
+###############
+
+
+rule multiqc:
+    message: "running multiqc for temposeq data"
+    input:
+        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+    output:
+        qc_dir / "MultiQC_Report.html"
+    benchmark: log_dir / "benchmark.multiqc.txt"
+    shell:
+        '''
+        multiqc \
+        --cl_config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+        --cl_config "sample_names_replace_exact: True" \
+        --filename MultiQC_Report.html \
+        --interactive \
+        --sample-names {metadata_file} \
+        -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
+        mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
+        '''
+
+
+###############
+### Cleanup ###
+###############
+onerror:
+    print("An error occurred. Attempting to unload genome")
+    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")

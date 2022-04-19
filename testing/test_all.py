@@ -27,7 +27,7 @@ def test_QC():    # run snakemake pipeline
     if(run_QC_tests):
         print('testing QC')
         # run QC
-        p1 = subprocess.Popen('cp data/processed/count_table_mini.csv data/processed/count_table.csv; Rscript scripts/render_studywide_QC_report.R', shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        p1 = subprocess.Popen('cp data/processed/count_table_mini.tsv data/processed/count_table.tsv; Rscript scripts/render_studywide_QC_report.R', shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         p1.communicate()
         assert p1.returncode == 0
 
