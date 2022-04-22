@@ -10,35 +10,7 @@ output:
 ---
 
 
-
-
-***
-
-# Revision History
-
-**This version**  
-  
-*Current version: 1*  
-Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
-Report prepared for: Name  
-Purpose of report:  
-
-* Exercise to analyze RNA-Seq data  
-
-**Previous revisions**  
-
-N/A  
-
-***
-
-
-# TODO: Rmd parameters like author and prepared for should be in the config
-
-This report is meant to help explore DESeq2 results and was generated using RMarkdown. This section contains the code for setting up the rest of the report.  
-
-## Load libraries
-
-```{r docSetup, warning = FALSE, message = FALSE}
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
 library('tidyverse')
 library('knitr')
 library('kableExtra')
@@ -49,11 +21,12 @@ library('pheatmap')
 ```
 
 
-```{r extra stuff}
+```{r extra stuff, include=F}
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","data_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
 
 
 config <- yaml::read_yaml(file.path(here::here(),
@@ -82,16 +55,28 @@ inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
-params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
+params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
 
-
+has_description <- !is.na(params$project_description)
+description_text <- paste("Purpose of report:", params$project_description)
 ```
 
+# `r params$project_title` - RNA-seq analysis {-}
 
-# TODO: R-ODAF filtering stats should be reported here
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
 
-## load functions
-```{r load_functions}
+Report prepared for: `r params$project_name`
+
+`r if(has_description){description_text}`
+
+***
+
+This report is meant to help explore DESeq2 results and was generated using RMarkdown. This section contains the code for setting up the rest of the report.  
+
+TODO: R-ODAF filtering stats should be reported here
+
+
+```{r load_functions, include=F}
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))

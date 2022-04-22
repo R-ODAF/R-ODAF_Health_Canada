@@ -2,7 +2,9 @@
 
 common:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_name: "Default"    # Change depending on your project name
+  project_title: "Default"    # Change depending on your project name
+  project_name: "Your name here" 
+  project_description: null # description of project for report, optional
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
