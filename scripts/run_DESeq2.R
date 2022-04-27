@@ -39,36 +39,14 @@ species_data <- load_species(params$species)
 #                    dataset = species_data$ensembl_species,
 #                    host = "useast.ensembl.org")
 
-# set some additional parameters based on platform
-if (params$platform == "RNA-Seq") {
-  SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
-  params$sampledata_sep = "\t"
-  
-  params$threshold <- 1000000 # Number of aligned reads per sample required
-  params$MinCount <- 1
-  params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
-  params$linear_fc_filter <- 1.5
-  params$biomart_filter <- "ensembl_gene_id"
-} else if (params$platform == "TempO-Seq") {
-  SampleDataFile <- file.path(paths$processed, "count_table.tsv")
-  params$sampledata_sep = "\t"
-
-  params$threshold = 100000 # Number of aligned reads per sample required
-  params$MinCount <- 0.5
-  params$alpha <- pAdjValue <- 0.05 
-  params$linear_fc_filter <- 1.5
-
-  bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-  params$biospyder_ID <- bs$biospyder_ID
-  params$biomart_filter <- bs$biomart_filter
-  params$biospyder_filter <- bs$biospyder_filter
-  params$biospyder <- bs$biospyder
-} else { 
-  stop("Platform/technology not recognized") 
-}
+bs <- params$bs
+params <- set_up_platform_params(params, bs, species_data)
 
 # Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
-params$R_ODAF_plots = FALSE
+params$R_ODAF_plots <- FALSE
+# filter gene counts to decrease runtime. Not recommended for biomarker input!library
+params$filter_gene_counts <- TRUE
+params$cooks <- F # Sometimes may need consideration
 
 
 ##############################################################################################
@@ -121,7 +99,8 @@ if (length(intgroup) > 1){
 original_design <- params$design
 
 # load count data
-sampleData <- load_count_data(SampleDataFile, params$sampledata_sep)
+sampleData <- load_count_data(params$SampleDataFile, params$sampledata_sep)
+
 
 processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, design_to_use, params)
 sampleData <- processed$sampleData

@@ -197,8 +197,9 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 }
 
 
-annotate_deseq_table <- function(deseq_results_list, params, bs, filter_results = F) {
+annotate_deseq_table <- function(deseq_results_list, params, filter_results = F) {
   x <- deseq_results_list
+  bs <- params$bs
   annotated_results <- list()
   for (i in 1:length(x)) {
     print(i)

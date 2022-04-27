@@ -9,31 +9,10 @@ output:
     code_download: true
 ---
 
-
-
-
-***
-
-# Revision History
-
-**This version**  
-  
-*Current version: 1*  
-Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
-Report prepared for: Name  
-Purpose of report:  
-
-* Exercise to analyze RNA-Seq data  
-
-**Previous revisions**  
-
-N/A  
-
-***
-
-
-
 ```{r docSetup, warning = FALSE, message = FALSE}
+#### Record start time
+startTime <- Sys.time()
+
 library('tidyverse')
 library('knitr')
 library('kableExtra')
@@ -42,43 +21,42 @@ library('RColorBrewer')
 library('pheatmap')
 library('data.table')
 
-
-source(here::here("scripts","file_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+#source(here::here("scripts","file_functions.R"))
+#source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 source(here::here("scripts","data_functions.R"))
 
 #########################################
-# to delete, should all be done by the render_DEseq2_reports.R script. Just in here to help with development
-
-
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
-
-# Combine required params from config
-params <- c(config$common, config$DESeq2)
-# replace nulls in params with NA
-params <- replace_nulls_in_config(params)
-# If projectdir is not set, figure out current project root directory
-projectdir <- params$projectdir
-if (is.na(projectdir)) {
-  projectdir <- here::here()
-  params$projectdir <- projectdir
-}
-
-paths <- set_up_paths(params)
-
-
-skip_extra <- c("DMSO") # Remove DMSO controls as a facet
-
-# Input file - Rmd
-inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-
-# Identify where metadata can be found
-SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
-
-params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
+# # to delete, should all be done by the render_DEseq2_reports.R script. Just in here to help with development
+# 
+# 
+# config <- yaml::read_yaml(file.path(here::here(),
+#                                     "config/config.yaml"),
+#                           eval.expr = T)
+# 
+# # Combine required params from config
+# params <- c(config$common, config$DESeq2)
+# # replace nulls in params with NA
+# params <- replace_nulls_in_config(params)
+# # If projectdir is not set, figure out current project root directory
+# projectdir <- params$projectdir
+# if (is.na(projectdir)) {
+#   projectdir <- here::here()
+#   params$projectdir <- projectdir
+# }
+# 
+# paths <- set_up_paths(params)
+# 
+# 
+# skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+# 
+# # Input file - Rmd
+# inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+# 
+# # Identify where metadata can be found
+# SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+# 
+# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
 
 #########################################
 
@@ -90,21 +68,21 @@ bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
 ```
 
 
-## load config
-```{r load_config}
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
+# `r params$project_title` - Extra stats {-}
 
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+Report prepared for: `r params$project_name`
+
+
+***
+
+This report contains extra statistics and plots.
+
+```{r load_facet_data, include=FALSE}
+source(here::here("scripts","load-facet-data.R"))
 ```
 
-
-
-```{r load_data, include=FALSE}
-source("load-facet-data.R", local = knitr::knit_global())
-```
-
-# metadata tables
+# Metadata tables
 ```{r tables, collapse=TRUE}
 
 # table of sample metadata
@@ -151,9 +129,9 @@ knitr::kable(summary_counts,
 ```
 
 
-# descriptive plots
+# Descriptive plots
 
-# boxplots of reads/sample (by group)
+## boxplots of reads/sample (by group)
 ```{r nReads_boxplot, collapse=TRUE}
 df<-data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
@@ -170,7 +148,7 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 
 ```
 
-# sample-to-sample heatmaps
+## sample-to-sample heatmaps
 ```{r sample-to-sample_heatmaps}
 
 plot_sample_heatmap <- function(current_rld){
@@ -201,7 +179,7 @@ plot_sample_heatmap(rld_DEGs)
 plot_sample_heatmap(rld_top)
 ```
 
-# P-value distributions
+## P-value distributions
 ```{r pvalue_distribution}
 ggplot(data.frame(allResults), aes(x = pvalue)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
@@ -210,7 +188,7 @@ ggplot(data.frame(allResults), aes(x = pvalue)) +
     facet_wrap( ~ contrast, ncol = 2)
 ```
 
-# MA plots
+## MA plots
 ```{r MA_plots}
 foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
 ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
@@ -231,4 +209,45 @@ for (i in seq_along(resultsListAll)) {
 
 ```
 
+
+# Session Info
+
+## Date the report was generated.
+
+```{r reproducibility1, echo = FALSE}
+## Date the report was generated
+Sys.time()
+```
+
+## Version of R-ODAF Repository
+
+The git hash for the commit of the [R-ODAF repository](`r system("git remote get-url origin", intern = T)`) used in this analysis is `r system("git rev-parse HEAD", intern = T)`.
+
+## Parameters Used
+
+From the list elements in each params${variable} used to generate this report.
+
+```{r paramsList, echo = FALSE}
+df <- as.data.frame(unlist(params))
+names(df) <- "Parameter Value"
+knitr::kable(as.data.frame(df), format = "markdown")
+```
+
+## Wallclock time spent generating the report.
+
+```{r reproducibility2, echo = FALSE}
+## Processing time in seconds
+totalTime <- diff(c(startTime, Sys.time()))
+round(totalTime, digits = 3)
+```
+
+## `R` session information.
+
+```{r reproducibility3, echo = FALSE}
+## Session info
+options(width = 120)
+session_info()
+```
+
+## Pandoc version used: `r rmarkdown::pandoc_version()`.
 

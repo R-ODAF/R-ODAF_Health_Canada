@@ -11,55 +11,80 @@ output:
 
 
 ```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+
 library('tidyverse')
 library('knitr')
 library('kableExtra')
 library('DESeq2')
 library('data.table')
 library('pheatmap')
-
+library('here')
+library('crosstalk')
+library('crosstool')
+library('plotly')
+library('tidytext')
+library('devtools')
 ```
 
 
 ```{r extra stuff, include=F}
+# 
+# source(here::here("scripts","file_functions.R"))
+# source(here::here("scripts","setup_functions.R"))
+# source(here::here("scripts","data_functions.R"))
+# source(here::here("scripts","DESeq_functions.R"))
+# 
+# 
+# config <- yaml::read_yaml(file.path(here::here(),
+#                                     "config/config.yaml"),
+#                           eval.expr = T)
+# 
+# # Combine required params from config
+# params <- c(config$common, config$DESeq2)
+# # replace nulls in params with NA
+# params <- replace_nulls_in_config(params)
+# 
+# # If projectdir is not set, figure out current project root directory
+# projectdir <- params$projectdir
+# if (is.na(projectdir)) {
+#   projectdir <- here::here()
+#   params$projectdir <- projectdir
+# }
+# 
+# paths <- set_up_paths(params)
+# 
+# 
+# skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+# 
+# # Input file - Rmd
+# inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+# 
+# # Identify where metadata can be found
+# SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+# 
+# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
+# 
+# has_description <- !is.na(params$project_description)
+# description_text <- paste("Purpose of report:", params$project_description)
+```
 
-source(here::here("scripts","file_functions.R"))
-source(here::here("scripts","setup_functions.R"))
+
+```{r load_functions, include=F}
+
+#source(here::here("scripts","file_functions.R"))
+#source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
-
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
-
-# Combine required params from config
-params <- c(config$common, config$DESeq2)
-# replace nulls in params with NA
-params <- replace_nulls_in_config(params)
-# If projectdir is not set, figure out current project root directory
-projectdir <- params$projectdir
-if (is.na(projectdir)) {
-  projectdir <- here::here()
-  params$projectdir <- projectdir
-}
-
-paths <- set_up_paths(params)
-
-
-skip_extra <- c("DMSO") # Remove DMSO controls as a facet
-
-# Input file - Rmd
-inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-
-# Identify where metadata can be found
-SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
-
-params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
-
 has_description <- !is.na(params$project_description)
 description_text <- paste("Purpose of report:", params$project_description)
+
+
 ```
+
 
 # `r params$project_title` - RNA-seq analysis {-}
 
@@ -76,38 +101,16 @@ This report is meant to help explore DESeq2 results and was generated using RMar
 TODO: R-ODAF filtering stats should be reported here
 
 
-```{r load_functions, include=F}
-
-source(here::here("scripts","file_functions.R"))
-source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","data_functions.R"))
-source(here::here("scripts","DESeq_functions.R"))
-
-species_data <- load_species(params$species)
-
-bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-
-```
-
-## load config
-```{r load_config}
-
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
-
-
-```
-
-
-```{r load_data, include=FALSE}
-source("load-facet-data.R", local = knitr::knit_global())
+```{r load_facet_data, include=FALSE}
+source(here::here("scripts","load-facet-data.R"))
 ```
 
 # descriptive plots
 
-# Volcano plots (14) -- gives a good high level summary at a glance
-```{r 'volcano-plot', fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+## Volcano plots
+
+### All data
+```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
   #geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
@@ -119,18 +122,93 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
     .default = label_wrap_gen(15)))
 ```
 
+### By contrast
+```{r volcano_by_contrast, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+volcano_df <-  as.data.frame(allResults) %>%
+    dplyr::select(c(Probe_Name,
+                    Gene_Symbol,
+                    "log2FoldChange",
+                    "linearFoldChange",
+                    "padj",
+                    "contrast")) %>%
+    distinct()
+
+volcano_df_sig <- as.data.frame(significantResults)
+volcano_df["sig_group"] <- "Not significant"
+volcano_df[which(volcano_df['padj'] < params$alpha &
+                   abs(volcano_df['linearFoldChange']) < params$linear_fc_filter ),
+           "sig_group"] <- paste0("FDR >", params$alpha)
+volcano_df[which(volcano_df['padj'] > params$alpha &
+                   abs(volcano_df['linearFoldChange']) > params$linear_fc_filter ),
+           "sig_group"] <- paste0("Linear fold change >", params$linear_fc_filter)
+volcano_df[!is.na(volcano_df[['padj']]) &
+             abs(volcano_df['linearFoldChange']) > params$linear_fc_filter &
+             volcano_df['padj'] < params$alpha &
+             volcano_df[["Probe_Name"]] %in% volcano_df_sig[["Probe_Name"]],
+           "sig_group"] <- "Passed all filters"
 
 
-# PCA plots (all genes, DEGs only, top 1000 most variable genes)
-```{r PCA, collapse=TRUE}
+volcano_df_shared <- SharedData$new(volcano_df)
+volcano_contrasts <- unique(allResults$contrast)
+
+contrast_init = volcano_contrasts[1]
+i = as.character(which(volcano_df$contrast == contrast_init))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(volcano_df_shared,
+               "transceiver",
+               init = i,
+               channel = "filter",
+               reset = rownames(volcano_df))
+
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(3,NA),
+  list(
+    filter_select("contrast_to_filter",
+                  "Contrast",
+                  volcano_df_shared,
+                  ~contrast,
+                  volcano_contrasts,
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = volcano_df_shared,
+            x = ~log2FoldChange,
+            y = ~-log10(padj),
+            type = 'scatter',
+            mode = 'markers',
+            color = ~sig_group,
+            text = ~Gene_Symbol) %>%
+    layout(xaxis = list(title = 'log2 Fold Change'),
+           yaxis = list(title = '-log10 adjusted p-value')),
+    # How to add title that gets updated??? Same problem with gene plots.
+    tx)
+)
+
+```
+
+# PCA plots {.tabset .tabset-fade}
+
+TODO: make these interactive with plotly
+
+## All genes
+```{r PCA_all_genes, collapse=TRUE}
 # all genes
 plotPCA(rld, intgroup = params$design, ntop = nrow(assay(rld))) +
   theme(legend.position = "bottom") +
   guides(color = guide_legend(ncol = 3))
+```
+
+## DEGs only
+```{r PCA_DEGs, collapse=TRUE}
 # DEGs only
 plotPCA(rld_DEGs, intgroup = params$design, ntop = nrow(assay(rld))) +
     theme(legend.position = "bottom") +
     guides(color = guide_legend(ncol = 3))
+```
+
+## Top `r params$nBest` genes
+```{r PCA_top_N, collapse=TRUE}
 # top N most variable
 plotPCA(rld_top, intgroup = params$design, ntop = nrow(assay(rld))) +
     theme(legend.position = "bottom") +
@@ -139,10 +217,10 @@ plotPCA(rld_top, intgroup = params$design, ntop = nrow(assay(rld))) +
 ```
 
 
-# DEG heatmaps
-# Heatmaps (18) -- I also like these but would consider dropping the row variance based one entirely, because I think it can be misleading
+# DEG heatmaps {.tabset .tabset-fade}
 
-```{r DEG_heatmaps}
+## All DEGs
+```{r DEG_heatmap_all_genes}
 mat <- assay(rld_DEGs)
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
@@ -157,16 +235,150 @@ if (nrow(as.matrix(mat)) > 1) {
 }
 ```
 
-# Genes of interest (13) -- often one the first things I'll look at myself... it shows upfront any big trends and whether genes you recognize are where they should be
+## Top `r params$nBest` differentially abundant genes
+```{r DEG_heatmap_DEGs}
+mat <- assay(rld_top)
+if (nrow(as.matrix(mat)) > 1) {
+  mat <- mat - rowMeans(mat)
+  pheatmap(mat,
+           annotation_col =  as.data.frame(colData(rld_top)[, intgroup, drop = F]),
+           show_rownames = FALSE,
+           border_color = NA,
+           scale = "row")
+  # color = inferno(10)
+} else {
+  print("No DEGs found.")
+}
+```
+
+# Genes of interest
 ```{r genes_of_interest}
 
+numResults <- params$nBestPlots
+
+allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange) > params$linear_fc_filter) %>%
+  arrange(-abs(linearFoldChange))
+
+
+allResultsOrdered_logFC_filter %>%
+  group_by(contrast) %>%
+  top_n(numResults, wt = abs(log2FoldChange)) %>%
+  ungroup() %>%
+  mutate(Contrast = as.factor(contrast),
+         Symbol = reorder_within(Gene_Symbol, log2FoldChange, Contrast)) %>%
+  ggplot(aes(x = log2FoldChange,
+             y = Symbol,
+             color = Contrast,
+             size = -log(padj))) +
+  geom_point(show.legend = TRUE) +
+  facet_wrap(~contrast,
+             scales = "free_y",
+             ncol = 4,
+             labeller = labeller(contrast = label_wrap_gen(10))) +
+  scale_y_reordered()  +
+  geom_vline(xintercept = 0,
+             linetype = "dashed",
+             color = "black",
+             size = 1) +
+  ggtitle(paste0("Top ",numResults," genes ranked by fold change (adjusted p-value <",params$alpha,"), grouped by treatment"))
+
+
 ```
 
-# Gene-level plots for top 20 features -- maybe we could cut this to 10, since we will have the data exploration plot. Maybe even make it a tabset? I do like having it myself because it gives granularity at the sample level - how much spread is in the data... are dose-response trends looking reasonable or not across doses...
+# Gene-level plots for top `r params$nBestPlots` features
+
+maybe we could cut this to 10, since we will have the data exploration plot. Maybe even make it a tabset? I do like having it myself because it gives granularity at the sample level - how much spread is in the data... are dose-response trends looking reasonable or not across doses...
 ```{r genelevel_plots}
 
+nBestFeatures <- params$nBestPlots
+
+id_table <- params$bs$biospyder
+
+# Would be valuable to have this broken down by contrast too.
+plotCounts_gg <- function(i, d, intgroup) {
+    plotdata <- plotCounts(d,
+                       gene = i,
+                       intgroup = intgroup,
+                       returnData = TRUE)
+    plot_title <- paste(id_table[[params$biomart_filter]][grep(i,id_table[[params$biomart_filter]])],
+                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[[params$biomart_filter]])])
+    if (ncol(plotdata) > 2) {
+      colorCol = 3
+    } else {colorCol = 2}
+    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
+      geom_point(position = position_jitterdodge()) +
+      ylab('Normalized count') +
+      xlab('Group') +
+      ggtitle(plot_title) +
+      coord_trans(y = "log10") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      labs(color = colnames(plotdata)[colorCol])
+}
+
+genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
+
+for (i in head(unique(genesToPlot$Probe_Name), nBestFeatures)) {
+  print(plotCounts_gg(i, d = dds, intgroup = params$design))
+}
+
 
 ```
 
-# methods summary
-# references
+
+# Methods Summary
+
+Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.  
+
+TODO: get the stats for this one
+
+## References {-}
+
+If these methods were used in your study, please cite the following papers as appropriate:  
+
+---
+nocite: '@*'
+---
+
+<div id="refs"></div>
+
+# Session Info
+
+## Date the report was generated.
+
+```{r reproducibility1, echo = FALSE}
+## Date the report was generated
+Sys.time()
+```
+
+## Version of R-ODAF Repository
+
+The git hash for the commit of the [R-ODAF repository](`r system("git remote get-url origin", intern = T)`) used in this analysis is `r system("git rev-parse HEAD", intern = T)`.
+
+## Parameters Used
+
+From the list elements in each params${variable} used to generate this report.
+
+```{r paramsList, echo = FALSE}
+df <- as.data.frame(unlist(params))
+names(df) <- "Parameter Value"
+knitr::kable(as.data.frame(df), format = "markdown")
+```
+
+## Wallclock time spent generating the report.
+
+```{r reproducibility2, echo = FALSE}
+## Processing time in seconds
+totalTime <- diff(c(startTime, Sys.time()))
+round(totalTime, digits = 3)
+```
+
+## `R` session information.
+
+```{r reproducibility3, echo = FALSE}
+## Session info
+options(width = 120)
+session_info()
+```
+
+## Pandoc version used: `r rmarkdown::pandoc_version()`.
+

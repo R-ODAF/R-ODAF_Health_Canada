@@ -66,5 +66,6 @@ rv = rowVars(assay(rld))
 select = order(rv, decreasing = TRUE)[1:params$nBest]
 rld_top <- rld[select,]
 
-allResults <- annotate_deseq_table(resultsListAll, params, bs, filter_results = F)
+allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
+significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
 
