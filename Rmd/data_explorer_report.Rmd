@@ -50,7 +50,11 @@ res.df.dt <- allResults %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 
-#browser()
+
+descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL")
+colnames(descriptions) <- c("Ensembl_Gene_ID","description")
+res.df.dt <- res.df.dt %>% left_join(descriptions)
+
 
 if (!is.null(searchURL)) {
     res.df.dt$Gene <- paste0('<a href="',
@@ -73,6 +77,8 @@ res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
 res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
 
+
+
 DT::datatable(res.df.dt,
           options = list(pagingType = 'full_numbers',
                          pageLength = 20,
@@ -84,7 +90,7 @@ DT::datatable(res.df.dt,
                                      'pdf',
                                      'print',
                                      'colvis'),
-                         columnDefs = list(list(visible = FALSE, targets = c(2, 4, 5)))),
+                         columnDefs = list(list(visible = FALSE, targets = c(1, 2, 4, 5)))),
           escape = FALSE,
           extensions = 'Buttons',
           rownames = FALSE,
@@ -96,8 +102,10 @@ DT::datatable(res.df.dt,
                                                     'contrast',
                                                     'description',
                                                     'Gene',
-                                                    'Ensembl_Gene_ID')),
+                                                    'Ensembl_Gene_ID',
+                                                    'Probe_Name')),
                   digits)
+
 
 ```
 
