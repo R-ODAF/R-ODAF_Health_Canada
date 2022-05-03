@@ -14,19 +14,14 @@ output:
 #### Record start time
 startTime <- Sys.time()
 
-
-library('tidyverse')
 library('knitr')
 library('kableExtra')
-library('DESeq2')
-library('data.table')
 library('pheatmap')
 library('here')
 library('crosstalk')
 library('crosstool')
 library('plotly')
 library('tidytext')
-library('devtools')
 ```
 
 
