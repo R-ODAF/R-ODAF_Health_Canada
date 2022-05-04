@@ -196,12 +196,14 @@ if(is.na(params$group_facet)){
 message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows indicate 0 DEGs passed filters"))
 message(paste(capture.output(summary_counts), collapse="\n"))
 
-# write the table of DEG counts to a file
-write.table(summary_counts,
-            file = file.path(paths$DEG_output, paste0(params$project_name, "_DEG_counts_summary.txt")),
-            sep = "\t",
-            quote = FALSE)
+
+source(here::here("scripts","write_output_tables.R"))
+
+# # write the table of DEG counts to a file
+# write.table(summary_counts,
+#             file = file.path(paths$DEG_output, paste0(params$project_name, "_DEG_counts_summary.txt")),
+#             sep = "\t",
+#             quote = FALSE)
 
 # save DESeq results to a file
-
 save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData")))
