@@ -69,11 +69,13 @@ make_reports <- function(file_prefix,pars){
   # Input files - Rmd
   # main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
   # extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
-  data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
+  # data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
+  go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
   
   # main_file <-          file.path(report_dir, paste0(file_prefix,".html"))
   # extra_stats_file <-   file.path(report_dir, paste0("extra_stats_",file_prefix,".html"))
-  data_explorer_file <- file.path(report_dir, paste0("data_explorer_",file_prefix,".html"))
+  # data_explorer_file <- file.path(report_dir, paste0("data_explorer_",file_prefix,".html"))
+  go_pathway_file <- file.path(report_dir, paste0("go_pathway_",file_prefix,".html"))
   
   # rmarkdown::render(input = main_report,
   #                   encoding = "UTF-8",
@@ -85,9 +87,14 @@ make_reports <- function(file_prefix,pars){
   #                   output_file = extra_stats_file,
   #                   params = pars,
   #                   envir = new.env())
-  rmarkdown::render(input = data_explorer_report,
+  # rmarkdown::render(input = data_explorer_report,
+  #                   encoding = "UTF-8",
+  #                   output_file = data_explorer_file,
+  #                   params = pars,
+  #                   envir = new.env())
+  rmarkdown::render(input = go_pathway_report,
                     encoding = "UTF-8",
-                    output_file = data_explorer_file,
+                    output_file = go_pathway_file,
                     params = pars,
                     envir = new.env())
 }
