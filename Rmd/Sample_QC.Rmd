@@ -8,7 +8,6 @@ params:
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
-  sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
     value:
     one: ["chemical", "dose"]
     two: ["I7_Index_ID", "I5_Index_ID"] 
