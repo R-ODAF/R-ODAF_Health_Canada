@@ -200,7 +200,7 @@ rule STAR_make_index:
     shell:
         '''
 		STAR \
-        --runMode genomeGenerate \
+    --runMode genomeGenerate \
 		--genomeDir {params.index_dir} \
 		--genomeFastaFiles {input.genome} \
 		--sjdbGTFfile {params.annotations} \
