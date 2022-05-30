@@ -244,6 +244,28 @@ if (file.exists(remove_file)) {
 }
 ```
 
+# Summary Statistics
+
+Below, you will find plots and a table showing the distribution of read metrics (quality, GC content, aligned reads, etc.).
+
+```{r summary-stats}
+summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
+stat_metrics <- summary_stats %>%
+  group_by(name) %>%
+  summarise(Mean=mean(value), Median=median(value))
+ggplot(summary_stats, aes(x=name, y=value)) +
+  geom_violin() +
+  geom_jitter(alpha = 0.5) +
+  facet_wrap(name~., scales = "free")
+
+stat_metrics %>%
+  kable(caption = "Summary statistics from the alignments for all samples") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+
+```
+
 # Sample Filtering Code
 
 ## Samples Removed Manually
