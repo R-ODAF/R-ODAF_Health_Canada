@@ -10,6 +10,7 @@ params:
   group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  "BitA"       # null # Which group will this report be done on?
   dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
+  sortcol: "dose"   # Column used to sort the data
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
