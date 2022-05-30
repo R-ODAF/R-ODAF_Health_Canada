@@ -69,6 +69,8 @@ rule all:
         processed_dir / "count_table.tsv",
         "genome.removed",
     benchmark: log_dir / "benchmark.all.txt"
+    run:
+      shell("rm genome.removed")
 
 ##################################
 ### Trimming raw reads : Fastp ###
