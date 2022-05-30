@@ -38,7 +38,7 @@ cnt <- qCount(proj2, txStart, clObj = cl)
 cnmat           <- as.data.frame(cnt, header=TRUE)
 #colnames(cnmat) <- gsub("fastqs/", "", colnames(cnmat))
 cnmat$width     <- NULL
-write.table(cnmat, count_table_file, sep='\t', quote=F, row.names=F)
+write.table(cnmat, count_table_file, sep='\t', quote=F, row.names=T)
 cat("Counts Table Completed\n")
 
 # Get Mapped/Unmapped Counts and Output
@@ -50,5 +50,5 @@ three       <- data.frame(two, check.names=FALSE)
 three$width <- NULL 
 ll          <- rbind(unmapped=unmapped, mapped=three)
 
-write.table(as.matrix(ll), mapped_unmapped_file, sep='\t', quote=F, row.names=F)
+write.table(as.matrix(ll), mapped_unmapped_file, sep='\t', quote=F, row.names=T)
 message("Mapped/Unmapped Table Completed\n")
