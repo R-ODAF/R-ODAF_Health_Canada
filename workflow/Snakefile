@@ -356,14 +356,23 @@ if common_config["platform"] =="TempO-Seq":
             samplefile = processed_dir / "samplefile.txt"
         params:
             annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
+            threads = pipeline_config["threads"],
             genome = str(genome_dir / pipeline_config["genome_filename"]),
+        threads: pipeline_config["threads"],
         output:
             count_table = processed_dir / "count_table.tsv",
             mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
         benchmark: log_dir / "benchmark.quantification.txt"
         shell:
             '''
-            Rscript {temposeq_quantification_script} {input.samplefile} {params.genome} {params.annotfile} {output.count_table} {output.mapped_unmapped}
+            Rscript \
+            {temposeq_quantification_script} \
+            {input.samplefile} \
+            {params.genome} \
+            {params.annotfile} \
+            {output.count_table} \
+            {output.mapped_unmapped} \
+            {params.threads}
             '''
 
 
