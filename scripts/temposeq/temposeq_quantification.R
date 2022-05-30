@@ -7,6 +7,9 @@ genome <- args[2]
 annotfile <- args[3]
 count_table_file <- args[4]
 mapped_unmapped_file <- args[5]
+num_threads   <- as.numeric(args[6])
+
+cl <- makeCluster(num_threads)
 
 # set up cache dir in tempdir
 cache_dir <- paste0(tempdir(),"/proba")
@@ -29,7 +32,7 @@ library(GenomicFeatures)
 txStart <- import.gff(annotfile, format="gtf")
 names(txStart) <- txStart@seqnames
 
-cnt <- qCount(proj2, txStart)
+cnt <- qCount(proj2, txStart, clObj = cl)
 
 # Make dataframe as count table
 cnmat           <- as.data.frame(cnt, header=TRUE)
