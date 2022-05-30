@@ -89,7 +89,6 @@ dendro_color_by <- params$dendro_color_by
 nmr_threshold <- params$nmr_threshold
 align_threshold <- params$align_threshold
 gini_cutoff <- params$gini_cutoff
-sampledata_sep <- params$sampledata_sep
 groups <- params$groups
 #groups[[2]]: c("I7_Index_ID","I5_Index_ID")
 #groups[[3]]: c("Row","Column")
@@ -131,66 +130,43 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ############################################################################
 
 # A. File with read counts
-if (Platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$processed,"count_table.tsv")
-    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.tsv")
-    sampledata_sep <- "\t"
-    collapse_reps <- function(filepath){
-      df <- read.table(file = filepath,
-                       sep = "\t",
-                       header = T)
-      names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
-      df <- df %>% pivot_longer(cols = -c("X"),
-                                names_to = c('.value','flowcell'),
-                                names_pattern = '(.*)_(.*)')
-      df[is.na(df)] <- 0
-      sampleDataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
-      results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
-      return(results)
-    }
-    if (params$collapse_replicates == T) {
-      sampleData <- collapse_reps(SampleDataFile)
-      write.table(sampleData,
-                  file = file.path(paths$processed,"count_table_collapsed.tsv"),
-                  sep = "\t",
-                  quote = F,
-                  row.names = F)
-      mu <- collapse_reps(MappedUnmapped)
-      write.table(mu,
-                  file = file.path(paths$processed,"mapped_unmapped_collapsed.tsv"),
-                  sep = "\t",
-                  quote = F,
-                  row.names = F)
-    } else {
-      sampleData <- read.table(file.path(paths$processed,"count_table.tsv"),
-                             sep = sampledata_sep,
-                             stringsAsFactors = FALSE,
-                             header = TRUE,
-                             quote = "\"",
-                             row.names = 1,
-                             check.names = FALSE)
-      mu <- read.table(file.path(paths$processed,"mapped_unmapped.tsv"),
-                     sep = "\t",
-                     header = T,
-                     row.names = 1,
-                     stringsAsFactors = F,
-                     check.names = F)  
-      }
-    mu <- as.data.frame(t(mu))
-    mu$pct_mapped <- mu$mapped/(mu$mapped + mu$unmapped)
-  } else {
-    SampleDataFile <- file.path(paths$processed,"genes.data.tsv")
-    sampleData <- read.table(SampleDataFile,
-                             sep = sampledata_sep,
-                             stringsAsFactors = FALSE,
-                             header = TRUE,
-                             quote = "\"",
-                             row.names = 1,
-                             check.names = FALSE)
-    multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
-    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep = "\t") 
-    mu <- data.frame(Sample = multiqc_general_stats$Sample, FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
+SampleDataFile <- file.path(paths$processed,"count_table.tsv")
+if (params$collapse_replicates == T) {
+  collapse_reps <- function(filepath) {
+  df <- read.table(file = filepath,
+                   sep = "\t",
+                   header = T)
+  names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
+  df <- df %>% pivot_longer(cols = -c("X"),
+                            names_to = c('.value','flowcell'),
+                            names_pattern = '(.*)_(.*)')
+  df[is.na(df)] <- 0
+  sampleDataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
+  return(results)
   }
+  sampleData <- collapse_reps(SampleDataFile)
+  write.table(sampleData,
+              file = file.path(paths$processed,"count_table_collapsed.tsv"),
+              sep = "\t",
+              quote = F,
+              row.names = F)
+  } else {
+  sampleData <- read.table(SampleDataFile,
+                           sep = "\t",
+                           stringsAsFactors = FALSE,
+                           header = TRUE,
+                           quote = "\"",
+                           row.names = 1,
+                           check.names = FALSE)
+  multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+  multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'),
+                                      header = TRUE, sep = "\t")
+  mu <- data.frame(Sample = multiqc_general_stats$Sample,
+                   FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
+  row.names(mu) <- mu[,1]
+  }
+
 
 # B. Tab delimited sample information file with at least 2 columns:
 #    1. sample names identical to the column names of sampleData
