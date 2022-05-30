@@ -100,11 +100,9 @@ TODO: R-ODAF filtering stats should be reported here
 source(here::here("scripts","load-facet-data.R"))
 ```
 
-# descriptive plots
+# Volcano plots
 
-## Volcano plots
-
-### All data
+## All data
 ```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
@@ -117,7 +115,7 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
     .default = label_wrap_gen(15)))
 ```
 
-### By contrast
+## By contrast
 ```{r volcano_by_contrast, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 volcano_df <-  as.data.frame(allResults) %>%
     dplyr::select(c(Probe_Name,

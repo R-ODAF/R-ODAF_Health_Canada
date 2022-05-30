@@ -316,7 +316,6 @@ if (nrow(matches) > 1) {
     TERM2GENE = wpid2gene,
     TERM2NAME = wpid2name)
   DEG_pathways <- DOSE::setReadable(DEG_pathways, species_data$orgdb, keyType = "ENTREZID")
-  #browser()
   ###################### TODO FIX THIS CHANTGED FOR TESTING ######################
   DEG_pathways@result$p.adjust[1:10] <- rep(0.001,10)
   DEG_pathways@result$qvalue[1:10] <- rep(0.001,10)
