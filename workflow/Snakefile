@@ -27,7 +27,6 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
 if common_config["platform"] =="TempO-Seq":
-    temposeq_script = main_dir / "scripts/temposeq/TempO-SeqR_v3.1.R"
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
 sample_id_col = pipeline_config["sample_id"]
 
