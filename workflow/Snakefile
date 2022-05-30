@@ -80,7 +80,7 @@ if common_config["platform"] =="TempO-Seq":
 else:
     length_required_fastp = 36
     trim_tail1_fastp = 0
-
+fastp_threads = 2
 
 rule fastp_se:
     input:
@@ -98,9 +98,9 @@ rule fastp_se:
         right_quality = 15,
         length_required = length_required_fastp,
         trim_tail1 = trim_tail1_fastp,
-        threads = pipeline_config["threads"],
+        threads = fastp_threads,
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
-    threads: pipeline_config["threads"],
+    threads: fastp_threads,
     shell:
         '''
         fastp \
@@ -141,9 +141,9 @@ rule fastp_pe:
         right_size = 4,
         right_quality = 15,
         length_required = length_required_fastp,
-        threads = pipeline_config["threads"],
+        threads = fastp_threads,
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
-    threads: pipeline_config["threads"],
+    threads: fastp_threads,
     shell:
         '''
         fastp \
@@ -180,7 +180,7 @@ else:
     STAR_insertion_deletion_penalty = -2 # STAR defaults
     STAR_multimap_nmax = 20
     STAR_mismatch_nmax = 999
-
+star_threads = 2
 
 # this rule is only used in RNA-seq jobs (not temposeq)
 rule STAR_make_index:
@@ -190,13 +190,13 @@ rule STAR_make_index:
         index_dir = genome_dir / "STAR_index",
         annotations = genome_dir / pipeline_config["annotation_filename"],
         overhang = 100,
-        threads = pipeline_config["threads"],
+        threads = workflow.cores,
         suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
         genomeChrBinNbits = 12, # might need to mess with this for different genomes
     output:
         directory(genome_dir / "STAR_index"),
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
-    threads: pipeline_config["threads"],
+    threads: workflow.cores,
     shell:
         '''
 		STAR \
@@ -245,10 +245,10 @@ if pipeline_config["mode"] == "se":
             multimap_nmax = STAR_multimap_nmax,
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            threads = pipeline_config["threads"],
+            threads = star_threads,
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: pipeline_config["threads"],
+        threads: star_threads,
         shell:
             '''
             STAR \
@@ -280,12 +280,12 @@ if pipeline_config["mode"] == "pe":
         params:
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            threads = copipeline_configfig["threads"],
+            threads = star_threads,
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: pipeline_config["threads"],
+        threads: star_threads,
         shell:
             '''
             STAR \
@@ -356,9 +356,9 @@ if common_config["platform"] =="TempO-Seq":
             samplefile = processed_dir / "samplefile.txt"
         params:
             annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
-            threads = pipeline_config["threads"],
+            threads = workflow.cores,
             genome = str(genome_dir / pipeline_config["genome_filename"]),
-        threads: pipeline_config["threads"],
+        threads: workflow.cores,
         output:
             count_table = processed_dir / "count_table.tsv",
             mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
@@ -407,11 +407,11 @@ if common_config["platform"] =="RNA-Seq":
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
             params:
-                threads = pipeline_config["threads"],
+                threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = pipeline_config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
-            threads: pipeline_config["threads"],
+            threads: workflow.cores,
             shell:
                 '''
                 rsem-calculate-expression \
@@ -432,11 +432,11 @@ if common_config["platform"] =="RNA-Seq":
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
             params:
-                threads = pipeline_config["threads"],
+                threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
                 index_name = pipeline_config["genome_name"],
             benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
-            threads: pipeline_config["threads"]
+            threads: workflow.cores
             shell:
                 '''
                 rsem-calculate-expression \
