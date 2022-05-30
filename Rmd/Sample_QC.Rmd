@@ -568,13 +568,8 @@ d %>%
 Samples less than `r align_threshold` aligned reads removed.
 
 ```{r fraction_mapped_reads}
-if (Platform == "TempO-Seq") {
-  FMR_df <- rownames_to_column(mu) %>% mutate(FMR = pct_mapped) %>% dplyr::select(rowname,FMR)
-  QAQC <- QAQC %>% left_join(FMR_df, QAQC, by=c("Sample" = "rowname"))
-} else {
-  QAQC <- QAQC %>% left_join(mu, by = "Sample")
-}
-  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
+QAQC <- QAQC %>% left_join(mu, by = "Sample")
+failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
   
 # Samples failing
 d %>%
