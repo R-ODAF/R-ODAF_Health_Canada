@@ -310,6 +310,7 @@ rule STAR_unload:
     run:
         shell("STAR --genomeLoad Remove --genomeDir {params.genome_dir}")
         shell("rm genome.loaded")
+        shell("rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
 
 
 
