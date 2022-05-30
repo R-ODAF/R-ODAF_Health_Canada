@@ -21,9 +21,6 @@
 # RStudio files
 .Rproj.user/
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
@@ -79,7 +76,7 @@ run.sh
 preprocessing.txt
 config/config.yaml
 config/config.new.yaml
-config/config.qc.yaml*Log.out
+config/config.qc.yaml
 *Log.out
 *Log.progress.out
 *Log.final.out
@@ -104,3 +101,5 @@ extra_stats_report.html
 *.bai
 genome.loaded
 genome.removed
+*.pdf
+*.html
