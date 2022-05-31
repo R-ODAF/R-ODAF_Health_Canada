@@ -142,7 +142,7 @@ foldChanges <- foldChanges[!is.na(names(foldChanges))]
 ## Biological processes
 
 
-```{r plot_GO_analysis_bp, warning = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_bp, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
 if (!is.null(enrich_go_bp)) {
   if (nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_bp, font.size = 9, showCategory = 20)  +
@@ -188,7 +188,7 @@ if (!is.null(enrich_go_bp)) {
 
 ## Molecular Functions
 
-```{r plot_GO_analysis_mf, warning = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_mf, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
 if (!is.null(enrich_go_mf)) {
   
   if (nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
@@ -238,7 +238,7 @@ if (!is.null(enrich_go_mf)) {
 
 ## Cellular Component
 
-```{r plot_GO_analysis_cc, warning = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_cc, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
 if (!is.null(enrich_go_cc)) {
   if (nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_cc, font.size = 9)  +
@@ -290,7 +290,7 @@ if (!is.null(enrich_go_cc)) {
 
 This section uses clusterProfiler to detect enriched gene sets using [WikiPathways](https://www.wikipathways.org/) data.  
 
-```{r 'pathway_analysis', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'pathway_analysis', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis, warning = FALSE, message = FALSE}
 entrez_IDs <- as.character(id_table_entrez$Entrez_ID)
 entrezDEGs <- dplyr::left_join(significantResults,
                                id_table_entrez,
@@ -336,7 +336,7 @@ if (nrow(matches) > 1) {
 
 This section uses clusterProfiler `enricher()` to detect enriched gene sets using [WikiPathways](https://www.wikipathways.org/) data. Only contrasts with results are shown here.  
 
-```{r 'pathway_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'pathway_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis, warning = FALSE, message = FALSE}
 plotList <- list()
 contrasts <- unique(significantResults$contrast)
 for (i in seq_along(contrasts) ){
@@ -373,7 +373,7 @@ for (i in seq_along(contrasts) ){
 }
 ```
 
-```{r 'pathway_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'pathway_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis, warning = FALSE, message = FALSE}
 for (i in seq_along(contrasts)) {
   if (any(!is.na(plotList[[i]]))) {
     cat("###", contrasts[i], "  \n\n")
@@ -389,7 +389,7 @@ for (i in seq_along(contrasts)) {
 
 This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
 
-```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- unique(allResults$contrast)
@@ -423,7 +423,7 @@ for (i in seq_along(contrasts)) {
 }
 ```
 
-```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 for (i in seq_along(contrasts)) {
   if (any(!is.na(plotListGSEA[[i]]))) {
     cat("###", contrasts[i], "  \n\n")
@@ -437,7 +437,7 @@ for (i in seq_along(contrasts)) {
 
 In this section, only the pathway with the top enrichment score is shown (for simplicity). Note that it is possible to plot any pathway of interest by altering the call to `gseaplot`.
 
-```{r 'gsea_scores_plot', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis}
+```{r 'gsea_scores_plot', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 for (i in seq_along(contrasts)) {
   if (any(!is.na(plotListGSEA_escore[[i]]))) {
     cat("###", contrasts[i], "  \n\n")
