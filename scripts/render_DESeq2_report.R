@@ -66,22 +66,21 @@ if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 # convenience function
 make_reports <- function(file_prefix,pars){
-  # Input files - Rmd
-  # main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+  main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
   # extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
   # data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
-  go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
+  # go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
   
-  # main_file <-          file.path(report_dir, paste0(file_prefix,".html"))
+  main_file <-          file.path(report_dir, paste0(file_prefix,".html"))
   # extra_stats_file <-   file.path(report_dir, paste0("extra_stats_",file_prefix,".html"))
   # data_explorer_file <- file.path(report_dir, paste0("data_explorer_",file_prefix,".html"))
-  go_pathway_file <- file.path(report_dir, paste0("go_pathway_",file_prefix,".html"))
+  # go_pathway_file <- file.path(report_dir, paste0("go_pathway_",file_prefix,".html"))
   
-  # rmarkdown::render(input = main_report,
-  #                   encoding = "UTF-8",
-  #                   output_file = main_file,
-  #                   params = pars,
-  #                   envir = new.env())
+  rmarkdown::render(input = main_report,
+                    encoding = "UTF-8",
+                    output_file = main_file,
+                    params = pars,
+                    envir = new.env())
   # rmarkdown::render(input = extra_stats_report,
   #                   encoding = "UTF-8",
   #                   output_file = extra_stats_file,
@@ -92,11 +91,11 @@ make_reports <- function(file_prefix,pars){
   #                   output_file = data_explorer_file,
   #                   params = pars,
   #                   envir = new.env())
-  rmarkdown::render(input = go_pathway_report,
-                    encoding = "UTF-8",
-                    output_file = go_pathway_file,
-                    params = pars,
-                    envir = new.env())
+  # rmarkdown::render(input = go_pathway_report,
+  #                   encoding = "UTF-8",
+  #                   output_file = go_pathway_file,
+  #                   params = pars,
+  #                   envir = new.env())
 }
 
 
@@ -104,11 +103,11 @@ make_reports <- function(file_prefix,pars){
 if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
   # input data file
-  params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
+  params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
 
   # output file prefix
   prefix <- paste0(params$platform, "_",
-                    params$project_name, "_",
+                    params$project_title, "_",
                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
   
   make_reports(prefix,params)
@@ -118,7 +117,7 @@ if (is.na(params$display_group_facet)) {
                  "Writing a single report for that (those) groups."))
   # output file prefix
   prefix <- paste0(params$platform, "_",
-                   params$project_name, "_",
+                   params$project_title, "_",
                    paste(params$display_group_filter, collapse = "_"), "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
   
@@ -139,7 +138,7 @@ if (is.na(params$display_group_facet)) {
     message(paste0("Building report for ", i, "..."))
     params$group_filter <- i
     prefix <- paste0(params$platform, "_",
-                     params$project_name, "_",
+                     params$project_title, "_",
                      i, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'))  
     
