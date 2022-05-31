@@ -111,8 +111,7 @@ DT::datatable(res.df.dt,
 
 
 
-
-# Session Info
+# Session Info {.tabset}
 
 ## Date the report was generated.
 
@@ -135,7 +134,7 @@ names(df) <- "Parameter Value"
 knitr::kable(as.data.frame(df), format = "markdown")
 ```
 
-## Wallclock time spent generating the report.
+## Wallclock time spent generating the report
 
 ```{r reproducibility2, echo = FALSE}
 ## Processing time in seconds
@@ -143,12 +142,14 @@ totalTime <- diff(c(startTime, Sys.time()))
 round(totalTime, digits = 3)
 ```
 
-## `R` session information.
+## `R` session information
 
 ```{r reproducibility3, echo = FALSE}
-## Session info
 options(width = 120)
 session_info()
+
 ```
 
-## Pandoc version used: `r rmarkdown::pandoc_version()`.
+## Pandoc version
+
+Pandoc version used: `r rmarkdown::pandoc_version()`.
