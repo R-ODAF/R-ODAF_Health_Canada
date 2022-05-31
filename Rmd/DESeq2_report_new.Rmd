@@ -1,4 +1,5 @@
 ---
+title: This is my title
 output:
   html_document:
     toc: true
@@ -77,8 +78,11 @@ source(here::here("scripts","DESeq_functions.R"))
 has_description <- !is.na(params$project_description)
 description_text <- paste("Purpose of report:", params$project_description)
 
-
+# now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
+---
+title: "`r params$platform` DEG analysis - main report"
+---
 
 
 # `r params$project_title` - RNA-seq analysis {-}

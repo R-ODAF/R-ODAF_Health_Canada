@@ -24,7 +24,12 @@ species_data <- load_species(params$species)
 bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
 
 
+# now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
+---
+title: "`r params$platform` DEG analysis - GO and pathway analysis"
+---
+
 
 
 # `r params$project_title` - GO and pathway analysis {-}
