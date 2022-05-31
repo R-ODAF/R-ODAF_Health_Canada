@@ -273,7 +273,7 @@ allResultsOrdered_logFC_filter %>%
              linetype = "dashed",
              color = "black",
              size = 1) +
-  ggtitle(paste0("Top ",numResults," genes ranked by fold change (adjusted p-value <",params$alpha,"), grouped by treatment"))
+  ggtitle(paste0("Top ",numResults," genes by fold change (adjusted p-value <",params$alpha,")\nGrouped by treatment"))
 
 
 ```
