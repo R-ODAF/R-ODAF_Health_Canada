@@ -245,6 +245,10 @@ if (nrow(as.matrix(mat)) > 1) {
 ```
 
 # Genes of interest
+
+This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestPlots` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
+
+## Overview
 ```{r genes_of_interest}
 
 numResults <- params$nBestPlots
@@ -273,15 +277,16 @@ allResultsOrdered_logFC_filter %>%
              linetype = "dashed",
              color = "black",
              size = 1) +
-  ggtitle(paste0("Top ",numResults," genes by fold change (adjusted p-value <",params$alpha,")\nGrouped by treatment"))
+  ggtitle(paste0("Top ",numResults," genes by fold change grouped by treatment"))
 
 
 ```
 
-# Gene-level plots for top `r params$nBestPlots` features
+## By gene {.tabset .tabset-fade}
 
-maybe we could cut this to 10, since we will have the data exploration plot. Maybe even make it a tabset? I do like having it myself because it gives granularity at the sample level - how much spread is in the data... are dose-response trends looking reasonable or not across doses...
-```{r genelevel_plots}
+The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
+
+```{r genelevel_plots, results='asis'}
 
 nBestFeatures <- params$nBestPlots
 
@@ -311,7 +316,9 @@ plotCounts_gg <- function(i, d, intgroup) {
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
 
 for (i in head(unique(genesToPlot$Probe_Name), nBestFeatures)) {
+  cat("\n###", id_table[[params$biomart_filter]][grep(i,id_table[[params$biomart_filter]])], "  \n\n")
   print(plotCounts_gg(i, d = dds, intgroup = params$design))
+  cat('\n\n')
 }
 
 
