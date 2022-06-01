@@ -63,12 +63,12 @@ load_species <- function(species){
 
 get_analysis_id <- function(params){
     # Set analysis ID. This ID will be used as prefix for the output files
-    # Normally, as follows: year - project_name - group_filter
+    # Normally, as follows: year - project_title - group_filter
     if (is.na(params$group_filter) || is.null(params$group_filter)) {
-    analysisID <- paste(format(Sys.time(), '%Y'), params$project_name, sep = "_")
+    analysisID <- paste(format(Sys.time(), '%Y'), params$project_title, sep = "_")
     } else {
     analysisID <- paste(format(Sys.time(), '%Y'),
-                        params$project_name,
+                        params$project_title,
                         paste(params$group_filter, collapse = "_"),
                         sep = "_")
     }

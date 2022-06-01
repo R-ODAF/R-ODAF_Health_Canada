@@ -53,7 +53,7 @@ source(here::here("scripts","data_functions.R"))
 # # Identify where metadata can be found
 # SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 # 
-# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_name, "_DEG_data.RData"))
+# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
 
 #########################################
 
@@ -251,7 +251,7 @@ This group of plots shows `alpha` = `r metadata(resultsListAll[[1]])$alpha`, whi
 ```{r MA_plots, results='asis'}
 foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
 ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
-
+browser()
 
 for (i in seq_along(resultsListAll)) {
   contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),

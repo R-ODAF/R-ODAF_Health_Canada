@@ -24,7 +24,7 @@ params:
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
-title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_name))`"
+title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_title))`"
 subtitle: "`r paste(params$platform)`"
 output:
   html_document:

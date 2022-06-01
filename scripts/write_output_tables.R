@@ -21,7 +21,8 @@ for (current_filter in facets) {
   
   descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
   colnames(descriptions) <- c("Ensembl_Gene_ID","description")
-  id_table <- params$bs$biospyder %>% left_join(descriptions) %>% dplyr::select(!!sym(params$biomart_filter), Gene_Symbol, Ensembl_Gene_ID)
+
+  id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(!!sym(params$biomart_filter), Gene_Symbol, Ensembl_Gene_ID)
   
   summaryTable <- allResults %>%
     dplyr::select(Probe_Name, baseMean)
@@ -30,7 +31,7 @@ for (current_filter in facets) {
   
   
   prefix <- paste0(params$platform, "_",
-                   params$project_name, "_",
+                   params$project_title, "_",
                    paste(params$current_filter, collapse = "_"), "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
   

@@ -29,7 +29,7 @@ message("Writing QC report for all samples in the experiment.")
 # Output file - HTML
 filename <- paste0("Study-wide_Sample_QC_",
                    params$platform, "_",
-                   params$project_name, "_",
+                   params$project_title, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'),
                    ".html")
 
