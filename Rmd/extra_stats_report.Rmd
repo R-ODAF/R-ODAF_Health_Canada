@@ -59,8 +59,6 @@ source(here::here("scripts","data_functions.R"))
 
 species_data <- load_species(params$species)
 
-bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -289,6 +287,7 @@ The git hash for the commit of the [R-ODAF repository](`r system("git remote get
 From the list elements in each params${variable} used to generate this report.
 
 ```{r paramsList, echo = FALSE}
+params$biospyder <- NULL # remove the manifest from the params
 df <- as.data.frame(unlist(params))
 names(df) <- "Parameter Value"
 knitr::kable(as.data.frame(df), format = "markdown")

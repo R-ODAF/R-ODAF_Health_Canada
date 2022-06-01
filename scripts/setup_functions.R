@@ -155,7 +155,6 @@ set_up_platform_params <-function(params, bs, species_data){
     params$linear_fc_filter <- 1.5
     
     bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-    params$bs <- bs
     params$biospyder_ID <- bs$biospyder_ID
     params$biomart_filter <- bs$biomart_filter
     params$biospyder_filter <- bs$biospyder_filter

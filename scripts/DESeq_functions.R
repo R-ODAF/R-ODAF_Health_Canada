@@ -199,7 +199,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 
 annotate_deseq_table <- function(deseq_results_list, params, filter_results = F) {
   x <- deseq_results_list
-  bs <- params$bs
   annotated_results <- list()
   for (i in 1:length(x)) {
     print(i)
@@ -216,7 +215,7 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F)
                                          replacement =  "",
                                          x = x[[i]]@elementMetadata[[2]][2]))
       deg_table <- dplyr::left_join(deg_table,
-                                    bs$biospyder,
+                                    params$biospyder,
                                     by = "Probe_Name")
       deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
                                                                       2 ^ log2FoldChange,
