@@ -1,5 +1,5 @@
 ---
-title: This is my title
+bibliography: references.bib
 output:
   html_document:
     toc: true
