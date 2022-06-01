@@ -74,6 +74,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                                 parallel = TRUE,
                                 BPPARAM = bpparam,
                                 contrast = currentContrast,
+                                alpha = params$alpha,
                                 pAdjustMethod = 'fdr',
                                 cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
 
