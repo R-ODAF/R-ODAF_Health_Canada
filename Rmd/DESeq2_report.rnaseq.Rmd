@@ -10,6 +10,7 @@ params:
   group_facet: "chemical"       #null # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  "BitA"       # null # Which group will this report be done on?
   dose: "dose"                   # Explictly define if there is a dose column in the experiment. Note: this *can* be different from the sortcol, which is why we include both.
+  sortcol: "dose"   # Column used to sort the data
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: !r NA  # Optionally, a vector of sample names to exclude from the analysis
@@ -20,6 +21,7 @@ params:
   cpus: 12 # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file: "190603 Mouse Whole Transcriptome 1.1 Manifest.txt"
   nBestFeatures: 20 # The number of best features to make plots of their counts
@@ -246,15 +248,9 @@ digits = 2 # For rounding numbers
 #### FILES TO LOAD
 ################################################################################
 ################################################################################
-# A. Tab delimited file with merged RSEM.genes.results files:
-if (Platform == "TempO-Seq") {
-  SampleDataFile <- file.path(paths$processed, "count_table.tsv")
-  sampledata_sep = ","
-} else {
-  SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
-  sampledata_sep = "\t"
-}
-  
+# A. Tab delimited file for genes by counts matrix:
+SampleDataFile <- file.path(paths$processed, "count_table.tsv")
+
 # B. Tab delimited sample information file with at least 2 columns:
   # 1. sample names identical to the column names of sampleData
   # 2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
@@ -277,7 +273,7 @@ The code above (not shown by default) specifies user preferences and data locati
 # Load input files
 message(paste("loading data from ", SampleDataFile))
 sampleData <- read.delim(SampleDataFile,
-                         sep = sampledata_sep,
+                         sep = "\t",
                          stringsAsFactors = FALSE,
                          header = TRUE, 
                          quote = "\"",

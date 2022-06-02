@@ -8,11 +8,11 @@ params:
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
-  sampledata_sep: ","     # Comma for TempO-Seq, Maybe tabs for RNASeq, customize!
+  groups:
     value:
-    one: ["chemical", "dose"]
-    two: ["I7_Index_ID", "I5_Index_ID"] 
-    three: ["row", "column"]
+      one: ["chemical", "dose"]
+      two: ["I7_Index_ID", "I5_Index_ID"]
+      three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
   batch_var: "batch"          # "batch"
@@ -89,7 +89,6 @@ dendro_color_by <- params$dendro_color_by
 nmr_threshold <- params$nmr_threshold
 align_threshold <- params$align_threshold
 gini_cutoff <- params$gini_cutoff
-sampledata_sep <- params$sampledata_sep
 groups <- params$groups
 #groups[[2]]: c("I7_Index_ID","I5_Index_ID")
 #groups[[3]]: c("Row","Column")
@@ -131,66 +130,43 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ############################################################################
 
 # A. File with read counts
-if (Platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$processed,"count_table.tsv")
-    MappedUnmapped <- file.path(paths$processed,"mapped_unmapped.tsv")
-    sampledata_sep <- "\t"
-    collapse_reps <- function(filepath){
-      df <- read.table(file = filepath,
-                       sep = "\t",
-                       header = T)
-      names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
-      df <- df %>% pivot_longer(cols = -c("X"),
-                                names_to = c('.value','flowcell'),
-                                names_pattern = '(.*)_(.*)')
-      df[is.na(df)] <- 0
-      sampleDataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
-      results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
-      return(results)
-    }
-    if (params$collapse_replicates == T) {
-      sampleData <- collapse_reps(SampleDataFile)
-      write.table(sampleData,
-                  file = file.path(paths$processed,"count_table_collapsed.tsv"),
-                  sep = "\t",
-                  quote = F,
-                  row.names = F)
-      mu <- collapse_reps(MappedUnmapped)
-      write.table(mu,
-                  file = file.path(paths$processed,"mapped_unmapped_collapsed.tsv"),
-                  sep = "\t",
-                  quote = F,
-                  row.names = F)
-    } else {
-      sampleData <- read.table(file.path(paths$processed,"count_table.tsv"),
-                             sep = sampledata_sep,
-                             stringsAsFactors = FALSE,
-                             header = TRUE,
-                             quote = "\"",
-                             row.names = 1,
-                             check.names = FALSE)
-      mu <- read.table(file.path(paths$processed,"mapped_unmapped.tsv"),
-                     sep = "\t",
-                     header = T,
-                     row.names = 1,
-                     stringsAsFactors = F,
-                     check.names = F)  
-      }
-    mu <- as.data.frame(t(mu))
-    mu$pct_mapped <- mu$mapped/(mu$mapped + mu$unmapped)
-  } else {
-    SampleDataFile <- file.path(paths$processed,"genes.data.tsv")
-    sampleData <- read.table(SampleDataFile,
-                             sep = sampledata_sep,
-                             stringsAsFactors = FALSE,
-                             header = TRUE,
-                             quote = "\"",
-                             row.names = 1,
-                             check.names = FALSE)
-    multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
-    multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'), header = TRUE, sep = "\t") 
-    mu <- data.frame(Sample = multiqc_general_stats$Sample, FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
+SampleDataFile <- file.path(paths$processed,"count_table.tsv")
+if (params$collapse_replicates == T) {
+  collapse_reps <- function(filepath) {
+  df <- read.table(file = filepath,
+                   sep = "\t",
+                   header = T)
+  names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
+  df <- df %>% pivot_longer(cols = -c("X"),
+                            names_to = c('.value','flowcell'),
+                            names_pattern = '(.*)_(.*)')
+  df[is.na(df)] <- 0
+  sampleDataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
+  return(results)
   }
+  sampleData <- collapse_reps(SampleDataFile)
+  write.table(sampleData,
+              file = file.path(paths$processed,"count_table_collapsed.tsv"),
+              sep = "\t",
+              quote = F,
+              row.names = F)
+  } else {
+  sampleData <- read.table(SampleDataFile,
+                           sep = "\t",
+                           stringsAsFactors = FALSE,
+                           header = TRUE,
+                           quote = "\"",
+                           row.names = 1,
+                           check.names = FALSE)
+  multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+  multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'),
+                                      header = TRUE, sep = "\t")
+  mu <- data.frame(Sample = multiqc_general_stats$Sample,
+                   FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
+  row.names(mu) <- mu[,1]
+  }
+
 
 # B. Tab delimited sample information file with at least 2 columns:
 #    1. sample names identical to the column names of sampleData
@@ -266,6 +242,28 @@ if (file.exists(remove_file)) {
               sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
   d <- DESeqDesign
 }
+```
+
+# Summary Statistics
+
+Below, you will find plots and a table showing the distribution of read metrics (quality, GC content, aligned reads, etc.).
+
+```{r summary-stats}
+summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
+stat_metrics <- summary_stats %>%
+  group_by(name) %>%
+  summarise(Mean=mean(value), Median=median(value))
+ggplot(summary_stats, aes(x=name, y=value)) +
+  geom_violin() +
+  geom_jitter(alpha = 0.5) +
+  facet_wrap(name~., scales = "free")
+
+stat_metrics %>%
+  kable(caption = "Summary statistics from the alignments for all samples") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+
 ```
 
 # Sample Filtering Code
@@ -570,13 +568,8 @@ d %>%
 Samples less than `r align_threshold` aligned reads removed.
 
 ```{r fraction_mapped_reads}
-if (Platform == "TempO-Seq") {
-  FMR_df <- rownames_to_column(mu) %>% mutate(FMR = pct_mapped) %>% dplyr::select(rowname,FMR)
-  QAQC <- QAQC %>% left_join(FMR_df, QAQC, by=c("Sample" = "rowname"))
-} else {
-  QAQC <- QAQC %>% left_join(mu, by = "Sample")
-}
-  failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
+QAQC <- QAQC %>% left_join(mu, by = "Sample")
+failed_alignment_threshold <- QAQC[QAQC$FMR < align_threshold,]
   
 # Samples failing
 d %>%
@@ -1435,7 +1428,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ### Dose effects
 
-```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*0.75}
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*1.5}
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
 plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(dose)), color = factor(!!ensym(dose)))) +
   facet_wrap(paste0("~",treatment_var), scales = "free") +
