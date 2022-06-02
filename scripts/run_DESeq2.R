@@ -44,9 +44,6 @@ params <- set_up_platform_params(params, bs, species_data)
 
 # Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
 params$R_ODAF_plots <- FALSE
-# filter gene counts to decrease runtime. Not recommended for biomarker input!library
-params$filter_gene_counts <- TRUE
-params$cooks <- F # Sometimes may need consideration
 
 
 ##############################################################################################
