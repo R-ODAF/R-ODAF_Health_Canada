@@ -1,7 +1,9 @@
 ---
 params:
   projectdir: !expr here::here() # "~/path/to/project" # Use  when loading. Can also hard code if for some reason you need that
-  project_name: "Test"        # Change depending on your project name
+  project_title: "Default"    # Change depending on your project name
+  project_name: "Your name here" 
+  project_description: null # description of project for report, optional
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
   dendro_color_by: "chemical" # Specify how you would like to color the dendrograms
