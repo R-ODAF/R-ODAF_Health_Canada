@@ -68,6 +68,8 @@ data/metadata/contrasts.txt
 data/metadata/metadata.QC_applied.txt
 data/processed/genes.data.tsv
 data/processed/*
+data/rnaseq
+data/temposeq
 /logs/
 *metadata.QC_applied.txt
 TODO.txt
@@ -75,8 +77,6 @@ data/metadata/metadata.QC_applied.txt
 run.sh
 preprocessing.txt
 config/config.yaml
-config/config.new.yaml
-config/config.qc.yaml
 *Log.out
 *Log.progress.out
 *Log.final.out
