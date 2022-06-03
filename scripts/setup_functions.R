@@ -133,22 +133,17 @@ load_biospyder <- function(biospyder_dbs, temposeq_manifest){
 }
 
 set_up_platform_params <-function(params, bs, species_data){
-  # set some additional parameters based on platform
-  if (params$platform == "RNA-Seq") {
-    SampleDataFile <- file.path(paths$processed, "genes.data.tsv")
+    SampleDataFile <- file.path(paths$processed, "count_table.tsv")
     params$SampleDataFile <- SampleDataFile
     params$sampledata_sep = "\t"
-    
-    params$threshold <- 1000000 # Number of aligned reads per sample required
+  # set some additional parameters based on platform
+  if (params$platform == "RNA-Seq") {
+    params$threshold <- 10000  # TODO: this should be 10^6
     params$MinCount <- 1
     params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
     params$linear_fc_filter <- 1.5
     params$biomart_filter <- "ensembl_gene_id"
   } else if (params$platform == "TempO-Seq") {
-    SampleDataFile <- file.path(paths$processed, "count_table.tsv")
-    params$SampleDataFile <- SampleDataFile
-    params$sampledata_sep = "\t"
-    
     params$threshold = 10000 # TODO: this should be 10^5
     params$MinCount <- 0.5
     params$alpha <- pAdjValue <- 0.05 
