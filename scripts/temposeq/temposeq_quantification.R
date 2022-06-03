@@ -23,7 +23,8 @@ message("Running qAlign function...")
 proj2 <- qAlign(samplefile,
                 genome,
                 paired="no",
-                cacheDir=cache_dir)
+                cacheDir=cache_dir,
+                clObj=cl)
 
 txStart <- import.gff(annotfile, format="gtf")
 names(txStart) <- txStart@seqnames
