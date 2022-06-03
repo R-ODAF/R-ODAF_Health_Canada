@@ -66,7 +66,6 @@ count_table*.csv
 data/metadata/metadata.txt
 data/metadata/contrasts.txt
 data/metadata/metadata.QC_applied.txt
-data/processed/genes.data.tsv
 data/processed/*
 data/rnaseq
 data/temposeq
