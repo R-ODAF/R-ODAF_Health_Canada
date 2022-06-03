@@ -94,43 +94,6 @@ load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
   return(return_data)
 }
 
-load_biospyder <- function(biospyder_dbs, temposeq_manifest){
-  return_data = list()
-  biospyder <- read.delim(file.path(biospyder_dbs, temposeq_manifest), # Assay manifest...
-                        stringsAsFactors = FALSE,
-                        sep = "\t",
-                        header = TRUE,
-                        quote = "\"")
-  # Annoyingly, the manifests are different depending on platform and version.
-  if (colnames(biospyder)[1] == "PROBE_NAME") {
-    biospyder_ID = "ENSEMBL_GENE_ID"
-    biomart_filter <- "PROBE_NAME"
-    biospyder_filter = "ensembl_gene_id"
-  } else if (colnames(biospyder)[1] == "Probe.name") {
-    biospyder_ID = "Reference.Transcript"
-    biomart_filter = "Probe.name"
-    biospyder_filter = "refseq_mrna"
-  } else if (colnames(biospyder)[1] == "PROBE_ID") {
-    # This should be an "or" statement instead... these manifests are so inconsistent.
-    # Same general idea as the first case, but slight differences in the Excel file
-    # Had to alter PROBE_NAME manually to include the number as XYZ_1
-    biospyder_ID = "ENSEMBL_GENE_ID"
-    biomart_filter <- "PROBE_NAME"
-    biospyder_filter = "ensembl_gene_id"
-  } else if (colnames(biospyder)[1] == "Probe.Name" && colnames(biospyder)[2] == "Gene.Symbol") {
-    biospyder_ID = "Gene.Symbol"
-    biomart_filter <- "Gene.Symbol"
-    biospyder_filter = "ensembl_gene_id"
-  }
-  # Fill in the blanks for TempO-Seq Manifest...
-  # Set NULL values to NA
-  biospyder[ biospyder == "NULL" ] <- NA
-  return_data$biospyder <- biospyder
-  return_data$biospyder_ID <- biospyder_ID
-  return_data$biomart_filter <- biomart_filter
-  return_data$biospyder_filter <- biospyder_filter
-  return(return_data)
-}
 
 set_up_platform_params <-function(params, bs, species_data){
     SampleDataFile <- file.path(paths$processed, "count_table.tsv")
