@@ -102,3 +102,4 @@ genome.loaded
 genome.removed
 *.pdf
 *.html
+analysis/*
