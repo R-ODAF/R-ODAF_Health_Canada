@@ -83,14 +83,10 @@ load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
                           header = TRUE,
                           quote = "\"")
   
-  biospyder_ID = "Ensembl_Gene_ID"
-  biomart_filter <- "Probe_Name"
-  biospyder_filter = "Ensembl_Gene_ID"
+  feature_id <- "Probe_Name"
   biospyder[ biospyder == "NULL" ] <- NA
   return_data$biospyder <- biospyder
-  return_data$biospyder_ID <- biospyder_ID
-  return_data$biomart_filter <- biomart_filter
-  return_data$biospyder_filter <- biospyder_filter
+  return_data$feature_id <- feature_id
   return(return_data)
 }
 
@@ -105,7 +101,7 @@ set_up_platform_params <-function(params, bs, species_data){
     params$MinCount <- 1
     params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
     params$linear_fc_filter <- 1.5
-    params$biomart_filter <- "ensembl_gene_id"
+    params$feature_id <- "ensembl_gene_id"
   } else if (params$platform == "TempO-Seq") {
     params$threshold = 10000 # TODO: this should be 10^5
     params$MinCount <- 0.5
@@ -113,9 +109,7 @@ set_up_platform_params <-function(params, bs, species_data){
     params$linear_fc_filter <- 1.5
     
     bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-    params$biospyder_ID <- bs$biospyder_ID
-    params$biomart_filter <- bs$biomart_filter
-    params$biospyder_filter <- bs$biospyder_filter
+    params$feature_id <- bs$feature_id
     params$biospyder <- bs$biospyder
   } else { 
     stop("Platform/technology not recognized") 

@@ -321,8 +321,8 @@ plotCounts_gg <- function(i, d, intgroup) {
                        gene = i,
                        intgroup = intgroup,
                        returnData = TRUE)
-    plot_title <- paste(id_table[[params$biomart_filter]][grep(i,id_table[[params$biomart_filter]])],
-                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[[params$biomart_filter]])])
+    plot_title <- paste(id_table[[params$feature_id]][grep(i,id_table[[params$feature_id]])],
+                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[[params$feature_id]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}
@@ -339,7 +339,7 @@ plotCounts_gg <- function(i, d, intgroup) {
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
 
 for (i in head(unique(genesToPlot$Probe_Name), nBestFeatures)) {
-  cat("\n###", id_table[[params$biomart_filter]][grep(i,id_table[[params$biomart_filter]])], "  \n\n")
+  cat("\n###", id_table[[params$feature_id]][grep(i,id_table[[params$feature_id]])], "  \n\n")
   print(plotCounts_gg(i, d = dds, intgroup = params$design))
   cat('\n\n')
 }

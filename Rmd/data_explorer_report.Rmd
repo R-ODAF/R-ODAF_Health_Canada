@@ -148,13 +148,13 @@ genesAlphabetized <- genesToSelect %>%
 
 # Get the data 
 counts_by_group <- counts_by_group %>%
-  dplyr::filter(gene %in% genesAlphabetized[[params$biomart_filter]])
+  dplyr::filter(gene %in% genesAlphabetized[[params$feature_id]])
 
 # Create "shared" data object - this is for enabling live filtering
 counts_by_group_shared <- SharedData$new(counts_by_group)
 
 # Make an initial filter using the top gene
-top_gene = genesToSelect[[params$biomart_filter]][1]
+top_gene = genesToSelect[[params$feature_id]][1]
 i = as.character(which(counts_by_group$gene == top_gene))
 
 # Make a "transceiver" to set initial state of filter
@@ -171,7 +171,7 @@ bscols(widths = c(2,NA),
                   "Gene",
                   counts_by_group_shared,
                   ~gene,
-                  unique(genesAlphabetized[[params$biomart_filter]]),
+                  unique(genesAlphabetized[[params$feature_id]]),
                   multiple = F)
   ),
   list(

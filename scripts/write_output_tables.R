@@ -22,7 +22,7 @@ for (current_filter in facets) {
   descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
   colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 
-  id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(!!sym(params$biomart_filter), Gene_Symbol, Ensembl_Gene_ID)
+  id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(!!sym(params$feature_id), Gene_Symbol, Ensembl_Gene_ID)
   
   summaryTable <- allResults %>%
     dplyr::select(Probe_Name, baseMean)
@@ -41,12 +41,12 @@ for (current_filter in facets) {
               x = resultsListDEGs[[i]]@elementMetadata[[2]][2])
     toJoin <- as.data.frame(resultsListDEGs[[i]])
     setDT(toJoin, keep.rownames = T)[]
-    setnames(toJoin, 1, params$biomart_filter)
+    setnames(toJoin, 1, params$feature_id)
     toJoin <- mutate(toJoin, linearFoldChange = ifelse(log2FoldChange > 0,
                                                        2 ^ log2FoldChange,
                                                        -1 / (2 ^ log2FoldChange)))
     toJoin <- toJoin[, c(1:3, 7, 4:6)]
-    summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = params$biomart_filter)
+    summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = params$feature_id)
   
     names(summaryTable)[[ncol(summaryTable) - 2]] <- paste0("log2FoldChange_", i)
     names(summaryTable)[[ncol(summaryTable) - 1]] <- paste0("linearFoldChange_", i)
@@ -60,21 +60,21 @@ for (current_filter in facets) {
   
   
   maxFCs <- allResults %>%
-    dplyr::group_by(!!sym(params$biomart_filter)) %>%
+    dplyr::group_by(!!sym(params$feature_id)) %>%
     dplyr::filter(abs(linearFoldChange) == max(abs(linearFoldChange))) %>%
     dplyr::ungroup() %>%
-    dplyr::select(!!sym(params$biomart_filter), linearFoldChange)
+    dplyr::select(!!sym(params$feature_id), linearFoldChange)
   
   minPvals <- allResults %>%
-    group_by(!!sym(params$biomart_filter)) %>%
+    group_by(!!sym(params$feature_id)) %>%
     dplyr::filter(padj == min(padj)) %>%
     dplyr::ungroup() %>%
-    dplyr::select(!!sym(params$biomart_filter), padj)
+    dplyr::select(!!sym(params$feature_id), padj)
   
   summaryTable <- summaryTable %>%
-    left_join(id_table, by = params$biomart_filter) %>%
-    left_join(maxFCs, by = params$biomart_filter) %>%
-    left_join(minPvals, by = params$biomart_filter) %>%
+    left_join(id_table, by = params$feature_id) %>%
+    left_join(maxFCs, by = params$feature_id) %>%
+    left_join(minPvals, by = params$feature_id) %>%
     dplyr::rename(maxFoldChange = linearFoldChange,
                   minFDR_pval = padj) %>%
     dplyr::distinct() %>%
@@ -90,7 +90,7 @@ for (current_filter in facets) {
   summaryTable <- summaryTable %>% dplyr::distinct() # Just in case duplicates snuck by
   
   CPMddsDF <- data.frame(genes = row.names(CPMdds), CPMdds, check.names = F)
-  CPMddsDF <- dplyr::left_join(CPMddsDF, id_table, by = c("genes" = params$biomart_filter))
+  CPMddsDF <- dplyr::left_join(CPMddsDF, id_table, by = c("genes" = params$feature_id))
   numColsToPrepend <- ncol(CPMddsDF) - ncol(CPMdds) - 1
   colPositionsToPrependSTART <- ncol(CPMddsDF) - numColsToPrepend + 1
   colPositionsOfData <- ncol(CPMddsDF) - numColsToPrepend

@@ -52,12 +52,12 @@ This section performs GO enrichment on **all DEGs passing filters**. The backgro
 ```{r cluster-profiler, warning = FALSE, message = FALSE, collapse = TRUE}
 
 id_table_entrez <- params$biospyder %>%
-  dplyr::select(!!sym(params$biomart_filter), Gene_Symbol, Entrez_ID)
+  dplyr::select(!!sym(params$feature_id), Gene_Symbol, Entrez_ID)
 
 
 
-probeIDDEGs <- data.frame(genes=significantResults[[params$biomart_filter]])
-names(probeIDDEGs)[names(probeIDDEGs) == 'genes'] <- params$biomart_filter
+probeIDDEGs <- data.frame(genes=significantResults[[params$feature_id]])
+names(probeIDDEGs)[names(probeIDDEGs) == 'genes'] <- params$feature_id
 
 DEGs <- dplyr::left_join(probeIDDEGs, id_table_entrez)
 entrezDEGs <- as.character(DEGs$Entrez_ID)
@@ -65,7 +65,7 @@ entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)] %>% unique()
 
 background <- dplyr::left_join(data.frame(genes = row.names(assay(dds))),
                                id_table_entrez,
-                               by = c("genes" = params$biomart_filter)) %>%
+                               by = c("genes" = params$feature_id)) %>%
   dplyr::filter(!is.na(Entrez_ID)) %>%
   dplyr::pull(Entrez_ID)
 background <- as.character(background)
@@ -131,7 +131,7 @@ enrich_go_cc@result$qvalue[1:5] <- rep(0.001,5)
 
 DEGs_full <- dplyr::left_join(significantResults,
                               id_table_entrez,
-                              by = params$biomart_filter) %>%
+                              by = params$feature_id) %>%
   distinct()
 foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
 names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
@@ -296,7 +296,7 @@ This section uses clusterProfiler to detect enriched gene sets using [WikiPathwa
 entrez_IDs <- as.character(id_table_entrez$Entrez_ID)
 entrezDEGs <- dplyr::left_join(significantResults,
                                id_table_entrez,
-                               by = params$biomart_filter)
+                               by = params$feature_id)
 entrezDEGs <- as.vector(entrezDEGs$Entrez_ID)
 
 #Wiki <- rWikiPathways::downloadPathwayArchive(organism=species_sci, format = "gmt", destpath = paths$DEG_output, date="20210310")
@@ -344,7 +344,7 @@ contrasts <- unique(significantResults$contrast)
 for (i in seq_along(contrasts) ){
   entrezDEGs <- dplyr::left_join(significantResults %>% filter(contrast == contrasts[i]),
                                  id_table_entrez,
-                                 by = params$biomart_filter)
+                                 by = params$feature_id)
   entrezDEGs <- entrezDEGs$Entrez_ID
   if (length(entrezDEGs) < 10) {
     plotList[[i]] <- NA
@@ -398,7 +398,7 @@ contrasts <- unique(allResults$contrast)
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
                                 id_table_entrez,
-                                by = params$biomart_filter)
+                                by = params$feature_id)
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
   names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
   foldChanges <- foldChanges %>% sort() %>% rev()
