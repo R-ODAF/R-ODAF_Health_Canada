@@ -105,7 +105,7 @@ DT::datatable(res.df.dt,
                                                     'description',
                                                     'Gene',
                                                     'Ensembl_Gene_ID',
-                                                    'Probe_Name')),
+                                                    'Feature_ID')),
                   digits)
 
 
@@ -148,13 +148,13 @@ genesAlphabetized <- genesToSelect %>%
 
 # Get the data 
 counts_by_group <- counts_by_group %>%
-  dplyr::filter(gene %in% genesAlphabetized[[params$feature_id]])
+  dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]])
 
 # Create "shared" data object - this is for enabling live filtering
 counts_by_group_shared <- SharedData$new(counts_by_group)
 
 # Make an initial filter using the top gene
-top_gene = genesToSelect[[params$feature_id]][1]
+top_gene = genesToSelect[["Feature_ID"]][1]
 i = as.character(which(counts_by_group$gene == top_gene))
 
 # Make a "transceiver" to set initial state of filter
@@ -163,7 +163,6 @@ tx = crosstool(counts_by_group_shared,
                init = i,
                channel = "filter",
                reset = rownames(counts_by_group))
-
 # Plot interactive plotly with filter on gene name
 bscols(widths = c(2,NA),
   list(
@@ -171,7 +170,7 @@ bscols(widths = c(2,NA),
                   "Gene",
                   counts_by_group_shared,
                   ~gene,
-                  unique(genesAlphabetized[[params$feature_id]]),
+                  unique(genesAlphabetized[["Feature_ID"]]),
                   multiple = F)
   ),
   list(

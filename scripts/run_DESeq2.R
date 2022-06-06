@@ -35,12 +35,12 @@ paths <- set_up_paths(params)
 get_analysis_id <- get_analysis_id(params)
 
 species_data <- load_species(params$species)
+params$species_data <- species_data
 # ensembl <- useMart("ensembl",
 #                    dataset = species_data$ensembl_species,
 #                    host = "useast.ensembl.org")
 
-bs <- params$bs
-params <- set_up_platform_params(params, bs, species_data)
+params <- set_up_platform_params(params)
 
 # Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
 params$R_ODAF_plots <- FALSE
@@ -196,11 +196,6 @@ message(paste(capture.output(summary_counts), collapse="\n"))
 
 source(here::here("scripts","write_output_tables.R"))
 
-# # write the table of DEG counts to a file
-# write.table(summary_counts,
-#             file = file.path(paths$DEG_output, paste0(params$project_title, "_DEG_counts_summary.txt")),
-#             sep = "\t",
-#             quote = FALSE)
 
 # save DESeq results to a file
 save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData")))

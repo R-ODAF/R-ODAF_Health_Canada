@@ -210,19 +210,26 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F)
     } else if (nrow(deg_table) == 0) {
       next
     } else {
-      deg_table <- cbind(Probe_Name = row.names(x[[i]]),
+      deg_table <- cbind(Feature_ID = row.names(x[[i]]),
                          as(deg_table, "data.frame"),
                          contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
                                          replacement =  "",
                                          x = x[[i]]@elementMetadata[[2]][2]))
-      deg_table <- dplyr::left_join(deg_table,
-                                    params$biospyder,
-                                    by = "Probe_Name")
+      if(params$platform == "TempO-Seq"){
+        deg_table <- dplyr::left_join(deg_table,
+                                      params$biospyder, 
+                                      by = c(Feature_ID = params$feature_id))
+      } else{
+        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL")
+        colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
+        descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
+        deg_table <- dplyr::left_join(deg_table, descriptions)
+      }
       deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
                                                                       2 ^ log2FoldChange,
                                                                       -1 / (2 ^ log2FoldChange)))
       deg_table <- deg_table %>%
-        dplyr::select(Probe_Name, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
       ## FILTERS ##
       if (filter_results == T) {
         deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < alpha & abs(deg_table$linearFoldChange) > linear_fc_filter, ]

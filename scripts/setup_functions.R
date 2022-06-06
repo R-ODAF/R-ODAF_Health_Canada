@@ -91,7 +91,8 @@ load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
 }
 
 
-set_up_platform_params <-function(params, bs, species_data){
+set_up_platform_params <-function(params){
+    species_data <- params$species_data
     SampleDataFile <- file.path(paths$processed, "count_table.tsv")
     params$SampleDataFile <- SampleDataFile
     params$sampledata_sep = "\t"
@@ -101,7 +102,7 @@ set_up_platform_params <-function(params, bs, species_data){
     params$MinCount <- 1
     params$alpha <- pAdjValue <- 0.05 # Relaxed from 0.01
     params$linear_fc_filter <- 1.5
-    params$feature_id <- "ensembl_gene_id"
+    params$feature_id <- "Ensembl_Gene_ID"
   } else if (params$platform == "TempO-Seq") {
     params$threshold = 10000 # TODO: this should be 10^5
     params$MinCount <- 0.5
@@ -109,8 +110,8 @@ set_up_platform_params <-function(params, bs, species_data){
     params$linear_fc_filter <- 1.5
     
     bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
-    params$feature_id <- bs$feature_id
-    params$biospyder <- bs$biospyder
+    params$feature_id <- bs$feature_id # Probe_Name
+    params$biospyder <- bs$biospyder # manifest
   } else { 
     stop("Platform/technology not recognized") 
   }

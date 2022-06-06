@@ -122,8 +122,8 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
 ## By contrast
 ```{r volcano_by_contrast, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 volcano_df <-  as.data.frame(allResults) %>%
-    dplyr::select(c(Probe_Name,
-                    Gene_Symbol,
+    dplyr::select(c("Feature_ID",
+                    "Gene_Symbol",
                     "log2FoldChange",
                     "linearFoldChange",
                     "padj",
@@ -141,7 +141,7 @@ volcano_df[which(volcano_df['padj'] > params$alpha &
 volcano_df[!is.na(volcano_df[['padj']]) &
              abs(volcano_df['linearFoldChange']) > params$linear_fc_filter &
              volcano_df['padj'] < params$alpha &
-             volcano_df[["Probe_Name"]] %in% volcano_df_sig[["Probe_Name"]],
+             volcano_df['Feature_ID'] %in% volcano_df_sig['Feature_ID'],
            "sig_group"] <- "Passed all filters"
 
 
@@ -269,12 +269,12 @@ if (nrow(as.matrix(mat)) > 1) {
 
 # Genes of interest
 
-This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestPlots` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
+This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestFeatures` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
 
 ## Overview
 ```{r genes_of_interest}
 
-numResults <- params$nBestPlots
+numResults <- params$nBestFeatures
 
 allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange) > params$linear_fc_filter) %>%
   arrange(-abs(linearFoldChange))
@@ -311,9 +311,15 @@ The Y axis is on the log10 scale and the feature name is shown in the title of e
 
 ```{r genelevel_plots, results='asis'}
 
-nBestFeatures <- params$nBestPlots
+nBestFeatures <- params$nBestFeatures
 
-id_table <- params$bs$biospyder
+if(params$platform == "TempO-Seq"){
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+} else {
+  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
+  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
+  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
+}
 
 # Would be valuable to have this broken down by contrast too.
 plotCounts_gg <- function(i, d, intgroup) {
@@ -321,8 +327,8 @@ plotCounts_gg <- function(i, d, intgroup) {
                        gene = i,
                        intgroup = intgroup,
                        returnData = TRUE)
-    plot_title <- paste(id_table[[params$feature_id]][grep(i,id_table[[params$feature_id]])],
-                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[[params$feature_id]])])
+    plot_title <- paste(id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])],
+                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[["Feature_ID"]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}
@@ -338,8 +344,8 @@ plotCounts_gg <- function(i, d, intgroup) {
 
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
 
-for (i in head(unique(genesToPlot$Probe_Name), nBestFeatures)) {
-  cat("\n###", id_table[[params$feature_id]][grep(i,id_table[[params$feature_id]])], "  \n\n")
+for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
+  cat("\n###", id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])], "  \n\n")
   print(plotCounts_gg(i, d = dds, intgroup = params$design))
   cat('\n\n')
 }
