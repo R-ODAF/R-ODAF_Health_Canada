@@ -492,6 +492,7 @@ rule multiqc:
         --filename MultiQC_Report.html \
         --interactive \
         --sample-names {metadata_file} \
+        -m fastp -m star -m rsem \
         -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
         mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
         '''
