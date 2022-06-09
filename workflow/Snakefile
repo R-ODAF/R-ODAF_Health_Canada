@@ -243,11 +243,13 @@ if pipeline_config["mode"] == "se":
             multimap_nmax = STAR_multimap_nmax,
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
+            folder = "{sample}",
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         threads: num_threads,
         shell:
             '''
+            [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
                 --alignEndsType EndToEnd \
                 --genomeLoad LoadAndKeep \
@@ -256,6 +258,7 @@ if pipeline_config["mode"] == "se":
                 --readFilesIn {input.R1} \
                 --quantMode TranscriptomeSAM \
                 --limitBAMsortRAM=10737418240 \
+                --outTmpDir /tmp/{params.folder} \
                 --scoreDelOpen {params.penalty} \
                 --scoreInsOpen {params.penalty} \
                 --outFilterMultimapNmax {params.multimap_nmax} \
@@ -277,6 +280,7 @@ if pipeline_config["mode"] == "pe":
         params:
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
+            folder = "{sample}",
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         resources:
             load=100
@@ -284,6 +288,7 @@ if pipeline_config["mode"] == "pe":
         threads: num_threads,
         shell:
             '''
+            [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
             --genomeLoad LoadAndKeep \
             --runThreadN {threads} \
@@ -292,6 +297,7 @@ if pipeline_config["mode"] == "pe":
             --quantMode TranscriptomeSAM \
             --readFilesCommand zcat \
             --outFileNamePrefix {params.bam_prefix} \
+            --outTmpDir /tmp/{params.folder} \
             --outSAMtype BAM SortedByCoordinate
             '''
 
