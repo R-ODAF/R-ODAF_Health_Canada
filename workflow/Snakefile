@@ -364,7 +364,6 @@ if common_config["platform"] =="TempO-Seq":
         threads: workflow.cores,
         output:
             count_table = processed_dir / "count_table.tsv",
-            mapped_unmapped = processed_dir / "mapped_unmapped.tsv",
         benchmark: log_dir / "benchmark.quantification.txt"
         shell:
             '''
@@ -374,7 +373,6 @@ if common_config["platform"] =="TempO-Seq":
             {params.genome} \
             {params.annotfile} \
             {output.count_table} \
-            {output.mapped_unmapped} \
             {params.threads}
             '''
 
