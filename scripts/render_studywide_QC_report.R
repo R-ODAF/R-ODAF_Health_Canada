@@ -3,24 +3,22 @@
 library(tidyverse)
 require(yaml)
 
+source(here::here("scripts","setup_functions.R"))
+
 #Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
 
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
+config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
-params <-c(config$common, config$QC)
-projectdir <- params$projectdir
+params <- c(config$common, config$QC)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
 # If projectdir is not set, figure out current project root directory
-if (is.null(projectdir)) {
+projectdir <- params$projectdir
+if (is.na(projectdir)) {
   projectdir <- here::here()
   params$projectdir <- projectdir
 }
-
-# Replace any other NULL in params with NA
-replace_nulls <- function(x) {ifelse(is.null(x), NA, x)}
-params <- lapply(params, replace_nulls)
 
 # Input file - Rmd
 inputFile <- file.path(projectdir, "Rmd", "Sample_QC.Rmd")
