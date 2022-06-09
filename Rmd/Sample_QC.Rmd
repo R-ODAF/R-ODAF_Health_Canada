@@ -10,7 +10,7 @@ params:
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
-  groups:
+  exp_groups:
     value:
       one: ["chemical", "dose"]
       two: ["I7_Index_ID", "I5_Index_ID"]
@@ -91,11 +91,8 @@ dendro_color_by <- params$dendro_color_by
 nmr_threshold <- params$nmr_threshold
 align_threshold <- params$align_threshold
 gini_cutoff <- params$gini_cutoff
-groups <- params$groups
-#groups[[2]]: c("I7_Index_ID","I5_Index_ID")
-#groups[[3]]: c("Row","Column")
-#groups[[4]]: c("Batch")
-groups <- unname(groups) # Include b/c of how things are addressed throughout.
+exp_groups <- params$exp_groups
+exp_groups <- unname(exp_groups) # Include b/c of how things are addressed throughout.
 batch_var <- params$batch_var
 dose <- params$dose
 treatment_var <- params$treatment_var
@@ -699,7 +696,7 @@ correlation_df_all <- DESeqDesign %>%
 rownames(correlation_df_all) <- correlation_df_all$original_names
 correlation_df_all <- correlation_df_all[colnames(ref_correlations_all),]
 
-correlation_df_all_heatmap <- correlation_df_all[,c(unlist(groups[[1]]),
+correlation_df_all_heatmap <- correlation_df_all[,c(unlist(exp_groups[[1]]),
                                                     technical_control,
                                                     reference_rna,
                                                     solvent_control)]
@@ -730,7 +727,7 @@ correlation_df_samples <- DESeqDesign %>%
 rownames(correlation_df_samples) <- correlation_df_samples$original_names
 correlation_df_samples <- correlation_df_samples[colnames(ref_correlations_samples),]
 
-correlation_df_samples_heatmap <- correlation_df_samples[,c(unlist(groups[[1]]),
+correlation_df_samples_heatmap <- correlation_df_samples[,c(unlist(exp_groups[[1]]),
                                                             technical_control,
                                                             reference_rna,
                                                             solvent_control)]
@@ -772,7 +769,7 @@ for (i in seq_along(facets)) {
   
   row.names(correlation_df) <- correlation_df$original_names
   correlation_df <- correlation_df[colnames(correlations),]
-  correlation_df <- as.data.frame(correlation_df[unlist(groups[[1]][1])])
+  correlation_df <- as.data.frame(correlation_df[unlist(exp_groups[[1]][1])])
   group_heatmap <- pheatmap(correlations,
                             annotation_col = correlation_df,
                             display_numbers = T,
@@ -849,7 +846,7 @@ correlation_df <- correlation_df[colnames(ref_correlations),]
 # This by default includes all the variables in the first "group" parameter
 # For example, if you have multiple chemicals and multiple doses
 # Those will likely be in your groups[[1]] variable
-correlation_df <- correlation_df[,unlist(groups[[1]]), drop = F]
+correlation_df <- correlation_df[,unlist(exp_groups[[1]]), drop = F]
 
 pheatmap(ref_correlations,
          annotation_col = correlation_df,
@@ -915,7 +912,7 @@ QAQC_failed_logical[QAQC_failed_logical == "PASS"] <- 0
 #apply(QAQC_failed_logical_matrix, 2, as.numeric)
 
 QAQC_failed_logical <- QAQC_failed_logical %>%
-  dplyr::left_join(d %>% dplyr::select(original_names, groups[[1]][1]),
+  dplyr::left_join(d %>% dplyr::select(original_names, exp_groups[[1]][1]),
                    by = (c("Sample" = "original_names"))) %>%
   dplyr::mutate(NMR = as.numeric(NMR),
                 FMR = as.numeric(FMR),
@@ -987,7 +984,7 @@ QAQC_metadata_subset <- QAQC_annotated %>%
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
 } else {
     QAQC_metadata_subset <- QAQC_annotated %>%
-    dplyr::select(unlist(groups),
+    dplyr::select(unlist(exp_groups),
                   NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
 }
 
@@ -1007,7 +1004,7 @@ covariate_names <- names(potential_covariates[potential_covariates < 24])
 if (length(groups) > 1 & !is.na(batch_var)) {
   for (i in seq_along(groups)[1:length(groups)]) {
     # Drop groups that have high numbers of possible values
-    covariate_cols <- unlist(groups[[i]])
+    covariate_cols <- unlist(exp_groups[[i]])
     for (subgroup in covariate_cols) {
       cardinality <- length(levels(factor(QAQC_metadata_subset[,subgroup])))
       if (cardinality > 24) {
@@ -1023,10 +1020,10 @@ if (length(groups) > 1 & !is.na(batch_var)) {
     print(p)
   }
 } else {
-  if (!is.na(batch_var)) {
+  if (length(exp_groups) <= 1 & !is.na(batch_var)) {
   p <- ggpairs(QAQC_metadata_subset,
                  cardinality_threshold = 24,
-                 columns = c(unlist(groups),
+                 columns = c(unlist(exp_groups),
                            "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"),
                  ggplot2::aes(colour = !!ensym(batch_var)))
   print(p)
@@ -1034,7 +1031,7 @@ if (length(groups) > 1 & !is.na(batch_var)) {
   if (is.na(batch_var)) {
   p <- ggpairs(QAQC_metadata_subset,
                  cardinality_threshold = 24,
-                 columns = c(unlist(groups),
+                 columns = c(unlist(exp_groups),
                            "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"))
   print(p)
   }
@@ -1163,7 +1160,7 @@ QAQC_failed_kable <- outlier_metadata %>%
 
 ```{r table_by_groups}
 knitr::kable(QAQC_annotated %>%
-               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>% # Could be better to somehow use groups[[1]], but not sure how to get it working as expected
+               dplyr::group_by(!!ensym(treatment_var), !!ensym(dose), Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
                tally() %>% dplyr::arrange(Any),
              caption = "Groups Summary") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
@@ -1333,7 +1330,7 @@ DESeqDesignExpSamples <- DESeqDesign %>% dplyr::filter(original_names %in% all_o
 dendro_after_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_after_all_exp_samples), method = "average"))
 
 dendro_after_all_exp_samples <- as.dendrogram(dendro_after_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(DESeqDesignExpSamples[,unlist(groups)[1]]))
+colors_to_use <- as.numeric(as.factor(DESeqDesignExpSamples[,unlist(exp_groups)[1]]))
 ordered_colors <- colors_to_use[order.dendrogram(dendro_after_all_exp_samples)]
 labels_colors(dendro_after_all_exp_samples) <- ordered_colors
 
