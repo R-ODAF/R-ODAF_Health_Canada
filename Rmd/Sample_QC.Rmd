@@ -981,11 +981,11 @@ This examines correlations between the QC metrics calculated and any factors in 
 
 Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
 
-```{r possible_covariates, fig.height = 12, fig.width = 12, eval = !is.na(batch_var)}
+```{r possible_covariates, fig.height = 12, fig.width = 12}
 
 if (!is.na(batch_var)) {
 QAQC_metadata_subset <- QAQC_annotated %>%
-  dplyr::select(unlist(groups), !!ensym(batch_var),
+  dplyr::select(unlist(exp_groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
 } else {
     QAQC_metadata_subset <- QAQC_annotated %>%
@@ -1006,8 +1006,8 @@ covariate_names <- names(potential_covariates[potential_covariates < 24])
 # Need a generic way to look for dose column...
 #QAQC_metadata_subset$dose <- factor(log(QAQC_metadata_subset$dose+1))
 
-if (length(groups) > 1 & !is.na(batch_var)) {
-  for (i in seq_along(groups)[1:length(groups)]) {
+if (length(exp_groups) > 1 & !is.na(batch_var)) {
+  for (i in seq_along(exp_groups)[1:length(exp_groups)]) {
     # Drop groups that have high numbers of possible values
     covariate_cols <- unlist(exp_groups[[i]])
     for (subgroup in covariate_cols) {
