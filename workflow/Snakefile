@@ -19,6 +19,7 @@ main_dir = Path(main_dir)
 
 
 genome_dir = Path(pipeline_config["genomedir"])
+num_threads = pipeline_config["threads"]
 
 data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist
@@ -82,7 +83,6 @@ if common_config["platform"] =="TempO-Seq":
 else:
     length_required_fastp = 36
     trim_tail1_fastp = 0
-fastp_threads = 2
 
 rule fastp_se:
     input:
@@ -100,9 +100,8 @@ rule fastp_se:
         right_quality = 15,
         length_required = length_required_fastp,
         trim_tail1 = trim_tail1_fastp,
-        threads = fastp_threads,
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
-    threads: fastp_threads,
+    threads: num_threads,
     shell:
         '''
         fastp \
@@ -122,7 +121,7 @@ rule fastp_se:
         --cut_right_mean_quality {params.right_quality} \
         --length_required {params.length_required} \
         --trim_tail1 {params.trim_tail1} \
-        --thread {params.threads} \
+        --thread {threads} \
         '''
 
 
@@ -143,9 +142,8 @@ rule fastp_pe:
         right_size = 4,
         right_quality = 15,
         length_required = length_required_fastp,
-        threads = fastp_threads,
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
-    threads: fastp_threads,
+    threads: num_threads,
     shell:
         '''
         fastp \
@@ -165,7 +163,7 @@ rule fastp_pe:
         --cut_right_window_size {params.right_size} \
         --cut_right_mean_quality {params.right_quality} \
         --length_required {params.length_required} \
-        --thread {params.threads} \
+        --thread {threads} \
         '''
 
 ################################
@@ -182,7 +180,6 @@ else:
     STAR_insertion_deletion_penalty = -2 # STAR defaults
     STAR_multimap_nmax = 20
     STAR_mismatch_nmax = 999
-star_threads = 2
 
 # this rule is only used in RNA-seq jobs (not temposeq)
 rule STAR_make_index:
@@ -192,7 +189,6 @@ rule STAR_make_index:
         index_dir = genome_dir / "STAR_index",
         annotations = genome_dir / pipeline_config["annotation_filename"],
         overhang = 100,
-        threads = workflow.cores,
         suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
         genomeChrBinNbits = 12, # might need to mess with this for different genomes
     output:
@@ -207,7 +203,7 @@ rule STAR_make_index:
 		--genomeFastaFiles {input.genome} \
 		--sjdbGTFfile {params.annotations} \
 		--sjdbOverhang {params.overhang} \
-		--runThreadN {params.threads} \
+		--runThreadN {threads} \
 		--genomeSAsparseD {params.suffix_array_sparsity} \
 		--genomeChrBinNbits {params.genomeChrBinNbits}
         '''
@@ -247,16 +243,15 @@ if pipeline_config["mode"] == "se":
             multimap_nmax = STAR_multimap_nmax,
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            threads = star_threads,
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: star_threads,
+        threads: num_threads,
         shell:
             '''
             STAR \
                 --alignEndsType EndToEnd \
                 --genomeLoad LoadAndKeep \
-                --runThreadN {params.threads} \
+                --runThreadN {threads} \
                 --genomeDir {params.index} \
                 --readFilesIn {input.R1} \
                 --quantMode TranscriptomeSAM \
@@ -282,17 +277,16 @@ if pipeline_config["mode"] == "pe":
         params:
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            threads = star_threads,
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: star_threads,
+        threads: num_threads,
         shell:
             '''
             STAR \
             --genomeLoad LoadAndKeep \
-            --runThreadN {params.threads} \
+            --runThreadN {threads} \
             --genomeDir {params.index} \
             --readFilesIn {input.R1} {input.R2} \
             --quantMode TranscriptomeSAM \
