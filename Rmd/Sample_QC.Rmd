@@ -159,10 +159,10 @@ if (params$collapse_replicates == T) {
                            row.names = 1,
                            check.names = FALSE)
   multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
-  multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_general_stats.txt'),
+  multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
-                   FMR = multiqc_general_stats$STAR_mqc.generalstats.star.uniquely_mapped_percent/100)
+                   FMR = multiqc_general_stats$uniquely_mapped_percent/100)
   row.names(mu) <- mu[,1]
   }
 
