@@ -252,9 +252,14 @@ summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
 stat_metrics <- summary_stats %>%
   group_by(name) %>%
   summarise(Mean=mean(value), Median=median(value))
-ggplot(summary_stats, aes(x=name, y=value)) +
+ggplot(summary_stats %>%
+         dplyr::filter(name %in% c("total_reads", "uniquely_mapped",
+                       "uniquely_mapped_percent", "mismatch_rate",
+                       "unmapped_mismatches_percent", "unmapped_other_percent",
+                       "unmapped_tooshort_percent")),
+       aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
   geom_violin() +
-  geom_jitter(alpha = 0.5) +
   facet_wrap(name~., scales = "free")
 
 stat_metrics %>%
