@@ -14,6 +14,7 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
     }
     bpparam <- MulticoreParam(params$cpus)
     dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
+    dds <- dds[rowSums(counts(dds)) > 1]
     return(dds)
 }
 
@@ -22,6 +23,7 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
 regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
   if (!is.na(nuisance)) {
     rld <- vst(dds, blind)
+
     mat <- assay(rld)
     if(!is.na(covariates)){
       condition <- formula(paste0("~",
@@ -66,7 +68,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 
         # run the DEseq p-value calculation
         message("Obtaining the DESeq2 results")
-
         currentContrast <- c(design, condition2, condition1)
         bpparam <- MulticoreParam(params$cpus)
 
@@ -77,7 +78,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                                 alpha = params$alpha,
                                 pAdjustMethod = 'fdr',
                                 cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
-
+        browser()
         res <- lfcShrink(dds,
                         contrast = currentContrast,
                         res = res,
@@ -159,7 +160,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
         Filter <- Filter[rownames(Filter) %in% rownames(DECounts), , drop = F]
         
-
         # Extract the final list of DEGs
         
         allCounts_all_filters <- res[rowSums(Filter) == 3 ,]

@@ -75,6 +75,7 @@ filter_data <- function(sampleData, DESeqDesign, threshold){
     # First data clean-up: replace NA & remove samples with total readcount < threshold 
     sampleData[ is.na(sampleData) ] <- 0 
     sampleData <- sampleData[,(colSums(sampleData) > threshold)] # reads required per sample
+    #sampleData <- sampleData[(rowSums(sampleData) > 1),] # reads required per gene
     DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
     sampleData <- sampleData[,DESeqDesign$original_names]
     return(sampleData)

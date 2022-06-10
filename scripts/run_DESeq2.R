@@ -30,6 +30,9 @@ if (is.na(projectdir)) {
   params$projectdir <- projectdir
 }
 
+
+
+
 paths <- set_up_paths(params)
 
 get_analysis_id <- get_analysis_id(params)
@@ -60,13 +63,14 @@ DESeqDesign <- read.delim(MetadataFile,
                           sep = "\t",
                           header = TRUE,
                           quote = "\"",
+                          colClasses = "character",
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 DESeqDesignAsRead <- DESeqDesign
 
 # read in contrasts
-contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"")
-
+contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"", 
+                        colClasses = "character")
 # set interesting groups
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
 design_to_use <- params$design
@@ -79,17 +83,17 @@ if (length(intgroup) > 1){
     }
     DESeqDesign <- DESeqDesign %>% unite((!!sym(new_group_name)), intgroup, remove = FALSE)
     # now redo the contrasts
-    contrasts <- contrasts %>%
-        left_join(DESeqDesign, by=c("V1"=params$design)) %>%
-        dplyr::select(V1, V1.new = new_group_name, V2) %>%
-        unique() %>%
-        left_join(DESeqDesign, by=c("V2"=params$design)) %>%
-        dplyr::select(V1, V1.new, V2, V2.new=new_group_name) %>%
-        unique() %>%
-        dplyr::select(V1=V1.new, V2=V2.new)
+      # contrasts <- contrasts %>%
+      #     left_join(DESeqDesign, by=c("V1"=params$design)) %>%
+      #     dplyr::select(V1, V1.new = new_group_name, V2) %>%
+      #     unique() %>%
+      #     left_join(DESeqDesign, by=c("V2"=params$design)) %>%
+      #     dplyr::select(V1, V1.new, V2, V2.new=new_group_name) %>%
+      #     unique() %>%
+      #     dplyr::select(V1=V1.new, V2=V2.new)
     design_to_use <- new_group_name
-    intgroup <- new_group_name
     covariates <- intgroup[intgroup != params$design]
+    intgroup <- new_group_name
 } else {
   covariates <- NA
 }
@@ -102,26 +106,30 @@ sampleData <- load_count_data(params$SampleDataFile, params$sampledata_sep)
 processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, design_to_use, params)
 sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
-contrasts <- processed$contrasts
+contrasts <- processed$contrasts 
+
 
 # set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
 if(!is.na(params$group_facet)){
-    if(!is.na(params$group_filter)){
-        facets <- params$group_filter
-    }else {
-        facets <- DESeqDesign %>%
-            filter(!(params$group_facet) %in% c(params$exclude_groups)) %>%
-            filter(!solvent_control) %>%
-            pull(params$group_facet) %>% 
-            unique()
-    }
+  if(!is.na(params$group_filter)){
+    facets <- params$group_filter
+  }else {
+    facets <- DESeqDesign %>%
+      filter(!(params$group_facet) %in% c(params$exclude_groups)) %>%
+      filter(!(solvent_control==TRUE)) %>%
+      pull(params$group_facet) %>% 
+      unique()
+  }
 } else {
-    facets <- NA
+  facets <- NA
 }
 
 stopifnot((is.na(params$group_facet) || length(facets) > 0))
 
+
+# set up the rest of the output paths (requires facets)
+paths <- set_up_paths_2(paths,params,facets)
 
 ddsList <- list()
 designList <- list()
@@ -150,9 +158,9 @@ if(is.na(params$group_facet)){
         DESeqDesign_subset <- metadata_subset$DESeqDesign
         contrasts_subset <- metadata_subset$contrasts
         sampleData_subset <- subset_data(sampleData, DESeqDesign_subset)
-
+        
         check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
-
+        
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
         rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
@@ -198,4 +206,4 @@ source(here::here("scripts","write_output_tables.R"))
 
 
 # save DESeq results to a file
-save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData")))
+save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))

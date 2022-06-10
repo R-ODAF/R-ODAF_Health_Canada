@@ -116,8 +116,6 @@ make_reports <- function(file_prefix,pars){
 # make reports
 if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
-  # input data file
-  params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
 
   # output file prefix
   prefix <- paste0(params$platform, "_",
@@ -150,7 +148,7 @@ if (is.na(params$display_group_facet)) {
 
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
-    params$group_filter <- i
+    params$display_group_filter <- i
     prefix <- paste0(params$platform, "_",
                      params$project_title, "_",
                      i, "_",
