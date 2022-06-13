@@ -9,10 +9,12 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
                                     design    = current_design)
+
     if(params$filter_gene_counts){ # filter gene counts to decrease runtime. Not recommended for biomarker input!
         dds <- dds[rowSums(counts(dds)) > 1]
     }
     bpparam <- MulticoreParam(params$cpus)
+    dds <- dds[rowSums(counts(dds)) > 1]
     dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
     return(dds)
 }
@@ -22,6 +24,7 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
 regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
   if (!is.na(nuisance)) {
     rld <- vst(dds, blind)
+
     mat <- assay(rld)
     if(!is.na(covariates)){
       condition <- formula(paste0("~",
@@ -64,27 +67,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             nrow(DESeqDesign_subset) > 0
         })
 
-        # run the DEseq p-value calculation
-        message("Obtaining the DESeq2 results")
-
-        currentContrast <- c(design, condition2, condition1)
-        bpparam <- MulticoreParam(params$cpus)
-
-        res <- DESeq2::results(dds,
-                                parallel = TRUE,
-                                BPPARAM = bpparam,
-                                contrast = currentContrast,
-                                alpha = params$alpha,
-                                pAdjustMethod = 'fdr',
-                                cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
-
-        res <- lfcShrink(dds,
-                        contrast = currentContrast,
-                        res = res,
-                        type = "ashr")
-
-        resListAll[[contrast_string]] <- res
-
         # Filter results using R-ODAF filters
         Filter <- matrix(data = NA, ncol = 3, nrow = nrow(Counts))
         rownames(Filter) <- rownames(Counts) # genes
@@ -96,35 +78,67 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         
         for (gene in 1:nrow(dds)) {
           CountsPass <- NULL
-          for (group in 1:length(SampPerGroup)) { 
-            sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[, design])
-            Check <- sum(CPMdds[gene,sampleCols] >= params$MinCount) >= 0.75 * SampPerGroup[group]
+          for (group in 1:length(SampPerGroup)) {
+            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design])
+            sampleNamesGroup <- DESeqDesign_subset[sampleCols, "original_names"]
+            Check <- sum(CPMdds[gene,sampleNamesGroup] >= params$MinCount) >= 0.75 * SampPerGroup[group]
             CountsPass <- c(CountsPass, Check)
           }
           if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
+
         }
-        
+
         compte <- Counts[Filter[,1] == 1,]
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
-        
+
         message(paste0("Relevance filtering removed ", nrow(dds) - nrow(Filter),
                        " genes from the ", nrow(dds)," assessed. ",
                        nrow(Filter), " genes remaining"))
         
+        # run the DEseq p-value calculation
+        message("Obtaining the DESeq2 results")
+        currentContrast <- c(design, condition2, condition1)
+        bpparam <- MulticoreParam(params$cpus)
+        
+        res <- DESeq2::results(dds[rownames(compte),],
+                               parallel = TRUE,
+                               BPPARAM = bpparam,
+                               contrast = currentContrast,
+                               alpha = params$alpha,
+                               pAdjustMethod = 'fdr',
+                               cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
+        res <- lfcShrink(dds,
+                         contrast = currentContrast,
+                         res = res,
+                         BPPARAM = bpparam,
+                         type = "ashr")
+        resListAll[[contrast_string]] <- res
+        
+        DEsamples <<- subset(res, res$padj < params$alpha)
+        if (nrow(DEsamples) == 0) {
+          print("No significant results were found for this contrast. Moving on...")
+          next
+        }
+        DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
+        Filter <- Filter[rownames(Filter) %in% rownames(DECounts), , drop = F]
         message("Check median against third quantile" )
         message("AND")
         message("Check the presence of a spike" )
 
-        for (gene in 1:nrow(compte)) {
+        for (gene in 1:nrow(DECounts)) {
             # Check the median against third quantile
             quantilePass <- NULL
             sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design])
             sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design])
-
-            Check <- median(as.numeric(compte[gene, sampleColsg1])) > quantile(compte[gene, sampleColsg2], 0.75)[[1]]
+            
+            # Same problem as above, use names explictly
+            sampleNames_g1 <- DESeqDesign_subset[sampleColsg1, "original_names"]
+            sampleNames_g2 <- DESeqDesign_subset[sampleColsg2, "original_names"]
+            
+            Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
 
-            Check <- median(as.numeric(compte[gene, sampleColsg2])) > quantile(compte[gene, sampleColsg1], 0.75)[[1]]
+            Check <- median(as.numeric(DECounts[gene, sampleNames_g2])) > quantile(DECounts[gene, sampleNames_g1], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
 
             if (sum(quantilePass) > 0) {
@@ -136,9 +150,10 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
-                if (max(compte[gene,sampleCols]) == 0) {Check <- FALSE} else {
-                Check <- (max(compte[gene, sampleCols]) / sum(compte[gene, sampleCols])) >= 1.4 * (SampPerGroup[group])^(-0.66)
+                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
+                sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
+                if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
+                Check <- (max(DECounts[gene, sampleNamesSpike]) / sum(DECounts[gene, sampleNamesSpike])) >= 1.4 * (SampPerGroup[group])^(-0.66)
                 spikePass <- c(spikePass, Check)
                 }
             }
@@ -148,17 +163,6 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                 Filter[gene, 3] <- 1
             }
         }
-        
-        # Create output tables
-        norm_data <- counts(dds[rownames(compte)], normalized = TRUE)
-        DEsamples <- subset(res, res$padj < params$alpha & abs(res$log2FoldChange) > log2(params$linear_fc_filter) )
-        if (nrow(DEsamples) == 0) {
-          message("No significant results were found for this contrast. Moving on...")
-          next
-        }
-        DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
-        Filter <- Filter[rownames(Filter) %in% rownames(DECounts), , drop = F]
-        
 
         # Extract the final list of DEGs
         
@@ -172,11 +176,9 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                     " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
                     " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
                     " gene(s) with a spike"))
-
         message("DESeq2 Done")
 
-        colnames(norm_data) <- colData(dds)[, design]
-        
+
         mergedDEGs <- c(mergedDEGs, rownames(DECounts_real))
 
         # TODO: the sapply at the end should be handling this, why doesn't it work?
