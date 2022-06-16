@@ -28,6 +28,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Set up miniconda
+      - uses: actions/checkout@v2
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: R-ODAF
