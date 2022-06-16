@@ -310,7 +310,7 @@ allResultsOrdered_logFC_filter %>%
 
 The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
 
-```{r genelevel_plots, results='asis'}
+```{r genelevel_plots, results='asis', message = FALSE}
 
 nBestFeatures <- params$nBestFeatures
 
