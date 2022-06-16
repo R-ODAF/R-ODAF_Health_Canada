@@ -55,7 +55,7 @@ if(params$platform == "TempO-Seq"){
 id_table_entrez <- params$biospyder %>%
   dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Entrez_ID)
 } else {
-  id_table_entrez <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "ENTREZID"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
+  id_table_entrez <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "ENTREZID"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
   colnames(id_table_entrez) <- c("Feature_ID","Gene_Symbol","Entrez_ID")
   id_table_entrez$Entrez_ID <- as.integer(id_table_entrez$Entrez_ID)
 }

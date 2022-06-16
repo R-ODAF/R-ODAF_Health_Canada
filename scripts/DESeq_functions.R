@@ -225,7 +225,7 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F)
                                       params$biospyder, 
                                       by = c(Feature_ID = params$feature_id))
       } else{
-        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL")
+        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
         colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
         descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
         deg_table <- dplyr::left_join(deg_table, descriptions)
