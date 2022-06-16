@@ -53,7 +53,7 @@ res.df.dt <- allResults %>%
   arrange(-abs(linearFoldChange))
 
 
-descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL")
+descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
 colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
@@ -80,6 +80,7 @@ res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
 
 
+browser()
 
 DT::datatable(res.df.dt,
           options = list(pagingType = 'full_numbers',

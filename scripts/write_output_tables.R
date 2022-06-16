@@ -21,11 +21,11 @@ for (current_filter in facets) {
   
 
   if(params$platform == "TempO-Seq"){
-    descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
+    descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(descriptions) <- c("Ensembl_Gene_ID","description")
     id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID, description)
   } else {
-    id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
+    id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
     id_table$Feature_ID <- id_table$Ensembl_Gene_ID
   }
