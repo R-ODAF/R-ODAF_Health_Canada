@@ -1,3 +1,5 @@
+[![Tests](https://github.com/R-ODAF/R-ODAF_Health_Canada/actions/workflows/tests.yml/badge.svg)](https://github.com/R-ODAF/R-ODAF_Health_Canada/actions/workflows/tests.yml)
+
 # Omics Data Analysis Frameworks for Regulatory application (R-ODAF)
 
 ## What is the [R-ODAF](https://www.sciencedirect.com/science/article/pii/S0273230022000307)?
