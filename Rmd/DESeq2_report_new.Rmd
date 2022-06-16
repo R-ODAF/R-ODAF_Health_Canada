@@ -110,7 +110,7 @@ source(here::here("scripts","load-facet-data.R"))
 ```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
-  #geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
   geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
   geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
   scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
@@ -132,18 +132,17 @@ volcano_df <-  as.data.frame(allResults) %>%
     distinct()
 
 volcano_df_sig <- as.data.frame(significantResults)
-volcano_df["sig_group"] <- "Not significant"
-volcano_df[which(volcano_df['padj'] < params$alpha &
-                   abs(volcano_df['linearFoldChange']) < params$linear_fc_filter ),
-           "sig_group"] <- paste0("FDR >", params$alpha)
-volcano_df[which(volcano_df['padj'] > params$alpha &
-                   abs(volcano_df['linearFoldChange']) > params$linear_fc_filter ),
-           "sig_group"] <- paste0("Linear fold change >", params$linear_fc_filter)
-volcano_df[!is.na(volcano_df[['padj']]) &
-             abs(volcano_df['linearFoldChange']) > params$linear_fc_filter &
-             volcano_df['padj'] < params$alpha &
-             volcano_df['Feature_ID'] %in% volcano_df_sig['Feature_ID'],
-           "sig_group"] <- "Passed all filters"
+
+
+volcano_df <- volcano_df %>%
+  mutate(
+    sig_group = case_when(
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("FDR > ", params$alpha),
+      padj >= params$alpha & abs(linearFoldChange) > params$linear_fc_filter                                             ~ paste0("Linear fold change > ", params$linear_fc_filter),
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
+      TRUE                                                                                                               ~ "Not significant"
+    )
+  )
 
 
 volcano_df_shared <- SharedData$new(volcano_df)
