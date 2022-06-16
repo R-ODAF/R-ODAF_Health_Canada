@@ -236,7 +236,7 @@ plot_interactive_PCA(rld_top)
 # DEG heatmaps {.tabset .tabset-fade}
 
 ## All DEGs
-```{r DEG_heatmap_all_genes}
+```{r DEG_heatmap_all_genes,fig.width = 10, fig.height = 10}
 mat <- assay(rld_DEGs)
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
@@ -252,7 +252,7 @@ if (nrow(as.matrix(mat)) > 1) {
 ```
 
 ## Top `r params$nBest` differentially abundant genes
-```{r DEG_heatmap_DEGs}
+```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
 mat <- assay(rld_top)
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)

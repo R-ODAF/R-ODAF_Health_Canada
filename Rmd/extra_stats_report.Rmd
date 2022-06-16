@@ -160,7 +160,7 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 ## Sample-to-sample distances {.tabset .tabset-fade}
 
 ### All genes
-```{r sample-to-sample_heatmaps}
+```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10}
 
 plot_sample_heatmap <- function(current_rld){
   ## Obtain the sample euclidean distances
@@ -186,13 +186,13 @@ plot_sample_heatmap(rld)
 ```
 
 ### DEGs only
-```{r sample-to-sample_heatmaps_DEGs}
+```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10}
 # DEGs only
 plot_sample_heatmap(rld_DEGs)
 ```
 
 ### Most `r params$nBest` variable genes only
-```{r sample-to-sample_most_variable}
+```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10}
 # 100 most variable genes
 plot_sample_heatmap(rld_top)
 ```
