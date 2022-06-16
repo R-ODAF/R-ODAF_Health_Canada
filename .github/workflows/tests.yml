@@ -46,5 +46,7 @@ jobs:
           source("install.R")
         shell: Rscript {0}
       - name: Snakemake tests
+        with:
+          activate-environment: R-ODAF
         run: |
-          conda activate R-ODAF
+          snakemake --cores 4 -n
