@@ -116,7 +116,8 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
   scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) + 
   facet_wrap(~contrast, ncol = 4, labeller = labeller(
-    .default = label_wrap_gen(15)))
+    .default = label_wrap_gen(15))) +
+  theme_bw()
 ```
 
 ## By contrast
@@ -300,6 +301,7 @@ allResultsOrdered_logFC_filter %>%
              linetype = "dashed",
              color = "black",
              size = 1) +
+  theme_bw() +
   ggtitle(paste0("Top ",numResults," genes by fold change grouped by treatment"))
 
 
@@ -339,7 +341,8 @@ plotCounts_gg <- function(i, d, intgroup) {
       ggtitle(plot_title) +
       coord_trans(y = "log10") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      labs(color = colnames(plotdata)[colorCol])
+      labs(color = colnames(plotdata)[colorCol]) +
+      theme_bw()
 }
 
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))

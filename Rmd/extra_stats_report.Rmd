@@ -205,7 +205,8 @@ ggplot(data.frame(allResults), aes(x = pvalue)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of unadjusted p-values') +
     xlab('Unadjusted p-values') +
-    facet_wrap( ~ contrast, ncol = 2)
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
 ```
 
 
@@ -215,7 +216,8 @@ ggplot(data.frame(allResults), aes(x = padj)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of adjusted p-values') +
     xlab('adjusted p-values') +
-    facet_wrap( ~ contrast, ncol = 2)
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
 ```
 
 ### Summary table of (unadjusted) p-value distribution
