@@ -80,8 +80,6 @@ res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
 
 
-browser()
-
 DT::datatable(res.df.dt,
           options = list(pagingType = 'full_numbers',
                          pageLength = 20,
