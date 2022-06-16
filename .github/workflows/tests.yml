@@ -33,6 +33,7 @@ jobs:
           activate-environment: R-ODAF
           environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
           auto-activate-base: false
           auto-update-conda: true
           use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
