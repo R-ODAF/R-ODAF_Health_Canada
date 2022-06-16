@@ -47,4 +47,5 @@ jobs:
         shell: Rscript {0}
       - name: Snakemake tests
         run: |
+          $CONDA/bin/conda activate R-ODAF
           snakemake --cores 4 -n
