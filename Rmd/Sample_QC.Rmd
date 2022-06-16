@@ -6,20 +6,20 @@ params:
   project_description: null # description of project for report, optional
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
-  dendro_color_by: "chemical" # Specify how you would like to color the dendrograms
+  dendro_color_by: "group" # Specify how you would like to color the dendrograms
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   exp_groups:
     value:
-      one: ["chemical", "dose"]
-      two: ["I7_Index_ID", "I5_Index_ID"]
+      one: ["chemical", "dose", "timepoint"]
+      #two: ["I7_Index_ID", "I5_Index_ID"]
       three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
-  batch_var: "batch"          # "batch"
+  batch_var: "temposeq_plate"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "chemical"
+  treatment_var: "chemical_plate"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
