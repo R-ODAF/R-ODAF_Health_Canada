@@ -213,12 +213,12 @@ plot_interactive_PCA <- function(rld_data){
 ```
 
 
-## All genes
+## All `r nrow(rld)` genes
 ```{r PCA_all_genes, collapse=TRUE}
 plot_interactive_PCA(rld)
 ```
 
-## DEGs only
+## DEGs  (`r nrow(rld_DEGs)` genes)
 ```{r PCA_DEGs, collapse=TRUE}
 if (length(rld_DEGs) > 1) {
   plot_interactive_PCA(rld_DEGs)
