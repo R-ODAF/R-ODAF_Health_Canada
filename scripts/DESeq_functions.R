@@ -85,7 +85,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             CountsPass <- c(CountsPass, Check)
           }
           if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
-
+          
         }
 
         compte <- Counts[Filter[,1] == 1,]
@@ -153,8 +153,9 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                 sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
                 sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
                 if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
-                Check <- (max(DECounts[gene, sampleNamesSpike]) / sum(DECounts[gene, sampleNamesSpike])) >= 1.4 * (SampPerGroup[group])^(-0.66)
-                spikePass <- c(spikePass, Check)
+                  Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=
+                    1.4 * (SampPerGroup[group])^(-0.66)
+                  spikePass <- c(spikePass, Check)
                 }
             }
             if (sum(spikePass) > 1) {
@@ -166,16 +167,18 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 
         # Extract the final list of DEGs
         
+        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
+        
         allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
-        DECounts_real <- DEsamples[rowSums(Filter) == 3 ,]
+        DECounts_real <- DEsamples[rowSums(Filter) == 3 & abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
         DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
         DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
         #TODO: output quantile rule failing and spike failing genes
 
         message(paste0("A total of ", nrow(DECounts_real),
                     " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
-                    " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
-                    " gene(s) with a spike"))
+                    " genes(s) removed by the quantile rule, ", nrow(DECounts_spike),
+                    " gene(s) with a spike, and linear fold-change filtering was applied"))
         message("DESeq2 Done")
 
 
