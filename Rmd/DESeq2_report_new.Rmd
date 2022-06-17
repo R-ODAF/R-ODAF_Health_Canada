@@ -274,7 +274,7 @@ if (nrow(as.matrix(mat)) > 1) {
 This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestFeatures` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
 
 ## Overview
-```{r genes_of_interest}
+```{r genes_of_interest, fig.width = 10, fig.height = 10}
 
 numResults <- params$nBestFeatures
 
