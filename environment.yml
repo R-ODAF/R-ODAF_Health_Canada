@@ -45,8 +45,9 @@ dependencies:
   - r-sessioninfo
   - r-gtools
   - r-ggridges
-  - r-crosstalk
-  - r-crosstool
+  - r-remotes
+  #- r-crosstalk
+  #- r-crosstool
   # R Bioconductor
   #- bioconductor-biocinstaller
   #- bioconductor-Rbowtie

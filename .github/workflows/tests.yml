@@ -44,17 +44,15 @@ jobs:
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.r-version }}
+      - name: Install extra dependencies
+        run: |
+          R -e "remotes::install_github('bwlewis/crosstool')"
       - name: Snakemake tests
         run: |
           conda info
           conda list
           #snakemake --cores 4 -n
         shell: bash -l {0}
-      # DO THIS IN ENVIRONMENT.YML INSTEAD
-      # - name: Install R dependencies
-      #   run: |
-      #     source("install.R")
-      #   shell: Rscript {0}
       - name: Import data
         run: |
           ls -alht # What is in the "working directory"?
