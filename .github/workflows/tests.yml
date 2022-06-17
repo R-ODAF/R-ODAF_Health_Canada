@@ -48,7 +48,7 @@ jobs:
       #     r-version: ${{ matrix.r-version }}
       - name: Install extra dependencies
         run: |
-          R -e "list(CRAN = 'https://cloud.r-project.org/'); \
+          R -e "chooseCRANmirror(1, graphics=FALSE); \
           remotes::install_github('bwlewis/crosstool'); \
           install.packages('cellWise')"
       - name: Snakemake tests
