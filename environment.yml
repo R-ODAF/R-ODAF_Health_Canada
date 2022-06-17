@@ -32,7 +32,6 @@ dependencies:
   - r-dendextend
   - r-dendsort
   - r-rrcov
-  - r-cellWise
   - r-vtree
   - r-knitr
   - r-magrittr
@@ -46,11 +45,11 @@ dependencies:
   - r-gtools
   - r-ggridges
   - r-remotes
+  # Install these via different mechanism.
   #- r-crosstalk
   #- r-crosstool
+  #- r-cellWise
   # R Bioconductor
-  #- bioconductor-biocinstaller
-  #- bioconductor-Rbowtie
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
