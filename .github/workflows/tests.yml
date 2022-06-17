@@ -48,8 +48,6 @@ jobs:
         run: |
           conda info
           conda list
-          $CONDA/bin/conda init bash
-          $CONDA/bin/conda activate R-ODAF
           snakemake --cores 4 -n
         shell: bash -l {0}
       - name: Install R dependencies
