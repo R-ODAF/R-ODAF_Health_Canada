@@ -57,5 +57,5 @@ jobs:
       #   shell: Rscript {0}
       - name: Import data
         run: |
-        ls -alht # What is in the "working directory"?
+          ls -alht # What is in the "working directory"?
 
