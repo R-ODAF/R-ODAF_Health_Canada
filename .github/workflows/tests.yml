@@ -46,6 +46,8 @@ jobs:
           r-version: ${{ matrix.r-version }}
       - name: Snakemake tests
         run: |
+          conda info
+          conda list
           $CONDA/bin/conda init bash
           $CONDA/bin/conda activate R-ODAF
           snakemake --cores 4 -n
