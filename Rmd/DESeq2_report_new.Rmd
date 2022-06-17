@@ -155,6 +155,8 @@ i = as.character(which(volcano_df$contrast == contrast_init))
 tx = crosstool(volcano_df_shared,
                "transceiver",
                init = i,
+               html="<span style='font-size:14pt; word-wrap:break-word;'/>",
+               height="1px",
                channel = "filter",
                reset = rownames(volcano_df))
 
