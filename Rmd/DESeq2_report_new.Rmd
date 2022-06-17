@@ -253,14 +253,19 @@ if (nrow(as.matrix(mat)) > 1) {
 }
 ```
 
-## Top `r params$nBest` differentially abundant genes
+## Top `r params$nHeatmapDEGs` differentially abundant genes
 ```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
-mat <- assay(rld_top)
+mat <- assay(rld_top_heatmap) %>%
+  as_tibble(rownames="Ensembl_Gene_ID") %>%
+  left_join(dplyr::select(id_table, c("Ensembl_Gene_ID", "Gene_Symbol")), by="Ensembl_Gene_ID") %>%
+  mutate(label = paste0(Gene_Symbol," : ",Ensembl_Gene_ID)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  column_to_rownames("label")
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
   pheatmap(mat,
-           annotation_col =  as.data.frame(colData(rld_top)[, intgroup, drop = F]),
-           show_rownames = FALSE,
+           annotation_col =  as.data.frame(colData(rld_top_heatmap)[, intgroup, drop = F]),
+           show_rownames = TRUE,
            border_color = NA,
            scale = "row")
   # color = inferno(10)
@@ -312,7 +317,7 @@ allResultsOrdered_logFC_filter %>%
 
 The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
 
-```{r genelevel_plots, results='asis', message = FALSE}
+```{r genelevel_plots, results='asis', message = FALSE, fig.width = 10, fig.height = 10}
 
 nBestFeatures <- params$nBestFeatures
 
