@@ -194,7 +194,7 @@ rule STAR_make_index:
         suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
         genomeChrBinNbits = 18, # might need to mess with this for different genomes - default is 18
         genomeSAindexNbases = STAR_genomeSAindexNbases,
-        sjdbGTFfeatureExon = exon # STAR default
+        sjdbGTFfeatureExon = "exon" # STAR default
     output:
         directory(genome_dir / "STAR_index"),
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
