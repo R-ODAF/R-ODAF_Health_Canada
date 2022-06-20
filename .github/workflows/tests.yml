@@ -19,7 +19,7 @@ jobs:
       matrix:
         r-version: ['4.1.1']
         python-version: ['3.7']
-        seq_type: ['temposeq', 'rnaseq']
+        seq_type: ['temposeq'] # add later... , 'rnaseq']
     defaults:
       run:
         shell: bash -l {0}
