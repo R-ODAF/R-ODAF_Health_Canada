@@ -48,6 +48,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
     resListAll <- list()
     resListFiltered <- list()
     resListDEGs <- list()
+    filtered_table <- data.frame()
     Counts  <- counts(dds, normalized = TRUE)
     CPMdds  <- edgeR::cpm(counts(dds, normalized = TRUE))
     mergedDEGs <- c()
@@ -91,7 +92,9 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         compte <- Counts[Filter[,1] == 1,]
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
 
-        message(paste0("Relevance filtering removed ", nrow(dds) - nrow(Filter),
+        intitial_count <- nrow(dds)
+        num_relevance_filtered <- nrow(dds) - nrow(Filter)
+        message(paste0("Relevance filtering removed ", num_relevance_filtered,
                        " genes from the ", nrow(dds)," assessed. ",
                        nrow(Filter), " genes remaining"))
         
@@ -181,8 +184,15 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                     " gene(s) with a spike, and linear fold-change filtering was applied"))
         message("DESeq2 Done")
 
-
         mergedDEGs <- c(mergedDEGs, rownames(DECounts_real))
+        
+        filtered_table <- rbind(filtered_table, data.frame(facet = current_group_filter,
+                                                           contrast = contrast_string,
+                                                           initial = intitial_count,
+                                                           relevance_filtered = num_relevance_filtered,
+                                                           quantile_filtered = nrow(DECounts_no_quant),
+                                                           spike_filtered = nrow(DECounts_spike),
+                                                           passed_all_filters = nrow(DECounts_real)))
 
         # TODO: the sapply at the end should be handling this, why doesn't it work?
         if (nrow(DECounts_real) > 0){
@@ -191,6 +201,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         if (nrow(DECounts_real) > 0){
           resListFiltered[[contrast_string]] <- allCounts_all_filters
         }
+        
     }
     # If there are no significant results - remove the empty contrast from the list:
     resListAll <- resListAll[!sapply(resListAll, is.null)]
@@ -199,7 +210,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
     
     mergedDEGs <- unique(mergedDEGs)
     
-    return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs))
+    return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
 }
 
 
