@@ -222,7 +222,7 @@ rule STAR_make_index:
 # https://github.com/snakemake/snakemake/pull/1413
 rule STAR_load:
     input:
-        directory(genome_dir / "STAR_index"),
+        genome_dir / "STAR_index",
     output:
         touch("genome.loaded")
     params:
