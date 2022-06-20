@@ -205,8 +205,6 @@ bscols(widths = c(3,NA),
 
 # PCA plots {.tabset .tabset-fade}
 
-This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
-
 ```{r PCA_function, collapse=TRUE}
 
 plot_interactive_PCA <- function(rld_data){
@@ -231,8 +229,10 @@ plot_interactive_PCA <- function(rld_data){
 
 ```
 
+This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
 ## All `r nrow(rld)` genes
+
 ```{r PCA_all_genes, collapse=TRUE}
 plot_interactive_PCA(rld)
 ```
