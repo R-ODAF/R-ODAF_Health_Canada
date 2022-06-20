@@ -70,6 +70,9 @@ title: "`r params$platform` DEG analysis - extra stats"
 # `r params$project_title` - Extra stats {-}
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
 Report prepared for: `r params$project_name`
 
 
@@ -89,6 +92,13 @@ metadata_table <- DESeqDesign %>% arrange(!!sym(params$design))
 knitr::kable(metadata_table,
              row.names =  F,
              caption = "Samples and corresponding experimental conditions used in this report") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of R-ODAF filtered genes
+knitr::kable(filtered_table,
+             row.names =  F,
+             caption = "Number of genes filtered by R-ODAF criteria") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
   scroll_box(height = "480px")
 
