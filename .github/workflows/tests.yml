@@ -66,6 +66,7 @@ jobs:
           rm -r config
           mv test-data/${{ matrix.seq_type}}/* ./
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+          snakemake
 
           
 
