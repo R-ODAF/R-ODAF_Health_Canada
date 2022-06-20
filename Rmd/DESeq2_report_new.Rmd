@@ -89,19 +89,36 @@ title: "`r params$platform` DEG analysis - main report"
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
 
+Report prepared by: `r params$project_bioinformatics_name`
+
 Report prepared for: `r params$project_name`
 
 `r if(has_description){description_text}`
 
 ***
 
-This report is meant to help explore DESeq2 results and was generated using RMarkdown. This section contains the code for setting up the rest of the report.  
+This report is meant to help explore DESeq2 results and was generated using RMarkdown.
 
-TODO: R-ODAF filtering stats should be reported here
+This main report displays the overall results of the experiment and contains the most commonly used visualizations. Additional statistics and graphs are available in the included "Extra stats report", and a "Data explorer report" with interactive tables and graphs to investigate specific genes is also available. Finally, the GO and KEGG pathway analysis results are contained in the "GO and pathway analysis report"
+
+The structure of this document originally extended the DESeq2 regionReport RMarkdown (Collado-Torres, Jaffe, and Leek 2017) but has been substantially reworked since then.
+
+Code sections are hidden by default but can be viewed by clicking the 'code' button.
 
 
 ```{r load_facet_data, include=FALSE}
 source(here::here("scripts","load-facet-data.R"))
+
+
+if(params$platform == "TempO-Seq"){
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+} else {
+  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
+  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
+}
+
+
 ```
 
 # Volcano plots
@@ -137,10 +154,10 @@ volcano_df_sig <- as.data.frame(significantResults)
 volcano_df <- volcano_df %>%
   mutate(
     sig_group = case_when(
-      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("FDR > ", params$alpha),
-      padj >= params$alpha & abs(linearFoldChange) > params$linear_fc_filter                                             ~ paste0("Linear fold change > ", params$linear_fc_filter),
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("Linear fold change < ",params$linear_fc_filter),
       padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
-      TRUE                                                                                                               ~ "Not significant"
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ "Filtered by R-ODAF criteria",
+      TRUE                                                                                                               ~ paste0("FDR >= ", params$alpha)
     )
   )
 
@@ -188,7 +205,7 @@ bscols(widths = c(3,NA),
 
 # PCA plots {.tabset .tabset-fade}
 
-TODO: make these interactive with plotly
+This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/). In this case, the first and second principal component explain `r percentVar[1]` and `r percentVar[2]` percent of the variance respectively.
 
 ```{r PCA_function, collapse=TRUE}
 
@@ -321,14 +338,6 @@ The Y axis is on the log10 scale and the feature name is shown in the title of e
 
 nBestFeatures <- params$nBestFeatures
 
-if(params$platform == "TempO-Seq"){
-  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
-} else {
-  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
-  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
-  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
-}
-
 # Would be valuable to have this broken down by contrast too.
 plotCounts_gg <- function(i, d, intgroup) {
     plotdata <- plotCounts(d,
@@ -365,9 +374,7 @@ for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
 
 # Methods Summary
 
-Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.  
-
-TODO: get the stats for this one
+Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.
 
 ## References {-}
 
