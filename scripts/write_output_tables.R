@@ -104,34 +104,40 @@ for (current_filter in facets) {
   CPMddsDF <- CPMddsDF[, c(1, colPositionsToPrependSTART:ncol(CPMddsDF), 2:colPositionsOfData)]
   
   
+  if(is.na(params$group_facet)){
+    output_folder <- paths$DEG_output
+  } else{
+    output_folder <- paths$DEG_output[[current_filter]]
+  }
+  
   
   #######################################
   ### Write results table from DESeq2
   #######################################
   message("write results tables to txt")
-  
+
   write.table(allResults,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(significantResults,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(summaryTable,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_all_genes.txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(CPMddsDF,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_CPM.txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(Counts,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_normalized_counts.txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(summary_counts,
-              file = file.path(paths$DEG_output[[current_filter]],
+              file = file.path(output_folder,
                                paste0(prefix, "-DEG_summary.txt")),
               quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
   
@@ -191,7 +197,7 @@ for (current_filter in facets) {
                  na.string = "NA")
   setColWidths(wb1, sheet = 1, cols = 1:6, widths = "auto") # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
   setColWidths(wb1, sheet = 1, cols = 7:ncol(summaryTable), widths = 13) # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
-  fname1 <- file.path(paths$DEG_output[[current_filter]], paste0("1.", prefix, "-DESeq_by_gene.xlsx"))
+  fname1 <- file.path(output_folder, paste0("1.", prefix, "-DESeq_by_gene.xlsx"))
   saveWorkbook(wb1, fname1, overwrite = TRUE)
   
   ### All results in one table
@@ -221,7 +227,7 @@ for (current_filter in facets) {
                  keepNA = T,
                  na.string = "NA")
   setColWidths(wb2, sheet = 2, cols = 1:ncol(allResults), widths = "auto")
-  fname2 <- file.path(paths$DEG_output[[current_filter]], paste0("2.", prefix, "-DESeq_all.xlsx"))
+  fname2 <- file.path(output_folder, paste0("2.", prefix, "-DESeq_all.xlsx"))
   saveWorkbook(wb2, fname2, overwrite = TRUE)
   
   ### All results with different tabs for each contrast
@@ -254,7 +260,7 @@ for (current_filter in facets) {
                    na.string = "NA")
     setColWidths(wb3, sheet = i, cols = 1:ncol(dataToWrite), widths = "auto")
   }
-  fname3 <- file.path(paths$DEG_output[[current_filter]], paste0("3.", prefix, "-DESeq_by_contrast.xlsx"))
+  fname3 <- file.path(output_folder, paste0("3.", prefix, "-DESeq_by_contrast.xlsx"))
   saveWorkbook(wb3, fname3, overwrite = TRUE)
   
   ### CPM
@@ -272,7 +278,7 @@ for (current_filter in facets) {
                  keepNA = T,
                  na.string = "NA")
   setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
-  fname4 <- file.path(paths$DEG_output[[current_filter]], paste0("4.", prefix, "-CPM.xlsx"))
+  fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
   saveWorkbook(wb4, fname4, overwrite = TRUE)
   # 
   # ### IPA
@@ -290,7 +296,7 @@ for (current_filter in facets) {
   #                keepNA = T,
   #                na.string = "NA")
   # setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
-  # fname5 <- file.path(paths$DEG_output[[current_filter]], paste0("5.", prefix, "-IPA.xlsx"))
+  # fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
   # saveWorkbook(wb5, fname5, overwrite = TRUE)
 
 }
