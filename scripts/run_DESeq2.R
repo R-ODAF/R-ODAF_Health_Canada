@@ -138,6 +138,7 @@ overallResListFiltered <- list()
 overallResListDEGs <- list()
 rldList <- list()
 mergedDEGsList <- list()
+filtered_table <- data.frame()
 
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
@@ -151,6 +152,7 @@ if(is.na(params$group_facet)){
     designList[['all']] <- DESeqDesign
     rldList[['all']] <- rld
     mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
+    filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
 } else {
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
@@ -169,6 +171,7 @@ if(is.na(params$group_facet)){
         overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
         overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
         mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
+        filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
     }
 }
 
@@ -204,6 +207,5 @@ message(paste(capture.output(summary_counts), collapse="\n"))
 
 source(here::here("scripts","write_output_tables.R"))
 
-
 # save DESeq results to a file
-save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
+save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, filtered_table, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))

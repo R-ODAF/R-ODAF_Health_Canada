@@ -30,6 +30,9 @@ title: "`r params$platform` DEG analysis - data explorer"
 # `r params$project_title` - Data explorer {-}
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
 Report prepared for: `r params$project_name`
 
 
@@ -53,7 +56,7 @@ res.df.dt <- allResults %>%
   arrange(-abs(linearFoldChange))
 
 
-descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL")
+descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
 colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
@@ -78,7 +81,6 @@ res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
                                 digits = digits)
 res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
-
 
 
 DT::datatable(res.df.dt,
