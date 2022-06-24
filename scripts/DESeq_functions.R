@@ -9,22 +9,31 @@ learn_deseq_model <- function(sd, des, intgroup, design, params){
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
                                     design    = current_design)
-    if(params$filter_gene_counts){
+
+    if(params$filter_gene_counts){ # filter gene counts to decrease runtime. Not recommended for biomarker input!
         dds <- dds[rowSums(counts(dds)) > 1]
     }
     bpparam <- MulticoreParam(params$cpus)
+    dds <- dds[rowSums(counts(dds)) > 1]
     dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
     return(dds)
 }
 
 # covariates are used to calculate within-group variability. Nuisance parameters are removed (e.g. for visualization) See:
 # http://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#why-after-vst-are-there-still-batches-in-the-pca-plot
-regularize_data <- function(dds, covariates, nuisance, blind=FALSE){
+regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
   if (!is.na(nuisance)) {
     rld <- vst(dds, blind)
+
     mat <- assay(rld)
-    condition <- formula(paste0("~",
-                                paste0(covariates[!covariates %in% nuisance],collapse = " + ")))
+    if(!is.na(covariates)){
+      condition <- formula(paste0("~",
+                                  design,
+                                  paste0(covariates[!covariates %in% nuisance],collapse = " + ")))
+      
+    } else {
+      condition <- formula(paste0("~", design))
+    }
     mm <- model.matrix(condition, colData(rld))
     mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
     assay(rld) <- mat
@@ -36,31 +45,19 @@ regularize_data <- function(dds, covariates, nuisance, blind=FALSE){
 
 get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, current_group_filter, outdir){
     # Initial setup for DESeq2 contrasts
-    resList <- list()
     resListAll <- list()
+    resListFiltered <- list()
+    resListDEGs <- list()
+    filtered_table <- data.frame()
     Counts  <- counts(dds, normalized = TRUE)
     CPMdds  <- edgeR::cpm(counts(dds, normalized = TRUE))
-
-    # Make new directory for the ODAF-specific files
-    ODAFdir <- file.path(outdir, "R-ODAF")
-    if (!dir.exists(ODAFdir)) {dir.create(ODAFdir, recursive = TRUE)}
-
-    if (is.na(current_group_filter)) {
-        analysisID <- paste(format(Sys.time(), '%Y'), params$project_name, sep = "_")
-    } else {
-        analysisID <- paste(format(Sys.time(), '%Y'),
-                            params$project_name,
-                            paste(current_group_filter, collapse = "_"),
-                            sep = "_")
-    }
+    mergedDEGs <- c()
 
     for (x in 1:nrow(contrasts)) {  # For all comparisons to be done  
         condition1 <- contrasts[x, 2] # Control
         condition2 <- contrasts[x, 1] # Experimental
 
         contrast_string <- paste(condition2, "vs", condition1, sep = "_")
-
-        FileName <- paste(analysisID, contrast_string, "FDR", params$alpha, sep = "_")
 
         message(contrast_string)
 
@@ -71,61 +68,62 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             nrow(DESeqDesign_subset) > 0
         })
 
+        # Filter results using R-ODAF filters
         Filter <- matrix(data = NA, ncol = 3, nrow = nrow(Counts))
         rownames(Filter) <- rownames(Counts) # genes
         colnames(Filter) <- c("Low", "quantile", "spike")
-
+        
         # Apply the "Relevance" condition
         message(paste0("Filtering genes: 75% of at least 1 group need to be above ", params$MinCount, " CPM"))
         SampPerGroup <- table(DESeqDesign_subset[, design])
-
+        
         for (gene in 1:nrow(dds)) {
-            CountsPass <- NULL
-            for (group in 1:length(SampPerGroup)) { 
-                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[, design])
-                Check <- sum(CPMdds[gene,sampleCols] >= params$MinCount) >= 0.75 * SampPerGroup[group]
-                CountsPass <- c(CountsPass, Check)
-            }
-            if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
+          CountsPass <- NULL
+          for (group in 1:length(SampPerGroup)) {
+            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design])
+            sampleNamesGroup <- DESeqDesign_subset[sampleCols, "original_names"]
+            Check <- sum(CPMdds[gene,sampleNamesGroup] >= params$MinCount) >= 0.75 * SampPerGroup[group]
+            CountsPass <- c(CountsPass, Check)
+          }
+          if (sum(CountsPass) > 0) {Filter[gene, 1] <- 1 }  else {Filter[gene,1] <- 0 }
+          
         }
 
         compte <- Counts[Filter[,1] == 1,]
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
 
-        message(paste0("Relevance filtering removed ", nrow(dds) - nrow(Filter),
-                    " genes from the ", nrow(dds)," assessed. ",
-                    nrow(Filter), " genes remaining"))
-
+        intitial_count <- nrow(dds)
+        num_relevance_filtered <- nrow(dds) - nrow(Filter)
+        message(paste0("Relevance filtering removed ", num_relevance_filtered,
+                       " genes from the ", nrow(dds)," assessed. ",
+                       nrow(Filter), " genes remaining"))
+        
+        # run the DEseq p-value calculation
         message("Obtaining the DESeq2 results")
-
         currentContrast <- c(design, condition2, condition1)
         bpparam <- MulticoreParam(params$cpus)
-
+        
         res <- DESeq2::results(dds[rownames(compte),],
-                                parallel = TRUE,
-                                BPPARAM = bpparam,
-                                contrast = currentContrast,
-                                pAdjustMethod = 'fdr',
-                                cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
-
-        res <- lfcShrink(dds = dds[rownames(compte),],
-                        contrast = currentContrast,
-                        res = res,
-                        type = "ashr")
-
+                               parallel = TRUE,
+                               BPPARAM = bpparam,
+                               contrast = currentContrast,
+                               alpha = params$alpha,
+                               pAdjustMethod = 'fdr',
+                               cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
+        res <- lfcShrink(dds,
+                         contrast = currentContrast,
+                         res = res,
+                         BPPARAM = bpparam,
+                         type = "ashr")
         resListAll[[contrast_string]] <- res
-
-
-        # Create output tables
-        norm_data <- counts(dds[rownames(compte)], normalized = TRUE)
-        DEsamples <- subset(res, res$padj < params$alpha)
+        
+        DEsamples <<- subset(res, res$padj < params$alpha)
         if (nrow(DEsamples) == 0) {
-            message("No significant results were found for this contrast. Moving on...")
-            next
+          print("No significant results were found for this contrast. Moving on...")
+          next
         }
         DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
         Filter <- Filter[rownames(Filter) %in% rownames(DECounts), , drop = F]
-
         message("Check median against third quantile" )
         message("AND")
         message("Check the presence of a spike" )
@@ -135,11 +133,15 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             quantilePass <- NULL
             sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design])
             sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design])
-
-            Check <- median(as.numeric(DECounts[gene, sampleColsg1])) > quantile(DECounts[gene, sampleColsg2], 0.75)[[1]]
+            
+            # Same problem as above, use names explictly
+            sampleNames_g1 <- DESeqDesign_subset[sampleColsg1, "original_names"]
+            sampleNames_g2 <- DESeqDesign_subset[sampleColsg2, "original_names"]
+            
+            Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
 
-            Check <- median(as.numeric(DECounts[gene, sampleColsg2])) > quantile(DECounts[gene, sampleColsg1], 0.75)[[1]]
+            Check <- median(as.numeric(DECounts[gene, sampleNames_g2])) > quantile(DECounts[gene, sampleNames_g1], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
 
             if (sum(quantilePass) > 0) {
@@ -151,10 +153,12 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleCols <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
-                if (max(DECounts[gene,sampleCols]) == 0) {Check <- FALSE} else {
-                Check <- (max(DECounts[gene, sampleCols]) / sum(DECounts[gene, sampleCols])) >= 1.4 * (SampPerGroup[group])^(-0.66)
-                spikePass <- c(spikePass, Check)
+                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
+                sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
+                if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
+                  Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=
+                    1.4 * (SampPerGroup[group])^(-0.66)
+                  spikePass <- c(spikePass, Check)
                 }
             }
             if (sum(spikePass) > 1) {
@@ -165,71 +169,90 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         }
 
         # Extract the final list of DEGs
-
-        DECounts_real <- DEsamples[rowSums(Filter) == 3 ,]
-        DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,]
-        DECounts_spike <- DEsamples[Filter[, 3] == 0 ,]
+        
+        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
+        
+        allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
+        DECounts_real <- DEsamples[rowSums(Filter) == 3 & abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
+        DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
+        DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
+        #TODO: output quantile rule failing and spike failing genes
 
         message(paste0("A total of ", nrow(DECounts_real),
                     " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
-                    " genes(s) removed by the quantile rule and ", nrow(DECounts_spike),
-                    " gene(s) with a spike"))
-
-        # Save the normalized counts and the list of DEGs
-        write.table(norm_data,
-                    file = file.path(ODAFdir, paste0(FileName, "_Norm_Data.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DEsamples,
-                    file = file.path(ODAFdir, paste0(FileName, "_DEG_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DECounts_no_quant,
-                    file = file.path(ODAFdir, paste0(FileName, "_failed_quantile_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-        write.table(DECounts_spike,
-                    file = file.path(ODAFdir, paste0(FileName, "_DEspikes_table.txt")),
-                    sep = "\t",
-                    quote = FALSE)
-
+                    " genes(s) removed by the quantile rule, ", nrow(DECounts_spike),
+                    " gene(s) with a spike, and linear fold-change filtering was applied"))
         message("DESeq2 Done")
 
-        colnames(norm_data) <- colData(dds)[, design]
+        mergedDEGs <- c(mergedDEGs, rownames(DECounts_real))
+        
+        filtered_table <- rbind(filtered_table, data.frame(facet = current_group_filter,
+                                                           contrast = contrast_string,
+                                                           initial = intitial_count,
+                                                           relevance_filtered = num_relevance_filtered,
+                                                           quantile_filtered = nrow(DECounts_no_quant),
+                                                           spike_filtered = nrow(DECounts_spike),
+                                                           passed_all_filters = nrow(DECounts_real)))
 
         # TODO: the sapply at the end should be handling this, why doesn't it work?
         if (nrow(DECounts_real) > 0){
-            resList[[contrast_string]] <- DECounts_real
+          resListDEGs[[contrast_string]] <- DECounts_real
         }
-
-
-        # Is this stuff needed? Would prefer to keep plotting stuff out of this script
-        #
-        # if (params$R_ODAF_plots == TRUE) {
-        #     message("creating Read count Plots")
-        #     # top DEGs
-        #     plotdir <- file.path(outdir, "plots")
-        #     if (!dir.exists(plotdir)) {dir.create(plotdir, recursive = TRUE)}
-        #     barplot.dir <- file.path(outdir, "plots", "/barplot_genes/")
-        #     if (!dir.exists(barplot.dir)) {dir.create(barplot.dir, recursive = TRUE)}
-
-        #     TOPbarplot.dir <- file.path(barplot.dir, "Top_DEGs")
-        #     if (!dir.exists(TOPbarplot.dir)) {dir.create(TOPbarplot.dir, recursive = TRUE)}
-        #     setwd(TOPbarplot.dir)
-        #     draw.barplots(DEsamples, "top", 20) # (DEsamples, top_bottom, NUM)
-        #     message("Top 20 DEG plots done")
-
-        #     # Spurious spikes
-        #     SPIKEbarplot.dir <- file.path(barplot.dir, "DE_Spurious_spikes")
-        #     if (!dir.exists(SPIKEbarplot.dir)) {dir.create(SPIKEbarplot.dir, recursive = TRUE)}
-        #     setwd(SPIKEbarplot.dir)
-        #     draw.barplots(DEspikes, "top", nrow(DEspikes)) # (DEsamples, top_bottom, NUM)
-        #     message("All DE_Spurious_spike plots done")
-        # }
+        if (nrow(DECounts_real) > 0){
+          resListFiltered[[contrast_string]] <- allCounts_all_filters
+        }
+        
     }
     # If there are no significant results - remove the empty contrast from the list:
-    resList <- resList[!sapply(resList, is.null)]
     resListAll <- resListAll[!sapply(resListAll, is.null)]
+    resListFiltered <- resListFiltered[!sapply(resListFiltered, is.null)]
+    resListDEGs <- resListDEGs[!sapply(resListDEGs, is.null)]
+    
+    mergedDEGs <- unique(mergedDEGs)
+    
+    return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
+}
 
-    return(list(resList=resList, resListAll=resListAll))
+
+annotate_deseq_table <- function(deseq_results_list, params, filter_results = F) {
+  x <- deseq_results_list
+  annotated_results <- list()
+  for (i in 1:length(x)) {
+    print(i)
+    deg_table <- x[[i]]
+    # Add taxonomy
+    if (is.null(deg_table)) {
+      next
+    } else if (nrow(deg_table) == 0) {
+      next
+    } else {
+      deg_table <- cbind(Feature_ID = row.names(x[[i]]),
+                         as(deg_table, "data.frame"),
+                         contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
+                                         replacement =  "",
+                                         x = x[[i]]@elementMetadata[[2]][2]))
+      if(params$platform == "TempO-Seq"){
+        deg_table <- dplyr::left_join(deg_table,
+                                      params$biospyder, 
+                                      by = c(Feature_ID = params$feature_id))
+      } else{
+        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+        colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
+        descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
+        deg_table <- dplyr::left_join(deg_table, descriptions)
+      }
+      deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
+                                                                      2 ^ log2FoldChange,
+                                                                      -1 / (2 ^ log2FoldChange)))
+      deg_table <- deg_table %>%
+        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+      ## FILTERS ##
+      if (filter_results == T) {
+        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < alpha & abs(deg_table$linearFoldChange) > linear_fc_filter, ]
+      }
+      annotated_results[[i]] <- deg_table %>% dplyr::distinct()
+    }
+  }
+  y <- rbindlist(annotated_results)
+  return(y)
 }

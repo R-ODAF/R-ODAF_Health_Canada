@@ -1,0 +1,279 @@
+---
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+---
+
+```{r docSetup, warning = FALSE, message = FALSE}
+#### Record start time
+startTime <- Sys.time()
+
+library('knitr')
+library('kableExtra')
+library('RColorBrewer')
+library('pheatmap')
+
+#source(here::here("scripts","file_functions.R"))
+#source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
+source(here::here("scripts","data_functions.R"))
+
+#########################################
+# # to delete, should all be done by the render_DEseq2_reports.R script. Just in here to help with development
+# 
+# 
+# config <- yaml::read_yaml(file.path(here::here(),
+#                                     "config/config.yaml"),
+#                           eval.expr = T)
+# 
+# # Combine required params from config
+# params <- c(config$common, config$DESeq2)
+# # replace nulls in params with NA
+# params <- replace_nulls_in_config(params)
+# # If projectdir is not set, figure out current project root directory
+# projectdir <- params$projectdir
+# if (is.na(projectdir)) {
+#   projectdir <- here::here()
+#   params$projectdir <- projectdir
+# }
+# 
+# paths <- set_up_paths(params)
+# 
+# 
+# skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+# 
+# # Input file - Rmd
+# inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+# 
+# # Identify where metadata can be found
+# SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+# 
+# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
+
+#########################################
+
+species_data <- load_species(params$species)
+
+
+# now that we have all our params etc loaded, we can set the HTML title of our document 
+```
+---
+title: "`r params$platform` DEG analysis - extra stats"
+---
+
+
+# `r params$project_title` - Extra stats {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
+Report prepared for: `r params$project_name`
+
+
+***
+
+This report contains extra statistics and plots.
+
+```{r load_facet_data, include=FALSE}
+source(here::here("scripts","load-facet-data.R"))
+```
+
+# Metadata tables
+```{r tables, collapse=TRUE}
+
+# table of sample metadata
+metadata_table <- DESeqDesign %>% arrange(!!sym(params$design))
+knitr::kable(metadata_table,
+             row.names =  F,
+             caption = "Samples and corresponding experimental conditions used in this report") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of R-ODAF filtered genes
+knitr::kable(filtered_table,
+             row.names =  F,
+             caption = "Number of genes filtered by R-ODAF criteria") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of contrasts
+knitr::kable(contrasts,
+             row.names =  F,
+             col.names = c("Condition", "Control"),
+             caption = "Contrasts being tested in this analysis") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of #samples/group
+nSamples_table <- table(metadata_table %>% dplyr::pull(!!sym(params$design))) 
+knitr::kable(nSamples_table,
+             row.names =  F,
+             col.names = c("Experimental group", "Number of samples in group"),
+             caption = "Number of samples in each experimental group used in this report") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of #DEGs/contrast 
+summary_counts <- data.frame()
+comparisons <- names(resultsListDEGs)
+for(comp in comparisons){ # by comparison
+    res <- resultsListDEGs[[comp]]
+    c <- nrow(res)
+    row <- data.frame(comparison=comp, DEG=c)
+    summary_counts <- rbind(summary_counts, row)
+}
+
+knitr::kable(summary_counts,
+             row.names =  F,
+             col.names = c("Contrast", "Number of DEGs"),
+             caption = "Number of differentially expressed genes across each contrast") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+
+```
+
+
+# Descriptive plots
+
+## Boxplot of reads per sample group
+
+This section shows the number of reads obtained for sample groups included in the report.  
+
+```{r nReads_boxplot, collapse=TRUE}
+df<-data.frame(colSums(counts(dds)))
+names(df) <- c("nReads")
+df$original_names = rownames(df)
+df2 <- df %>%
+    left_join(DESeqDesign) %>%
+    dplyr::select(original_names,sym(design_to_use),nReads)
+
+ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
+    geom_boxplot() +
+    geom_jitter(size = 0.3, alpha = 0.5, color = "blue") +
+    coord_flip() +
+    expand_limits(y = 0) +
+    scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+    xlab("Group") +
+    ylab("Number of reads") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Sample-to-sample distances {.tabset .tabset-fade}
+
+### All genes
+```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10}
+
+plot_sample_heatmap <- function(current_rld){
+  ## Obtain the sample euclidean distances
+  sampleDists <- stats::dist(t(assay(current_rld)))
+  sampleDists <- dendextend::sort_dist_mat(sampleDists)
+  sampleDistMatrix <- as.matrix(sampleDists)
+  
+  distances_df <- as.data.frame(colData(current_rld)[, intgroup, drop = F])
+  
+  ## Define colors to use for the heatmap
+  colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+  
+  ## Make the heatmap
+  return( pheatmap(sampleDistMatrix,
+           clustering_distance_rows = sampleDists,
+           clustering_distance_cols = sampleDists,
+           color = colors,
+           annotation_col = distances_df) )
+}
+# all genes
+plot_sample_heatmap(rld)
+
+```
+
+### DEGs only
+```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10}
+# DEGs only
+plot_sample_heatmap(rld_DEGs)
+```
+
+### Most `r params$nBest` variable genes only
+```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10}
+# 100 most variable genes
+plot_sample_heatmap(rld_top)
+```
+
+## P-value Distributions {.tabset .tabset-fade}
+
+### Distribution of unadjusted p-values
+```{r pvalue_distribution}
+ggplot(data.frame(allResults), aes(x = pvalue)) +
+    geom_histogram(alpha = .5, position = 'identity', bins = 50) +
+    labs(title = 'Histogram of unadjusted p-values') +
+    xlab('Unadjusted p-values') +
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
+```
+
+
+### Distribution of adjusted p-values
+```{r adjusted_pvalue_distribution}
+ggplot(data.frame(allResults), aes(x = padj)) +
+    geom_histogram(alpha = .5, position = 'identity', bins = 50) +
+    labs(title = 'Histogram of adjusted p-values') +
+    xlab('adjusted p-values') +
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
+```
+
+### Summary table of (unadjusted) p-value distribution
+```{r pvalue_distribution_table}
+## Split features by different p-value cutoffs
+pval_table <- lapply(c(1e-04, 0.001, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5,
+    0.6, 0.7, 0.8, 0.9, 1), function(x) {
+    data.frame('Cut' = x, 'Count' = sum(allResults$pvalue <= x, na.rm = TRUE))
+})
+pval_table <- do.call(rbind, pval_table)
+#kable(pval_table, format = 'markdown', align = c('c', 'c'))
+
+knitr::kable(pval_table,
+             row.names =  F,
+             caption = "Summary of the distribution of the p-values") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+```
+
+
+
+## MA plots {.tabset .tabset-fade}
+
+This section contains three groups of MA plots (see [Wikipedia](https://en.wikipedia.org/wiki/MA_plot)) that compare the mean of the normalized counts against the log fold change. Each of the groups has a tab for each contrast. The plots show one point per feature. The points are shown in red if the feature has an adjusted p-value less than the cutoff listed in each section, that is, the statistically significant features are shown in red.
+
+This group of plots shows `alpha` = `r metadata(resultsListAll[[1]])$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
+
+```{r MA_plots, results='asis'}
+foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
+ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
+
+for (i in seq_along(resultsListAll)) {
+  contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
+                  replacement =  "",
+                  x = resultsListAll[[i]]@elementMetadata[[2]][2])
+  cat("###", contrast, "  \n\n")
+  MA_title <- paste0('MA plot, alpha = ', metadata(resultsListAll[[i]])$alpha,', ', contrast)
+  DESeq2::plotMA(resultsListAll[[i]],
+                 alpha = metadata(resultsListAll[[i]])$alpha,
+                 main = str_wrap(MA_title, width = 40),
+                 ylim = ylims_for_ma_plots)
+  cat('  \n\n')
+}
+
+```
+
+
+```{r, child='session_info.Rmd'}
+```

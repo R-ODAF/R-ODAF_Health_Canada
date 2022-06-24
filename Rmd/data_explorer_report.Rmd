@@ -1,0 +1,206 @@
+---
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+---
+
+```{r docSetup, include = FALSE, warning = FALSE, message = FALSE}
+#### Record start time
+startTime <- Sys.time()
+
+library('DT')
+
+source(here::here("scripts","DESeq_functions.R"))
+
+species_data <- load_species(params$species)
+
+
+# now that we have all our params etc loaded, we can set the HTML title of our document 
+```
+---
+title: "`r params$platform` DEG analysis - data explorer"
+---
+
+
+# `r params$project_title` - Data explorer {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
+Report prepared for: `r params$project_name`
+
+
+***
+
+This report contains detailed tables of DEG data.
+
+```{r load_facet_data, include=FALSE}
+source(here::here("scripts","load-facet-data.R"))
+```
+
+
+This table shows the significant DEGs (passing all filtering criteria) ordered by their absolute fold change. Use the search function to find your feature of interest or sort by one of the columns. You can limit to a single contrast if desired.
+
+```{r 'topFeatures', results = 'asis', warning = FALSE, message = FALSE}
+searchURL <- "http://www.ncbi.nlm.nih.gov/gene/?term="
+## Add search url if appropriate
+res.df.dt <- allResults %>%
+  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter) %>%
+  dplyr::filter(padj < params$alpha) %>%
+  arrange(-abs(linearFoldChange))
+
+
+descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+colnames(descriptions) <- c("Ensembl_Gene_ID","description")
+res.df.dt <- res.df.dt %>% left_join(descriptions)
+
+
+if (!is.null(searchURL)) {
+    res.df.dt$Gene <- paste0('<a href="',
+                             searchURL,
+                             res.df.dt$Ensembl_Gene_ID,
+                             '" rel="noopener noreferrer" target="_blank">',
+                             res.df.dt$Ensembl_Gene_ID,
+                             '<br/>',
+                             res.df.dt$Gene_Symbol,
+                             '</a>')
+    res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
+}
+
+res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
+                              scientific = TRUE,
+                              digits = digits)
+res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
+                                scientific = TRUE,
+                                digits = digits)
+res.df.dt <- res.df.dt %>%
+  dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
+
+
+DT::datatable(res.df.dt,
+          options = list(pagingType = 'full_numbers',
+                         pageLength = 20,
+                         scrollX = '100%',
+                         dom = 'Bfrtip',
+                         buttons = c('copy',
+                                     'csv',
+                                     'excel',
+                                     'pdf',
+                                     'print',
+                                     'colvis'),
+                         columnDefs = list(list(visible = FALSE, targets = c(1, 2, 4, 5)))),
+          escape = FALSE,
+          extensions = 'Buttons',
+          rownames = FALSE,
+          filter = "top",
+          ) %>% 
+  DT::formatRound(which(!colnames(res.df.dt) %in% c('pvalue',
+                                                    'padj',
+                                                    'Feature',
+                                                    'contrast',
+                                                    'description',
+                                                    'Gene',
+                                                    'Ensembl_Gene_ID',
+                                                    'Feature_ID')),
+                  digits)
+
+
+```
+# Interactive Gene-level plot
+
+This section allows the normalized counts of specific genes (or probes, in the case of TempO-Seq) to be viewed.
+
+Note that for ease of use, only the top 1000 genes (by absolute fold change) are included.
+
+```{r geneplots, warning = FALSE, message = FALSE}
+
+# Make a table of counts
+counts_by_group <- as.data.frame(counts(dds, normalized = TRUE))
+counts_by_group <- as.data.frame(counts_by_group)
+# counts_by_group <- log2(counts_by_group + 1) # Optional
+# Add gene name
+counts_by_group$gene <- row.names(counts_by_group)
+# Clean up table, make into long format for plotting
+counts_by_group <- counts_by_group %>%
+  pivot_longer(!gene,
+               names_to = "Sample",
+               values_to = "Normalized Counts")
+
+# Annotate table with experimental group of interest (params$design)
+counts_by_group <- counts_by_group %>%
+  left_join(DESeqDesign %>% dplyr::select(c(!!sym(params$design),original_names)),
+            by = c("Sample" = "original_names"))
+names(counts_by_group)[4] <- "group"
+
+# Filter by absolute fold change to include a reasonable number of genes
+genesToSelect <- allResults %>%
+  arrange(-abs(log2FoldChange)) %>%
+  head(1000) # Seems to be a reasonable maximum...
+
+# Order by alphabet to help readability in dropdown menu
+genesAlphabetized <- genesToSelect %>%
+  dplyr::arrange(-abs(log2FoldChange)) %>%
+  dplyr::arrange(Gene_Symbol)
+
+# Get the data 
+counts_by_group <- counts_by_group %>%
+  dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]])
+
+# Create "shared" data object - this is for enabling live filtering
+counts_by_group_shared <- SharedData$new(counts_by_group)
+
+# Make an initial filter using the top gene
+top_gene = genesToSelect[["Feature_ID"]][1]
+i = as.character(which(counts_by_group$gene == top_gene))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(counts_by_group_shared,
+               "transceiver",
+               init = i,
+               channel = "filter",
+               reset = rownames(counts_by_group))
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(2,NA),
+  list(
+    filter_select("gene_to_filter",
+                  "Gene",
+                  counts_by_group_shared,
+                  ~gene,
+                  unique(genesAlphabetized[["Feature_ID"]]),
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = counts_by_group_shared,
+            x = ~group,
+            y = ~`Normalized Counts`,
+            color = ~group,
+            type = "box",
+            boxpoints = "all",
+            jitter = 0.6,
+            pointpos = 0,
+            text = ~Sample,
+            boxmean = T) %>%
+      layout(xaxis = list(title = ''), 
+             yaxis = list(title = 'Normalized Counts'),
+             legend = list(title = list(text = '<b> Experimental Group </b>'))) %>%
+      add_annotations(
+        text = "Gene",
+        x = 0.5, y = 1,
+        xref = "paper", yref = "paper",
+        xanchor = "center", yanchor = "bottom",
+        showarrow = FALSE
+      ),
+    tx)
+)
+
+
+```
+
+```{r, child='session_info.Rmd'}
+```

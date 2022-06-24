@@ -2,7 +2,9 @@
 
 common:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_name: "Default"    # Change depending on your project name
+  project_title: "Default"    # Change depending on your project name
+  project_name: "Your name here" 
+  project_description: null # description of project for report, optional
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
@@ -46,6 +48,8 @@ DESeq2:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
+  display_group_facet: null #  
+  display_group_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
@@ -69,3 +73,9 @@ DESeq2:
   nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
   nHeatmap: 50                   # Number of most variable genes for heatmap
   nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+  generate_main_report: TRUE
+  generate_extra_stats_report: TRUE
+  generate_data_explorer_report: TRUE
+  generate_go_pathway_report: TRUE

@@ -1,0 +1,390 @@
+---
+bibliography: references.bib
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+---
+
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+library('knitr')
+library('kableExtra')
+library('pheatmap')
+library('here')
+library('crosstalk')
+library('crosstool')
+library('plotly')
+library('tidytext')
+```
+
+
+```{r extra stuff, include=F}
+# 
+# source(here::here("scripts","file_functions.R"))
+# source(here::here("scripts","setup_functions.R"))
+# source(here::here("scripts","data_functions.R"))
+# source(here::here("scripts","DESeq_functions.R"))
+# 
+# 
+# config <- yaml::read_yaml(file.path(here::here(),
+#                                     "config/config.yaml"),
+#                           eval.expr = T)
+# 
+# # Combine required params from config
+# params <- c(config$common, config$DESeq2)
+# # replace nulls in params with NA
+# params <- replace_nulls_in_config(params)
+# 
+# # If projectdir is not set, figure out current project root directory
+# projectdir <- params$projectdir
+# if (is.na(projectdir)) {
+#   projectdir <- here::here()
+#   params$projectdir <- projectdir
+# }
+# 
+# paths <- set_up_paths(params)
+# 
+# 
+# skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+# 
+# # Input file - Rmd
+# inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
+# 
+# # Identify where metadata can be found
+# SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+# 
+# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
+# 
+# has_description <- !is.na(params$project_description)
+# description_text <- paste("Purpose of report:", params$project_description)
+```
+
+
+```{r load_functions, include=F}
+
+#source(here::here("scripts","file_functions.R"))
+#source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","data_functions.R"))
+source(here::here("scripts","DESeq_functions.R"))
+
+has_description <- !is.na(params$project_description)
+description_text <- paste("Purpose of report:", params$project_description)
+
+# now that we have all our params etc loaded, we can set the HTML title of our document 
+```
+---
+title: "`r params$platform` DEG analysis - main report"
+---
+
+
+# `r params$project_title` - RNA-seq analysis {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
+Report prepared for: `r params$project_name`
+
+`r if(has_description){description_text}`
+
+***
+
+This report is meant to help explore DESeq2 results and was generated using RMarkdown.
+
+This main report displays the overall results of the experiment and contains the most commonly used visualizations. Additional statistics and graphs are available in the included "Extra stats report", and a "Data explorer report" with interactive tables and graphs to investigate specific genes is also available. Finally, the GO and KEGG pathway analysis results are contained in the "GO and pathway analysis report"
+
+The structure of this document originally extended the DESeq2 regionReport RMarkdown (Collado-Torres, Jaffe, and Leek 2017) but has been substantially reworked since then.
+
+Code sections are hidden by default but can be viewed by clicking the 'code' button.
+
+
+```{r load_facet_data, include=FALSE}
+source(here::here("scripts","load-facet-data.R"))
+
+
+if(params$platform == "TempO-Seq"){
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+} else {
+  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
+  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
+}
+
+
+```
+
+# Volcano plots
+
+## All data
+```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
+  geom_point(size = 0.5, alpha = 0.3) +
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
+  geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
+  scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
+  scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) + 
+  facet_wrap(~contrast, ncol = 4, labeller = labeller(
+    .default = label_wrap_gen(15))) +
+  theme_bw()
+```
+
+## By contrast
+```{r volcano_by_contrast, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+volcano_df <-  as.data.frame(allResults) %>%
+    dplyr::select(c("Feature_ID",
+                    "Gene_Symbol",
+                    "log2FoldChange",
+                    "linearFoldChange",
+                    "padj",
+                    "contrast")) %>%
+    distinct()
+
+volcano_df_sig <- as.data.frame(significantResults)
+
+
+volcano_df <- volcano_df %>%
+  mutate(
+    sig_group = case_when(
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("Linear fold change < ",params$linear_fc_filter),
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ "Filtered by R-ODAF criteria",
+      TRUE                                                                                                               ~ paste0("FDR >= ", params$alpha)
+    )
+  )
+
+
+volcano_df_shared <- SharedData$new(volcano_df)
+volcano_contrasts <- unique(allResults$contrast)
+
+contrast_init = volcano_contrasts[1]
+i = as.character(which(volcano_df$contrast == contrast_init))
+
+# Make a "transceiver" to set initial state of filter
+tx = crosstool(volcano_df_shared,
+               "transceiver",
+               init = i,
+               html="<span style='font-size:14pt; word-wrap:break-word;'/>",
+               height="1px",
+               channel = "filter",
+               reset = rownames(volcano_df))
+
+# Plot interactive plotly with filter on gene name
+bscols(widths = c(3,NA),
+  list(
+    filter_select("contrast_to_filter",
+                  "Contrast",
+                  volcano_df_shared,
+                  ~contrast,
+                  volcano_contrasts,
+                  multiple = F)
+  ),
+  list(
+    plot_ly(data = volcano_df_shared,
+            x = ~log2FoldChange,
+            y = ~-log10(padj),
+            type = 'scatter',
+            mode = 'markers',
+            color = ~sig_group,
+            text = ~Gene_Symbol) %>%
+    layout(xaxis = list(title = 'log2 Fold Change'),
+           yaxis = list(title = '-log10 adjusted p-value')),
+    # How to add title that gets updated??? Same problem with gene plots.
+    tx)
+)
+
+```
+
+# PCA plots {.tabset .tabset-fade}
+
+```{r PCA_function, collapse=TRUE}
+
+plot_interactive_PCA <- function(rld_data){
+  ## Perform PCA analysis
+  data_pca <- plotPCA(rld_data, intgroup = params$design, ntop = nrow(assay(rld_data)), returnData = TRUE)
+  ## Get percent of variance explained
+  percentVar <- round(100 * attr(data_pca, "percentVar"))
+  ## Plot
+  highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable? "group" too right?
+  p <- plot_ly(data = highlight_pca,
+          x = ~PC1,
+          y = ~PC2,
+          color = ~group,
+          text = ~name,
+          type = "scatter",
+          mode = "markers") %>%
+    layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
+           yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance")))
+  highlight(p, on = "plotly_click", off = "plotly_doubleclick", color = "red")
+  return(p)
+}
+
+```
+
+This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+
+## All `r nrow(rld)` genes
+
+```{r PCA_all_genes, collapse=TRUE}
+plot_interactive_PCA(rld)
+```
+
+## DEGs  (`r nrow(rld_DEGs)` genes)
+```{r PCA_DEGs, collapse=TRUE}
+if (length(rld_DEGs) > 1) {
+  plot_interactive_PCA(rld_DEGs)
+} else {
+  print("Insufficient DEGs found.")
+}
+```
+
+## Top `r params$nBest` genes
+```{r PCA_top_N, collapse=TRUE}
+plot_interactive_PCA(rld_top)
+```
+
+
+# DEG heatmaps {.tabset .tabset-fade}
+
+## All DEGs
+```{r DEG_heatmap_all_genes,fig.width = 10, fig.height = 10}
+mat <- assay(rld_DEGs)
+if (nrow(as.matrix(mat)) > 1) {
+  mat <- mat - rowMeans(mat)
+  pheatmap(mat,
+           annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
+           show_rownames = FALSE,
+           border_color = NA,
+           scale = "row")
+  # color = inferno(10)
+} else {
+  print("No DEGs found.")
+}
+```
+
+## Top `r params$nHeatmapDEGs` differentially abundant genes
+```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
+mat <- assay(rld_top_heatmap) %>%
+  as_tibble(rownames="Ensembl_Gene_ID") %>%
+  left_join(dplyr::select(id_table, c("Ensembl_Gene_ID", "Gene_Symbol")), by="Ensembl_Gene_ID") %>%
+  mutate(label = paste0(Gene_Symbol," : ",Ensembl_Gene_ID)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  column_to_rownames("label")
+if (nrow(as.matrix(mat)) > 1) {
+  mat <- mat - rowMeans(mat)
+  pheatmap(mat,
+           annotation_col =  as.data.frame(colData(rld_top_heatmap)[, intgroup, drop = F]),
+           show_rownames = TRUE,
+           border_color = NA,
+           scale = "row")
+  # color = inferno(10)
+} else {
+  print("No DEGs found.")
+}
+```
+
+# Genes of interest
+
+This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestFeatures` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
+
+## Overview
+```{r genes_of_interest, fig.width = 10, fig.height = 10}
+
+numResults <- params$nBestFeatures
+
+allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange) > params$linear_fc_filter) %>%
+  arrange(-abs(linearFoldChange))
+
+
+allResultsOrdered_logFC_filter %>%
+  group_by(contrast) %>%
+  top_n(numResults, wt = abs(log2FoldChange)) %>%
+  ungroup() %>%
+  mutate(Contrast = as.factor(contrast),
+         Symbol = reorder_within(Gene_Symbol, log2FoldChange, Contrast)) %>%
+  ggplot(aes(x = log2FoldChange,
+             y = Symbol,
+             color = Contrast,
+             size = -log(padj))) +
+  geom_point(show.legend = TRUE) +
+  facet_wrap(~contrast,
+             scales = "free_y",
+             ncol = 4,
+             labeller = labeller(contrast = label_wrap_gen(10))) +
+  scale_y_reordered()  +
+  geom_vline(xintercept = 0,
+             linetype = "dashed",
+             color = "black",
+             size = 1) +
+  theme_bw() +
+  ggtitle(paste0("Top ",numResults," genes by fold change grouped by treatment"))
+
+
+```
+
+## By gene {.tabset .tabset-fade}
+
+The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
+
+```{r genelevel_plots, results='asis', message = FALSE, fig.width = 10, fig.height = 10}
+
+nBestFeatures <- params$nBestFeatures
+
+# Would be valuable to have this broken down by contrast too.
+plotCounts_gg <- function(i, d, intgroup) {
+    plotdata <- plotCounts(d,
+                       gene = i,
+                       intgroup = intgroup,
+                       returnData = TRUE)
+    plot_title <- paste(id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])],
+                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[["Feature_ID"]])])
+    if (ncol(plotdata) > 2) {
+      colorCol = 3
+    } else {colorCol = 2}
+    ggplot(plotdata, aes(x = plotdata[, 2], y = plotdata[, 1], color = plotdata[, colorCol])) + 
+      geom_point(position = position_jitterdodge()) +
+      ylab('Normalized count') +
+      xlab('Group') +
+      ggtitle(plot_title) +
+      coord_trans(y = "log10") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      labs(color = colnames(plotdata)[colorCol]) +
+      theme_bw()
+}
+
+genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
+
+for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
+  cat("\n###", id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])], "  \n\n")
+  print(plotCounts_gg(i, d = dds, intgroup = params$design))
+  cat('\n\n')
+}
+
+
+```
+
+
+# Methods Summary
+
+Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.
+
+## References {-}
+
+If these methods were used in your study, please cite the following papers as appropriate:  
+
+---
+nocite: '@*'
+---
+
+<div id="refs"></div>
+
+```{r, child='session_info.Rmd'}
+```
