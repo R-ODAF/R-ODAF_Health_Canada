@@ -70,6 +70,9 @@ title: "`r params$platform` DEG analysis - extra stats"
 # `r params$project_title` - Extra stats {-}
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
 Report prepared for: `r params$project_name`
 
 
@@ -89,6 +92,13 @@ metadata_table <- DESeqDesign %>% arrange(!!sym(params$design))
 knitr::kable(metadata_table,
              row.names =  F,
              caption = "Samples and corresponding experimental conditions used in this report") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+  scroll_box(height = "480px")
+
+# table of R-ODAF filtered genes
+knitr::kable(filtered_table,
+             row.names =  F,
+             caption = "Number of genes filtered by R-ODAF criteria") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
   scroll_box(height = "480px")
 
@@ -160,7 +170,7 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 ## Sample-to-sample distances {.tabset .tabset-fade}
 
 ### All genes
-```{r sample-to-sample_heatmaps}
+```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10}
 
 plot_sample_heatmap <- function(current_rld){
   ## Obtain the sample euclidean distances
@@ -186,13 +196,13 @@ plot_sample_heatmap(rld)
 ```
 
 ### DEGs only
-```{r sample-to-sample_heatmaps_DEGs}
+```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10}
 # DEGs only
 plot_sample_heatmap(rld_DEGs)
 ```
 
 ### Most `r params$nBest` variable genes only
-```{r sample-to-sample_most_variable}
+```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10}
 # 100 most variable genes
 plot_sample_heatmap(rld_top)
 ```
@@ -205,7 +215,8 @@ ggplot(data.frame(allResults), aes(x = pvalue)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of unadjusted p-values') +
     xlab('Unadjusted p-values') +
-    facet_wrap( ~ contrast, ncol = 2)
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
 ```
 
 
@@ -215,7 +226,8 @@ ggplot(data.frame(allResults), aes(x = padj)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of adjusted p-values') +
     xlab('adjusted p-values') +
-    facet_wrap( ~ contrast, ncol = 2)
+    facet_wrap( ~ contrast, ncol = 2) +
+    theme_bw()
 ```
 
 ### Summary table of (unadjusted) p-value distribution

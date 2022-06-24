@@ -67,6 +67,8 @@ rld_DEGs <- rld[row.names(assay(rld)) %in% mergedDEGs]
 rv = rowVars(assay(rld))
 select = order(rv, decreasing = TRUE)[1:params$nBest]
 rld_top <- rld[select,]
+select_heatmap = order(rv, decreasing = TRUE)[1:params$nHeatmapDEGs]
+rld_top_heatmap <- rld[select_heatmap,]
 
 allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
 significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)

@@ -89,19 +89,36 @@ title: "`r params$platform` DEG analysis - main report"
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
 
+Report prepared by: `r params$project_bioinformatics_name`
+
 Report prepared for: `r params$project_name`
 
 `r if(has_description){description_text}`
 
 ***
 
-This report is meant to help explore DESeq2 results and was generated using RMarkdown. This section contains the code for setting up the rest of the report.  
+This report is meant to help explore DESeq2 results and was generated using RMarkdown.
 
-TODO: R-ODAF filtering stats should be reported here
+This main report displays the overall results of the experiment and contains the most commonly used visualizations. Additional statistics and graphs are available in the included "Extra stats report", and a "Data explorer report" with interactive tables and graphs to investigate specific genes is also available. Finally, the GO and KEGG pathway analysis results are contained in the "GO and pathway analysis report"
+
+The structure of this document originally extended the DESeq2 regionReport RMarkdown (Collado-Torres, Jaffe, and Leek 2017) but has been substantially reworked since then.
+
+Code sections are hidden by default but can be viewed by clicking the 'code' button.
 
 
 ```{r load_facet_data, include=FALSE}
 source(here::here("scripts","load-facet-data.R"))
+
+
+if(params$platform == "TempO-Seq"){
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+} else {
+  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
+  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
+}
+
+
 ```
 
 # Volcano plots
@@ -110,13 +127,14 @@ source(here::here("scripts","load-facet-data.R"))
 ```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
-  #geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
+  geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
   geom_vline(xintercept = c(-log2(1.5), log2(1.5)), color = "red", alpha = 1.0) + 
   geom_hline(yintercept = -log10(0.05), color = "blue", alpha = 1.0) +
   scale_x_continuous(name = "log2 Fold Change", limits = c(-5, 5)) +
   scale_y_continuous(name = "-log10 adjusted p-value", limits = c(0, 6)) + 
   facet_wrap(~contrast, ncol = 4, labeller = labeller(
-    .default = label_wrap_gen(15)))
+    .default = label_wrap_gen(15))) +
+  theme_bw()
 ```
 
 ## By contrast
@@ -131,18 +149,17 @@ volcano_df <-  as.data.frame(allResults) %>%
     distinct()
 
 volcano_df_sig <- as.data.frame(significantResults)
-volcano_df["sig_group"] <- "Not significant"
-volcano_df[which(volcano_df['padj'] < params$alpha &
-                   abs(volcano_df['linearFoldChange']) < params$linear_fc_filter ),
-           "sig_group"] <- paste0("FDR >", params$alpha)
-volcano_df[which(volcano_df['padj'] > params$alpha &
-                   abs(volcano_df['linearFoldChange']) > params$linear_fc_filter ),
-           "sig_group"] <- paste0("Linear fold change >", params$linear_fc_filter)
-volcano_df[!is.na(volcano_df[['padj']]) &
-             abs(volcano_df['linearFoldChange']) > params$linear_fc_filter &
-             volcano_df['padj'] < params$alpha &
-             volcano_df['Feature_ID'] %in% volcano_df_sig['Feature_ID'],
-           "sig_group"] <- "Passed all filters"
+
+
+volcano_df <- volcano_df %>%
+  mutate(
+    sig_group = case_when(
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("Linear fold change < ",params$linear_fc_filter),
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ "Filtered by R-ODAF criteria",
+      TRUE                                                                                                               ~ paste0("FDR >= ", params$alpha)
+    )
+  )
 
 
 volcano_df_shared <- SharedData$new(volcano_df)
@@ -155,6 +172,8 @@ i = as.character(which(volcano_df$contrast == contrast_init))
 tx = crosstool(volcano_df_shared,
                "transceiver",
                init = i,
+               html="<span style='font-size:14pt; word-wrap:break-word;'/>",
+               height="1px",
                channel = "filter",
                reset = rownames(volcano_df))
 
@@ -186,8 +205,6 @@ bscols(widths = c(3,NA),
 
 # PCA plots {.tabset .tabset-fade}
 
-TODO: make these interactive with plotly
-
 ```{r PCA_function, collapse=TRUE}
 
 plot_interactive_PCA <- function(rld_data){
@@ -212,13 +229,15 @@ plot_interactive_PCA <- function(rld_data){
 
 ```
 
+This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
-## All genes
+## All `r nrow(rld)` genes
+
 ```{r PCA_all_genes, collapse=TRUE}
 plot_interactive_PCA(rld)
 ```
 
-## DEGs only
+## DEGs  (`r nrow(rld_DEGs)` genes)
 ```{r PCA_DEGs, collapse=TRUE}
 if (length(rld_DEGs) > 1) {
   plot_interactive_PCA(rld_DEGs)
@@ -236,7 +255,7 @@ plot_interactive_PCA(rld_top)
 # DEG heatmaps {.tabset .tabset-fade}
 
 ## All DEGs
-```{r DEG_heatmap_all_genes}
+```{r DEG_heatmap_all_genes,fig.width = 10, fig.height = 10}
 mat <- assay(rld_DEGs)
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
@@ -251,14 +270,19 @@ if (nrow(as.matrix(mat)) > 1) {
 }
 ```
 
-## Top `r params$nBest` differentially abundant genes
-```{r DEG_heatmap_DEGs}
-mat <- assay(rld_top)
+## Top `r params$nHeatmapDEGs` differentially abundant genes
+```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
+mat <- assay(rld_top_heatmap) %>%
+  as_tibble(rownames="Ensembl_Gene_ID") %>%
+  left_join(dplyr::select(id_table, c("Ensembl_Gene_ID", "Gene_Symbol")), by="Ensembl_Gene_ID") %>%
+  mutate(label = paste0(Gene_Symbol," : ",Ensembl_Gene_ID)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  column_to_rownames("label")
 if (nrow(as.matrix(mat)) > 1) {
   mat <- mat - rowMeans(mat)
   pheatmap(mat,
-           annotation_col =  as.data.frame(colData(rld_top)[, intgroup, drop = F]),
-           show_rownames = FALSE,
+           annotation_col =  as.data.frame(colData(rld_top_heatmap)[, intgroup, drop = F]),
+           show_rownames = TRUE,
            border_color = NA,
            scale = "row")
   # color = inferno(10)
@@ -272,7 +296,7 @@ if (nrow(as.matrix(mat)) > 1) {
 This section contains plots showing the normalized counts per sample for each group of interest. Only the best `r params$nBestFeatures` features (adjusted p-value <`r params$alpha`) are shown, ranked by their absolute fold change values.
 
 ## Overview
-```{r genes_of_interest}
+```{r genes_of_interest, fig.width = 10, fig.height = 10}
 
 numResults <- params$nBestFeatures
 
@@ -300,6 +324,7 @@ allResultsOrdered_logFC_filter %>%
              linetype = "dashed",
              color = "black",
              size = 1) +
+  theme_bw() +
   ggtitle(paste0("Top ",numResults," genes by fold change grouped by treatment"))
 
 
@@ -309,17 +334,9 @@ allResultsOrdered_logFC_filter %>%
 
 The Y axis is on the log10 scale and the feature name is shown in the title of each plot.
 
-```{r genelevel_plots, results='asis'}
+```{r genelevel_plots, results='asis', message = FALSE, fig.width = 10, fig.height = 10}
 
 nBestFeatures <- params$nBestFeatures
-
-if(params$platform == "TempO-Seq"){
-  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
-} else {
-  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL")
-  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
-  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
-}
 
 # Would be valuable to have this broken down by contrast too.
 plotCounts_gg <- function(i, d, intgroup) {
@@ -339,7 +356,8 @@ plotCounts_gg <- function(i, d, intgroup) {
       ggtitle(plot_title) +
       coord_trans(y = "log10") +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      labs(color = colnames(plotdata)[colorCol])
+      labs(color = colnames(plotdata)[colorCol]) +
+      theme_bw()
 }
 
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
@@ -356,9 +374,7 @@ for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
 
 # Methods Summary
 
-Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.  
-
-TODO: get the stats for this one
+Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. All of the information provided here is contained elsewhere in the report, but it is aggregated here for your convenience.
 
 ## References {-}
 
