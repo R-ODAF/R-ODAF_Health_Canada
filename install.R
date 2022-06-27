@@ -3,6 +3,7 @@ chooseCRANmirror(1, graphics=FALSE)
 
 install.packages("tidyverse")
 install.packages("yaml")
+install.packages("here")
 install.packages("plotly")
 install.packages("data.table")
 install.packages("cluster")
@@ -33,7 +34,9 @@ install.packages("sessioninfo")
 install.packages("gtools")
 install.packages("ggridges")
 install.packages("crosstalk")
-install.packages("crosstool")
+install.packages("ashr")
+install.packages("devtools")
+install_github("bwlewis/crosstool")
 
 
 install.packages("BiocManager")
@@ -52,5 +55,6 @@ BiocManager::install("clusterProfiler")
 BiocManager::install("biomaRt")
 BiocManager::install("AnnotationHub")
 BiocManager::install("vsn")
-
+BiocManager::install("org.Mm.eg.db")
+BiocManager::install("org.Hs.eg.db")
 
