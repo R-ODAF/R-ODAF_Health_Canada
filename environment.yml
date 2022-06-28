@@ -8,7 +8,7 @@ dependencies:
   - rsem
   - fastp
   - star
-  - multiqc=1.12
+  - multiqc # 1.12 works...
   - snakemake
   # R CRAN
   - r-curl
