@@ -26,52 +26,8 @@ library('tidytext')
 ```
 
 
-```{r extra stuff, include=F}
-# 
-# source(here::here("scripts","file_functions.R"))
-# source(here::here("scripts","setup_functions.R"))
-# source(here::here("scripts","data_functions.R"))
-# source(here::here("scripts","DESeq_functions.R"))
-# 
-# 
-# config <- yaml::read_yaml(file.path(here::here(),
-#                                     "config/config.yaml"),
-#                           eval.expr = T)
-# 
-# # Combine required params from config
-# params <- c(config$common, config$DESeq2)
-# # replace nulls in params with NA
-# params <- replace_nulls_in_config(params)
-# 
-# # If projectdir is not set, figure out current project root directory
-# projectdir <- params$projectdir
-# if (is.na(projectdir)) {
-#   projectdir <- here::here()
-#   params$projectdir <- projectdir
-# }
-# 
-# paths <- set_up_paths(params)
-# 
-# 
-# skip_extra <- c("DMSO") # Remove DMSO controls as a facet
-# 
-# # Input file - Rmd
-# inputFile <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-# 
-# # Identify where metadata can be found
-# SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
-# 
-# params$dataFile <- file.path(paths$DEG_output, paste0(params$project_title, "_DEG_data.RData"))
-# 
-# has_description <- !is.na(params$project_description)
-# description_text <- paste("Purpose of report:", params$project_description)
-```
-
-
 ```{r load_functions, include=F}
 
-#source(here::here("scripts","file_functions.R"))
-#source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
