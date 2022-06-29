@@ -3,14 +3,12 @@ set_up_paths <- function(params) {
     # Other important system paths to specify in config
     paths$wikipathways <- params$wikipathways_directory
     # For project structure
-    # Should probably update this to use the file.path() function.
     paths$root <- params$projectdir
     paths$data <- file.path(paths$root, "data")
     paths$raw <- file.path(paths$data, "raw")
     paths$processed <- file.path(paths$data, "processed")
     paths$metadata <- file.path(paths$data, "metadata")
     paths$results <- file.path(paths$root, "analysis")
-    paths$reports <- file.path(paths$results, "reports")
     paths$BMD_output <- file.path(paths$results, "BMD_and_biomarker_files")
     paths$RData <- file.path(paths$results, "DEG_RData")
     paths$pathway_analysis <- file.path(paths$results, "pathway_analysis")
