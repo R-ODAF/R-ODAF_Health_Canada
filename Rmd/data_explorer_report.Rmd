@@ -14,6 +14,9 @@ output:
 startTime <- Sys.time()
 
 library('DT')
+library('crosstalk')
+library('crosstool')
+library('plotly')
 
 source(here::here("scripts","DESeq_functions.R"))
 
