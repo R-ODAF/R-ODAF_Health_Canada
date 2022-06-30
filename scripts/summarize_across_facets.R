@@ -98,7 +98,7 @@ p2_data <- filtered_table %>%
   mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
 
 if (length(facets) < 10) {
-  p2 = ggplot(filtered_table_long, aes(x=facet_contrast,y=value,fill=facet)) +
+  p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +
     facet_wrap(~name, scales="free") +
@@ -106,7 +106,7 @@ if (length(facets) < 10) {
     ylab("Percent of all reads") +
     xlab("Facet: contrast")
 } else {
-  p2 = ggplot(filtered_table_long, aes(x=facet_contrast,y=value,fill=facet)) +
+  p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +
     facet_wrap(~name, scales="free") +
