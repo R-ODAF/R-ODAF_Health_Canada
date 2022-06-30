@@ -83,7 +83,8 @@ if (length(facets) < 10) {
         ylab("Number of DEGs") +
         xlab("Facet: contrast")
 }
-ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1)
+ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1,
+       width=round(sqrt(length(facets)))*1.5, height=round(sqrt(length(facets)))*1.5)
 
 
 # plot filter stats
@@ -117,6 +118,7 @@ if (length(facets) < 10) {
 }
   
 
-ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2)
+ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
+       width=round(sqrt(length(facets)))*1.5, height=round(sqrt(length(facets))))
 
 
