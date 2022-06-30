@@ -62,6 +62,19 @@ prefix <- paste0(params$platform, "_",
                  paste(params$current_filter, collapse = "_"), "_",
                  format(Sys.time(),'%d-%m-%Y.%H.%M'))  
 
+<<<<<<< HEAD
+=======
+# plot # degs
+p1_data <- significantResultsUnfaceted %>%
+  mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
+
+p1 = ggplot(p1_data, aes(x=facet_contrast)) +
+  geom_bar(aes(y=..count.., fill=facet)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  ylab("Number of DEGs") +
+  xlab("Facet: contrast")
+>>>>>>> sort facet summaries by contrasts
 
 p1_data <- significantResultsUnfaceted %>%
     mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
@@ -98,6 +111,7 @@ p2_data <- filtered_table %>%
   mutate(name = factor(name, levels=c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters"))) %>%
   mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
 
+<<<<<<< HEAD
 if (length(facets) < 10) {
   p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
@@ -117,6 +131,15 @@ if (length(facets) < 10) {
     xlab("Facet: contrast")
 }
   
+=======
+p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
+  theme_bw() +
+  geom_bar(stat="identity",position="dodge") +
+  facet_wrap(~name, scales="free") +
+  theme(axis.text.x = element_text(angle=90, hjust=1)) +
+  ylab("Percent of all reads") +
+  xlab("Facet: contrast")
+>>>>>>> sort facet summaries by contrasts
 
 ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
        width=round(sqrt(length(facets)))*1.5, height=round(sqrt(length(facets))))
