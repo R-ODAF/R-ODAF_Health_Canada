@@ -10,8 +10,7 @@ samplefile <- args[1]
 genome <- args[2]
 annotfile <- args[3]
 count_table_file <- args[4]
-mapped_unmapped_file <- args[5]
-num_threads   <- as.numeric(args[6])
+num_threads   <- as.numeric(args[5])
 
 cl <- makeCluster(num_threads)
 

@@ -59,14 +59,24 @@ prefix <- paste0(params$platform, "_",
                  format(Sys.time(),'%d-%m-%Y.%H.%M'))  
 
 # plot # degs
-p1 = ggplot(significantResultsUnfaceted, aes(x=paste0(facet,": ",contrast))) +
-  geom_bar(aes(y=..count.., fill=facet)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=90, hjust=1)) +
-  ylab("Number of DEGs") +
-  xlab("Facet: contrast")
-
-ggsave(file.path(paths$RData,paste0(prefix,"_","DEG_summary_plot.png")),p1)
+if (length(facets) < 10) {
+  p1 = ggplot(significantResultsUnfaceted, aes(x=paste0(facet,": ",contrast))) +
+    geom_bar(aes(y=..count.., fill=facet)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Number of DEGs") +
+    xlab("Facet: contrast")
+} else {
+  p1 = ggplot(significantResultsUnfaceted, aes(x=paste0(facet,": ",contrast))) +
+    geom_bar(aes(y=..count.., fill=facet)) +
+    theme_bw() +
+    theme(axis.text.x = element_blank(),
+          legend.position = "none") +
+    facet_wrap(~facet, scales = "free_x") +
+    ylab("Number of DEGs") +
+    xlab("Facet: contrast")
+}
+ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1)
 
 
 # plot filter stats
@@ -77,15 +87,26 @@ filtered_table_long <- filtered_table %>%
   pivot_longer(cols=c(not_significant,relevance_filtered,quantile_filtered,spike_filtered,passed_all_filters)) %>%
   mutate(perc = value/initial) %>%
   mutate(name = factor(name, levels=c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters")))
+if (length(facets) < 10) {
+  p2 = ggplot(filtered_table_long, aes(x=paste0(facet,": ",contrast),y=value,fill=facet)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free") +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Percent of all reads") +
+    xlab("Facet: contrast")
+} else {
+  p2 = ggplot(filtered_table_long, aes(x=paste0(facet,": ",contrast),y=value,fill=facet)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free") +
+    theme(axis.text.x = element_blank(),
+          legend.position = "none") +
+    ylab("Percent of all reads") +
+    xlab("Facet: contrast")
+}
+  
 
-p2 = ggplot(filtered_table_long, aes(x=paste0(facet,": ",contrast),y=value,fill=facet)) +
-  theme_bw() +
-  geom_bar(stat="identity",position="dodge") +
-  facet_wrap(~name, scales="free") +
-  theme(axis.text.x = element_text(angle=90, hjust=1)) +
-  ylab("Percent of all reads") +
-  xlab("Facet: contrast")
-
-ggsave(file.path(paths$RData,paste0(prefix,"_","filter_summary_plot.png")),p2)
+ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2)
 
 

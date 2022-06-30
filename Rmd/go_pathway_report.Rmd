@@ -316,7 +316,7 @@ if (nrow(matches) > 1) {
   DEG_pathways <- DOSE::setReadable(DEG_pathways, species_data$orgdb, keyType = "ENTREZID")
   if (nrow(DEG_pathways@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 1) {
     write.table(as.data.frame(DEG_pathways),
-                file = file.path(paths$pathway_analysis, paste0(params$display_group_filter,"_Enriched.WikiPathways.txt")))
+                file = file.path(paths$pathway_analysis[[params$display_group_filter]],"Enriched.WikiPathways.txt"))
   } else { cat("No significantly enriched terms using criteria selected") }
 }
 ```
@@ -351,7 +351,7 @@ for (i in seq_along(contrasts) ){
       theme(axis.text.y = element_text(angle = 0)) +
       scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
     write.table(as.data.frame(DEG_pathways),
-                file = file.path(paths$pathway_analysis,paste0(params$display_group_filter,"_Enriched.WikiPathways.",
+                file = file.path(paths$pathway_analysis[[params$display_group_filter]],paste0("Enriched.WikiPathways.",
                                                          str_replace_all(levels(significantResults$contrast)[i],
                                                                          " ",
                                                                          "_"),
@@ -397,7 +397,7 @@ for (i in seq_along(contrasts)) {
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
   gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
-              file = file.path(paths$pathway_analysis,paste0(params$display_group_filter,"_Enriched.KEGG_Pathways.",
+              file = file.path(paths$pathway_analysis[[params$display_group_filter]],paste0("Enriched.KEGG_Pathways.",
                                                        str_replace_all(contrasts[i]," ","_"),
                                                        ".txt")))
   if (dim(kk@result)[1] > 1) {

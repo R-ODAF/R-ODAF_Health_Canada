@@ -11,6 +11,7 @@ if(is.na(params$group_facet)){
 for (current_filter in facets) {
   resultsListAll <- overallResListAll[[current_filter]] 
   resultsListDEGs <- overallResListAll[[current_filter]] 
+  resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
   
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
@@ -280,23 +281,80 @@ for (current_filter in facets) {
   setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
   fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
   saveWorkbook(wb4, fname4, overwrite = TRUE)
-  # 
-  # ### IPA
-  # wb5 <- createWorkbook()
-  # modifyBaseFont(wb5, fontSize = 10, fontName = "Arial Narrow")
-  # addWorksheet(wb5, "For IPA upload")
-  # freezePane(wb5, sheet = 1, firstRow = TRUE, firstActiveCol = 5)
-  # writeDataTable(wb5,
-  #                sheet = 1,
-  #                x = as.data.frame(IPA),
-  #                colNames = TRUE,
-  #                rowNames = F,
-  #                tableStyle = "none",
-  #                headerStyle = hs1,
-  #                keepNA = T,
-  #                na.string = "NA")
-  # setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
-  # fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
-  # saveWorkbook(wb5, fname5, overwrite = TRUE)
+
+  ### IPA
+  IPA <- allResults %>% 
+    distinct() %>% 
+    pivot_wider(names_from = contrast, values_from = c(log2FoldChange, linearFoldChange, lfcSE, pvalue, padj))
+  wb5 <- createWorkbook()
+  modifyBaseFont(wb5, fontSize = 10, fontName = "Arial Narrow")
+  addWorksheet(wb5, "For IPA upload")
+  freezePane(wb5, sheet = 1, firstRow = TRUE, firstActiveCol = 5)
+  writeDataTable(wb5,
+                 sheet = 1,
+                 x = as.data.frame(IPA),
+                 colNames = TRUE,
+                 rowNames = F,
+                 tableStyle = "none",
+                 headerStyle = hs1,
+                 keepNA = T,
+                 na.string = "NA")
+  setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
+  fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
+  saveWorkbook(wb5, fname5, overwrite = TRUE)
+  
+  if (!is.na(params$dose)) {
+    # Create input file...
+    lognorm.read.counts <- log2(Counts + 1)
+    bmdexpress <- as.data.frame(lognorm.read.counts)
+    bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
+                        bmdexpress,
+                        stringsAsFactors = F)
+    bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
+                        bmdexpress,
+                        stringsAsFactors = F)
+    biomarkers <- bmdexpress # Still includes all genes
+    genes_filtered <- lapply(resultsListFiltered,
+                             function(x) row.names(as.data.frame(x)))
+    genes_filtered <- unlist(genes_filtered) %>% unique()
+    bmdexpress <- rbind(bmdexpress[1,], bmdexpress[genes_filtered,]) # Remove low-quality genes
+    if (!is.na(params$group_facet)) {
+      fname <- paste0("bmdexpress_input_",
+                      paste(current_filter,
+                            collapse = "_"),
+                      ".txt")
+      fname2 <- paste0("biomarker_input_",
+                       paste(current_filter,
+                             collapse = "_"),
+                       ".txt")
+      write.table(bmdexpress,
+                  file = file.path(paths$BMD_output,
+                                   fname),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+      write.table(biomarkers,
+                  file = file.path(paths$BMD_output,
+                                   fname2),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+    } else {
+      write.table(bmdexpress,
+                  file = file.path(paths$BMD_output, "bmdexpress_input.txt"),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+      write.table(biomarkers,
+                  file = file.path(paths$BMD_output, "biomarkers_input.txt"),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+    }
+  }
 
 }

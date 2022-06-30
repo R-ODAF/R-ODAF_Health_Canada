@@ -156,6 +156,7 @@ if (is.na(params$display_group_facet)) {
     
     make_reports(prefix,params)
   }
+  source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
   # # This depends on 'cat' being available on the command line (i.e., linux-specific)

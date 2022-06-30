@@ -8,7 +8,53 @@ dependencies:
   - rsem
   - fastp
   - star
-  - multiqc
+  - multiqc=1.12
   - snakemake
+  # R CRAN
   - r-curl
-
+  - r-sessioninfo
+  - r-BiocManager
+  - r-tidyverse
+  - r-yaml
+  - r-plotly
+  - r-data.table
+  - r-cluster
+  - r-Cairo
+  - r-sfsmisc
+  - r-fields
+  - r-heatmap3
+  - r-foreach
+  - r-doParallel
+  - r-UpSetR
+  - r-GGally
+  - r-pheatmap
+  - r-kableExtra
+  - r-dendextend
+  - r-dendsort
+  - r-rrcov
+  - r-vtree
+  - r-knitr
+  - r-magrittr
+  - r-DT
+  - r-lattice
+  - r-tidytext
+  - r-openxlsx
+  - r-RColorBrewer
+  - r-viridis
+  - r-sessioninfo
+  - r-gtools
+  - r-ggridges
+  - r-remotes
+  # Install these via different mechanism.
+  #- r-crosstalk
+  #- r-crosstool
+  #- r-cellWise
+  # R Bioconductor
+  - bioconductor-QuasR
+  - bioconductor-rtracklayer
+  - bioconductor-GenomicFeatures
+  - bioconductor-edgeR
+  - bioconductor-DESeq2
+  - bioconductor-ComplexHeatmap
+  - bioconductor-limma
+  - bioconductor-enrichplot

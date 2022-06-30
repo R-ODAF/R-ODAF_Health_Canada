@@ -1,0 +1,70 @@
+# This workflow is used for testing whether the DEG list produced by the new code is identical to the expected result based on example data.
+
+name: Tests
+
+on:
+  push:
+    branches:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04 # self-hosted # not quite the same environment!?
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      matrix:
+        r-version: ['4.1.1']
+        python-version: ['3.7']
+        seq_type: ['temposeq'] # add later... , 'rnaseq']
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install linux dependencies
+        run: |
+          sudo apt update
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: R-ODAF
+          environment-file: environment.yml
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          auto-activate-base: false
+          auto-update-conda: true
+          use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
+      # - name: Set up R ${{ matrix.r-version }}
+      #   uses: r-lib/actions/setup-r@v2
+      #   with:
+      #     r-version: ${{ matrix.r-version }}
+      - name: Install extra dependencies
+        run: |
+          R -e "chooseCRANmirror(1, graphics=FALSE); \
+          remotes::install_github('bwlewis/crosstool'); \
+          install.packages('cellWise')"
+      - name: Check conda install
+        run: |
+          conda info
+          conda list
+        shell: bash -l {0}
+      - name: Import data
+        run: |
+          ls -alht # What is in the "working directory"?
+          git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
+          rm -r data # Remove existing directory before replacing w/ test data
+          rm -r config # Remove existing directory before replacing w/ test data
+          mv test-data/${{ matrix.seq_type}}/* ./
+          wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+      - name: Run workflow
+        run: |
+          snakemake --cores 8
