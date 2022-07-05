@@ -15,14 +15,17 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04 # self-hosted # not quite the same environment!?
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
+        os: ['ubuntu-20.04'] # self-hosted # not quite the same environment!?
+        prefix: /usr/share/miniconda3/envs/R-ODAF
+        label: linux-64
         r-version: ['4.1.1']
         python-version: ['3.7']
         seq_type: ['temposeq'] # add later... , 'rnaseq']
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -l {0}
