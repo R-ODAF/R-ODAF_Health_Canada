@@ -38,6 +38,7 @@ jobs:
       - name: Install linux dependencies
         run: |
           sudo apt update
+          sudo apt-get install libcairo2-dev
       - name: Set up python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
