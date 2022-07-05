@@ -76,7 +76,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         # Apply the "Relevance" condition
         message(paste0("Filtering genes: 75% of at least 1 group need to be above ", params$MinCount, " CPM"))
         SampPerGroup <- table(DESeqDesign_subset[, design])
-        if (!SampPerGroup[1] > 1) { next }
+        if (!SampPerGroup[condition2] > 1) { next }
         
         for (gene in 1:nrow(dds)) {
           CountsPass <- NULL
