@@ -68,3 +68,12 @@ jobs:
       - name: Run workflow
         run: |
           snakemake --cores 8
+      - name: Render studywide QC
+        run: |
+          Rscript scripts/render_studywide_QC_report.R
+      - name: Run DESeq2
+        run: |
+          Rscript scripts/run_DESeq2.R
+      - name: Render Reports
+        run: |
+          Rscript scripts/render_DESeq2_report.R
