@@ -1,6 +1,6 @@
 name: R-ODAF
 channels:
-  - conda-forge
+  - mamba-forge
   - bioconda
   - defaults
 dependencies:
