@@ -2,7 +2,7 @@ name: R-ODAF
 channels:
   - bioconda
   - conda-forge
-#  - defaults
+  - defaults
 dependencies:
   - anaconda-clean
   - rsem
@@ -21,7 +21,7 @@ dependencies:
   - r-plotly
   - r-data.table
   - r-cluster
-  - r-cairo
+  #- r-cairo
   - r-sfsmisc
   - r-fields
   - r-heatmap3
