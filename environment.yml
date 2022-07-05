@@ -1,8 +1,8 @@
 name: R-ODAF
 channels:
-  - bioconda
+ # - bioconda
   - conda-forge
-  - defaults
+#  - defaults
 dependencies:
   - anaconda-clean
   - rsem
