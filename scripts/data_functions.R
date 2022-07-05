@@ -60,7 +60,7 @@ sort_contrasts <- function(DESeqDesign, contrasts, design, sortcol){
 }
 
 process_data_and_metadata <- function(sampledata, DESeqDesign, contrasts, intgroup, design, params){
-    sampleData <- filter_data(sampleData, DESeqDesign, params$threshold)
+    sampleData <- filter_data(sampleData, DESeqDesign, params$nmr_threshold)
     DESeqDesign <- filter_metadata(DESeqDesign, params, design)
     DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
