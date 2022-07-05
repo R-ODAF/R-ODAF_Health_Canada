@@ -21,7 +21,7 @@ dependencies:
   - r-plotly
   - r-data.table
   - r-cluster
-  #- r-cairo
+  - r-cairo=1.5
   - r-sfsmisc
   - r-fields
   - r-heatmap3
