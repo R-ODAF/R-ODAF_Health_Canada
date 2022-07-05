@@ -10,6 +10,7 @@ dependencies:
   - star
   - multiqc=1.12
   - snakemake
+  - pandoc
   # R CRAN
   - r-here
   - r-curl
