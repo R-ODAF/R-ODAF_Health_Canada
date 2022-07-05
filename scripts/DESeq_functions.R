@@ -35,8 +35,10 @@ regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
       condition <- formula(paste0("~", design))
     }
     mm <- model.matrix(condition, colData(rld))
-    mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
-    assay(rld) <- mat
+    if (length(unique(rld[[nuisance]])) > 1) {
+      mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
+      assay(rld) <- mat
+    }
   } else {
     rld <- vst(dds, blind)
   }
