@@ -83,7 +83,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         for (gene in 1:nrow(dds)) {
           CountsPass <- NULL
           for (group in 1:length(SampPerGroup)) {
-            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design])
+            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design], fixed = T)
             sampleNamesGroup <- DESeqDesign_subset[sampleCols, "original_names"]
             Check <- sum(CPMdds[gene,sampleNamesGroup] >= params$MinCount) >= 0.75 * SampPerGroup[group]
             CountsPass <- c(CountsPass, Check)
@@ -134,8 +134,8 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         for (gene in 1:nrow(DECounts)) {
             # Check the median against third quantile
             quantilePass <- NULL
-            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design])
-            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design])
+            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design], fixed = T)
+            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design], fixed = T)
             
             # Same problem as above, use names explictly
             sampleNames_g1 <- DESeqDesign_subset[sampleColsg1, "original_names"]
@@ -156,7 +156,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
+                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design], fixed = T)
                 sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
                 if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
                   Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=
