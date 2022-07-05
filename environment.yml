@@ -60,3 +60,4 @@ dependencies:
   - bioconductor-ComplexHeatmap
   - bioconductor-limma
   - bioconductor-enrichplot
+  - bioconductor-org.hs.eg.db
