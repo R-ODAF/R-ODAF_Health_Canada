@@ -111,16 +111,16 @@ jobs:
         run: |
           cmp truth_checksums/checksum.count_table checksum.count_table
           cmp truth_checksums/checksum.metadata.QC_applied checksum.metadata.QC_applied
-          cmp truth_checksums/checksum.multiQC checksum.multiQC
+          #cmp truth_checksums/checksum.multiQC checksum.multiQC
           cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
       - name: Compare DEG lists to truth set
         run: |
           cmp truth_checksums/checksums.BaP_DEGs checksums.BaP_DEGs
           cmp truth_checksums/checksums.CISP_DEGs checksums.CISP_DEGs
-      - name: Compare pathway analysis to truth set
-        run: |
-          cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
-          cmp truth_checksums/checksums.CISP_pathways checksums.CISP_pathways
+      #- name: Compare pathway analysis to truth set
+        #run: |
+          #cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
+          #cmp truth_checksums/checksums.CISP_pathways checksums.CISP_pathways
       - name: Compare BMD input files to truth set
         run: |
           cmp truth_checksums/checksums.BMD_files checksums.BMD_files
