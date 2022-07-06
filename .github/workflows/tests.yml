@@ -97,3 +97,31 @@ jobs:
       - name: Render Reports
         run: |
           Rscript scripts/render_DESeq2_report.R
+      - name: Generate md5sums
+        run: |
+          md5sum data/processed/count_table.tsv > checksum.count_table
+          md5sum data/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
+          md5sum analysis/QC/MultiQC_Report_data.zip > checksum.multiQC
+          md5sum analysis/QC/details/QC_per_sample.txt > checksum.QC_per_sample
+          md5sum analysis/DEG_lists/BaP/* > checksums.BaP_DEGs
+          md5sum analysis/DEG_lists/CISP/* > checksums.CISP_DEGs
+          md5sum analysis/pathway_analysis/BaP/* > checksums.BaP_pathways
+          md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
+          md5sum analysis/BMD_and_biomarker_files/* > checksums.BMD_files
+      - name: Compare pre-processing and QC files to truth set
+        run: |
+          cmp truth_checksums/checksum.count_table checksum.count_table
+          cmp truth_checksums/checksum.metadata.QC_applied checksum.metadata.QC_applied
+          cmp truth_checksums/checksum.multiQC checksum.multiQC
+          cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
+      - name: Compare DEG lists to truth set
+        run: |
+          cmp truth_checksums/checksums.BaP_DEGs checksums.BaP_DEGs
+          cmp truth_checksums/checksums.CISP_DEGs checksums.CISP_DEGs
+      - name: Compare pathway analysis to truth set
+        run: |
+          cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
+          cmp truth_checksums/checksums.CISP_pathways checksums.CISP_pathways
+      - name: Compare BMD input files to truth set
+        run: |
+          cmp truth_checksums/checksums.BMD_files checksums.BMD_files
