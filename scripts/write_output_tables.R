@@ -39,7 +39,6 @@ for (current_filter in facets) {
   
   prefix <- paste0(params$platform, "_",
                    params$project_title, "_",
-                   paste(params$current_filter, collapse = "_"), "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
   
   for (i in 1:length(resultsListDEGs)) {
