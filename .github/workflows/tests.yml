@@ -84,6 +84,7 @@ jobs:
           rm -r config # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+          wget https://wikipathways-data.wmcloud.org/20210810/gmt/wikipathways-20210810-gmt-Homo_sapiens.gmt
       - name: Run workflow
         run: |
           snakemake --cores 8
