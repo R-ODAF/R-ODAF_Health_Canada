@@ -119,9 +119,9 @@ jobs:
           cat truth_checksums/checksums.BaP_DEGs # Can be informative if there are errors
           # Only check first column, because of timestamps in filenames
           cmp <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'}) \
-              <(cat checksums.BaP_DEGs | awk {'print $1'})
+              <(cat checksums.BaP_DEGs | awk {'print $1'} | sort)
           cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'}) \
-              <(cat checksums.CISP_DEGs | awk {'print $1'})
+              <(cat checksums.CISP_DEGs | awk {'print $1'} | sort)
       - name: Compare pathway analysis to truth set
         run: |
           cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
