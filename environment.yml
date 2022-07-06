@@ -12,6 +12,7 @@ dependencies:
   - snakemake
   - pandoc
   # R CRAN
+  - r-devtools
   - r-here
   - r-curl
   - r-sessioninfo
