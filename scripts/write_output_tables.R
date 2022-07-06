@@ -39,7 +39,11 @@ for (current_filter in facets) {
   
   prefix <- paste0(params$platform, "_",
                    params$project_title, "_",
+                   current_filter, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
+  prefix <- str_replace_all(prefix, " ", "_")
+  prefix <- str_replace_all(prefix, "[[:punct:]]", "")
+  
   
   for (i in 1:length(resultsListDEGs)) {
     message(resultsListDEGs[[i]]@elementMetadata[[2]][2])
