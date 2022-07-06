@@ -122,10 +122,9 @@ jobs:
               <(cat checksums.BaP_DEGs | awk {'print $1'})
           cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'}) \
               <(cat checksums.CISP_DEGs | awk {'print $1'})
-       - name: Compare pathway analysis to truth set
+      - name: Compare pathway analysis to truth set
         run: |
           cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
-          cmp truth_checksums/checksums.CISP_pathways checksums.CISP_pathways
       - name: Compare BMD input files to truth set
         run: |
           cmp truth_checksums/checksums.BMD_files checksums.BMD_files
