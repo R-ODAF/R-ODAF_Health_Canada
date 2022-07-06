@@ -102,8 +102,8 @@ jobs:
           md5sum data/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
           md5sum analysis/QC/MultiQC_Report_data.zip > checksum.multiQC
           md5sum analysis/QC/details/QC_per_sample.txt > checksum.QC_per_sample
-          md5sum analysis/DEG_lists/BaP/* > checksums.BaP_DEGs
-          md5sum analysis/DEG_lists/CISP/* > checksums.CISP_DEGs
+          md5sum analysis/DEG_lists/BaP/*.txt > checksums.BaP_DEGs
+          md5sum analysis/DEG_lists/CISP/*.txt > checksums.CISP_DEGs
           md5sum analysis/pathway_analysis/BaP/* > checksums.BaP_pathways
           md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
           md5sum analysis/BMD_and_biomarker_files/* > checksums.BMD_files
