@@ -64,7 +64,7 @@ process_data_and_metadata <- function(sampleData, DESeqDesign, contrasts, intgro
     DESeqDesign <- filter_metadata(DESeqDesign, params, design)
     DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
-        contrasts <- sort_contrasts(DESeqDesign, contrasts, design, sortcol)
+        contrasts <- sort_contrasts(DESeqDesign, contrasts, design, params$sortcol)
     }
     check_data(sampleData, DESeqDesign, contrasts)
     return(list(sampleData=sampleData, DESeqDesign=DESeqDesign, contrasts=contrasts))
