@@ -55,6 +55,7 @@ dependencies:
   - bioconductor-GenomicFeatures
   - bioconductor-edgeR
   - bioconductor-DESeq2
+  - bioconductor-ashr
   - bioconductor-ComplexHeatmap
   - bioconductor-limma
   - bioconductor-enrichplot
