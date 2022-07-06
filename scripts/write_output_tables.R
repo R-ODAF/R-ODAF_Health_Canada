@@ -10,7 +10,7 @@ if(is.na(params$group_facet)){
 
 for (current_filter in facets) {
   resultsListAll <- overallResListAll[[current_filter]] 
-  resultsListDEGs <- overallResListAll[[current_filter]] 
+  resultsListDEGs <- overallResListDEGs[[current_filter]] # REVIEW: is this right?
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
   
