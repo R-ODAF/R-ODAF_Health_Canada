@@ -57,6 +57,7 @@ dependencies:
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
+  - bioconductor-clusterProfiler
   - bioconductor-edgeR
   - bioconductor-DESeq2
   - bioconductor-ComplexHeatmap
