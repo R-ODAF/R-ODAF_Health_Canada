@@ -45,6 +45,7 @@ dependencies:
   - r-gtools
   - r-ggridges
   - r-remotes
+  - r-ashr
   # Install these via different mechanism.
   #- r-crosstalk
   #- r-crosstool
@@ -55,7 +56,6 @@ dependencies:
   - bioconductor-GenomicFeatures
   - bioconductor-edgeR
   - bioconductor-DESeq2
-  - bioconductor-ashr
   - bioconductor-ComplexHeatmap
   - bioconductor-limma
   - bioconductor-enrichplot
