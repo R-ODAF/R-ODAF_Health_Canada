@@ -48,7 +48,6 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: R-ODAF
-          environment-file: environment.yml
           python-version: ${{ matrix.python-version }}
           mamba-version: "*"
           auto-activate-base: false
