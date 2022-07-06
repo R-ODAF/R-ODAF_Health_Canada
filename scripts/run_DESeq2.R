@@ -103,7 +103,7 @@ original_design <- params$design
 sampleData <- load_count_data(params$SampleDataFile, params$sampledata_sep)
 
 
-processed <- process_data_and_metadata(sampledata, DESeqDesign, contrasts, intgroup, design_to_use, params)
+processed <- process_data_and_metadata(sampleData, DESeqDesign, contrasts, intgroup, design_to_use, params)
 sampleData <- processed$sampleData
 DESeqDesign <- processed$DESeqDesign
 contrasts <- processed$contrasts 
