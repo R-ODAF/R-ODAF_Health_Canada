@@ -42,7 +42,7 @@ for (current_filter in facets) {
                    current_filter, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
   prefix <- str_replace_all(prefix, " ", "_")
-  prefix <- str_replace_all(prefix, "[,\/?:*""><|]+", "",)
+  prefix <- fs::path_sanitize(prefix)
   
   
   for (i in 1:length(resultsListDEGs)) {
