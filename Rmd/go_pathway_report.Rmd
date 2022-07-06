@@ -351,9 +351,7 @@ for (i in seq_along(contrasts) ){
       scale_y_discrete(labels = function(x) stringr::str_wrap(x, width = 30))
     write.table(as.data.frame(DEG_pathways),
                 file = file.path(paths$pathway_analysis[[params$display_group_filter]],paste0("Enriched.WikiPathways.",
-                                                         str_replace_all(levels(significantResults$contrast)[i],
-                                                                         " ",
-                                                                         "_"),
+                                                         str_replace_all(contrasts[i]," ","_"),
                                                          ".txt")))
   } else { plotList[[i]] <- NA }
 }
