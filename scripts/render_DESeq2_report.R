@@ -159,7 +159,7 @@ if (is.na(params$display_group_facet)) {
     make_reports(prefix,params)
   }
   # Only use half the cores because this is really memory intensive for some reason
-  parallel::mclapply(facets, parallel_reports, mc.cores = params$cpus/2)
+  BiocParallel::bplapply(facets, parallel_reports, BPPARAM = BiocParallel::bpparam())
 
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
