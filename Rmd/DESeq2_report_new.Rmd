@@ -311,9 +311,9 @@ plotCounts_gg <- function(i, d, intgroup) {
       xlab('Group') +
       ggtitle(plot_title) +
       coord_trans(y = "log10") +
+      theme_bw() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      labs(color = colnames(plotdata)[colorCol]) +
-      theme_bw()
+      labs(color = colnames(plotdata)[colorCol])
 }
 
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
