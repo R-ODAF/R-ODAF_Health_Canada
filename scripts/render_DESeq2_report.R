@@ -148,16 +148,21 @@ if (is.na(params$display_group_facet)) {
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
 
-  for (i in facets[1:length(facets)]) {
+  parallel_reports <- function(facet) {
+    i <- facet
     message(paste0("Building report for ", i, "..."))
     params$display_group_filter <- i
     prefix <- paste0(params$platform, "_",
                      params$project_title, "_",
                      i, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))  
-    
+                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
+    prefix <- gsub(" ", "_", prefix)
+    prefix <- fs::path_sanitize(prefix)
     make_reports(prefix,params)
   }
+  # Only use half the cores because this is really memory intensive for some reason
+  mclapply(facets, parallel_reports, mc.cores = params$cpus/2)
+
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
