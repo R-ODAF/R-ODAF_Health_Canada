@@ -209,42 +209,38 @@ plot_interactive_PCA(rld_top)
 
 
 # DEG heatmaps {.tabset .tabset-fade}
-
-## All DEGs
-```{r DEG_heatmap_all_genes,fig.width = 10, fig.height = 10}
-mat <- assay(rld_DEGs)
-if (nrow(as.matrix(mat)) > 1) {
-  mat <- mat - rowMeans(mat)
-  pheatmap(mat,
-           annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
-           show_rownames = FALSE,
-           border_color = NA,
-           scale = "row")
-  # color = inferno(10)
-} else {
-  print("No DEGs found.")
-}
-```
-
-## Top `r params$nHeatmapDEGs` differentially abundant genes
-```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
-mat <- assay(rld_top_heatmap) %>%
+```{R heatmap_function}
+plot_DEG_heatmap <- function(rld_data){
+  mat <- assay(rld_data) %>%
   as_tibble(rownames="Ensembl_Gene_ID") %>%
   left_join(dplyr::select(id_table, c("Ensembl_Gene_ID", "Gene_Symbol")), by="Ensembl_Gene_ID") %>%
   mutate(label = paste0(Gene_Symbol," : ",Ensembl_Gene_ID)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
   column_to_rownames("label")
-if (nrow(as.matrix(mat)) > 1) {
-  mat <- mat - rowMeans(mat)
-  pheatmap(mat,
-           annotation_col =  as.data.frame(colData(rld_top_heatmap)[, intgroup, drop = F]),
-           show_rownames = TRUE,
-           border_color = NA,
-           scale = "row")
-  # color = inferno(10)
-} else {
-  print("No DEGs found.")
+  if (nrow(as.matrix(mat)) > 1) {
+    mat <- mat - rowMeans(mat)
+    return(pheatmap(mat,
+             annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
+             show_rownames = (nrow(rld_DEGs) <= 50),
+             border_color = NA,
+             scale = "row"))
+  } else {
+    return("No DEGs found.")
+  }
 }
+
+
+```
+
+
+## All DEGs
+```{r DEG_heatmap_all_genes,fig.width = 10, fig.height = 10}
+plot_DEG_heatmap(rld_DEGs)
+```
+
+## Top `r params$nHeatmapDEGs` differentially abundant genes
+```{r DEG_heatmap_DEGs, fig.width = 10, fig.height = 10}
+plot_DEG_heatmap(rld_top_heatmap)
 ```
 
 # Genes of interest
