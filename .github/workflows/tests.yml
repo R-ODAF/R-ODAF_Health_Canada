@@ -117,7 +117,10 @@ jobs:
         run: |
           cat checksums.BaP_DEGs # Can be informative if there are errors
           cat truth_checksums/checksums.BaP_DEGs # Can be informative if there are errors
-          cat analysis/DEG_lists/BaP/*_significant.txt # ??
+          # There are rounding differences between different environments, e.g.:
+          # cat analysis/DEG_lists/BaP/*_significant.txt
+          cat checksums.CISP_DEGs
+          cat checksums.BaP_pathways
           # Only check first column, because of timestamps in filenames
           cmp <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort) \
               <(cat checksums.BaP_DEGs | awk {'print $1'} | sort)
