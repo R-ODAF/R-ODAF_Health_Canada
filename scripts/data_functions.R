@@ -59,12 +59,12 @@ sort_contrasts <- function(DESeqDesign, contrasts, design, sortcol){
     return(ordered_contrasts)
 }
 
-process_data_and_metadata <- function(sampledata, DESeqDesign, contrasts, intgroup, design, params){
-    sampleData <- filter_data(sampleData, DESeqDesign, params$threshold)
+process_data_and_metadata <- function(sampleData, DESeqDesign, contrasts, intgroup, design, params){
+    sampleData <- filter_data(sampleData, DESeqDesign, params$nmr_threshold)
     DESeqDesign <- filter_metadata(DESeqDesign, params, design)
     DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
-        contrasts <- sort_contrasts(DESeqDesign, contrasts, design, sortcol)
+        contrasts <- sort_contrasts(DESeqDesign, contrasts, design, params$sortcol)
     }
     check_data(sampleData, DESeqDesign, contrasts)
     return(list(sampleData=sampleData, DESeqDesign=DESeqDesign, contrasts=contrasts))

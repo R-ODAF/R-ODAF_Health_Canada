@@ -48,7 +48,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   # case 3: yes facet, yes display facet
 } else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
   display_group_filter <- params$display_group_filter
-  
+  # This does not work when the $group_facet and $display_group_facet are different.
+  # It should be possible though... for example, when $display_group_filter includes
+  # more than one facet
   dds <- ddsList[[display_group_filter]]
   resultsListAll <- overallResListAll[[display_group_filter]]
   resultsListDEGs <- overallResListDEGs[[display_group_filter]]

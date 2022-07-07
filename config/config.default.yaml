@@ -8,6 +8,7 @@ common:
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
 
 ###### Alignment and processing pipeline parameters
 
@@ -25,7 +26,6 @@ QC:
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
-  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
   exp_groups:

@@ -1,7 +1,7 @@
 name: R-ODAF
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
   - anaconda-clean
@@ -10,8 +10,10 @@ dependencies:
   - star
   - multiqc=1.12
   - snakemake
+  - pandoc
   # R CRAN
   - r-devtools
+  - r-here
   - r-curl
   - r-sessioninfo
   - r-BiocManager
@@ -20,7 +22,7 @@ dependencies:
   - r-plotly
   - r-data.table
   - r-cluster
-  - r-Cairo
+  - r-cairo=1.5
   - r-sfsmisc
   - r-fields
   - r-heatmap3
@@ -55,8 +57,10 @@ dependencies:
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
+  - bioconductor-clusterProfiler
   - bioconductor-edgeR
   - bioconductor-DESeq2
   - bioconductor-ComplexHeatmap
   - bioconductor-limma
   - bioconductor-enrichplot
+  - bioconductor-org.hs.eg.db

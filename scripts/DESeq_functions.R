@@ -35,8 +35,10 @@ regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
       condition <- formula(paste0("~", design))
     }
     mm <- model.matrix(condition, colData(rld))
-    mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
-    assay(rld) <- mat
+    if (length(unique(rld[[nuisance]])) > 1) {
+      mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
+      assay(rld) <- mat
+    }
   } else {
     rld <- vst(dds, blind)
   }
@@ -76,12 +78,12 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         # Apply the "Relevance" condition
         message(paste0("Filtering genes: 75% of at least 1 group need to be above ", params$MinCount, " CPM"))
         SampPerGroup <- table(DESeqDesign_subset[, design])
-        if (!SampPerGroup[1] > 1) { next }
+        if (!SampPerGroup[condition2] > 1) { next }
         
         for (gene in 1:nrow(dds)) {
           CountsPass <- NULL
           for (group in 1:length(SampPerGroup)) {
-            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design])
+            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design], fixed = T)
             sampleNamesGroup <- DESeqDesign_subset[sampleCols, "original_names"]
             Check <- sum(CPMdds[gene,sampleNamesGroup] >= params$MinCount) >= 0.75 * SampPerGroup[group]
             CountsPass <- c(CountsPass, Check)
@@ -132,8 +134,8 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         for (gene in 1:nrow(DECounts)) {
             # Check the median against third quantile
             quantilePass <- NULL
-            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design])
-            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design])
+            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design], fixed = T)
+            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design], fixed = T)
             
             # Same problem as above, use names explictly
             sampleNames_g1 <- DESeqDesign_subset[sampleColsg1, "original_names"]
@@ -154,7 +156,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design])
+                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design], fixed = T)
                 sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
                 if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
                   Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=

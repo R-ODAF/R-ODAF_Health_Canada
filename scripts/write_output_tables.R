@@ -10,7 +10,7 @@ if(is.na(params$group_facet)){
 
 for (current_filter in facets) {
   resultsListAll <- overallResListAll[[current_filter]] 
-  resultsListDEGs <- overallResListAll[[current_filter]] 
+  resultsListDEGs <- overallResListDEGs[[current_filter]] # REVIEW: is this right?
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
   
@@ -39,8 +39,11 @@ for (current_filter in facets) {
   
   prefix <- paste0(params$platform, "_",
                    params$project_title, "_",
-                   paste(params$current_filter, collapse = "_"), "_",
+                   current_filter, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
+  prefix <- str_replace_all(prefix, " ", "_")
+  prefix <- fs::path_sanitize(prefix)
+  
   
   for (i in 1:length(resultsListDEGs)) {
     message(resultsListDEGs[[i]]@elementMetadata[[2]][2])

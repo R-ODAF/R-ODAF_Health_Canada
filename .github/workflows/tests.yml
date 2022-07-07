@@ -6,20 +6,29 @@ on:
   push:
     branches:
       - '*'
+  
+  schedule:
+    - cron: '0 0 1 * *'
+env:
+  CACHE_NUMBER: 0
 
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-20.04 # self-hosted # not quite the same environment!?
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
+        include: 
+          - os: ubuntu-20.04
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/R-ODAF
         r-version: ['4.1.1']
         python-version: ['3.7']
         seq_type: ['temposeq'] # add later... , 'rnaseq']
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -l {0}
@@ -28,25 +37,35 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install linux dependencies
         run: |
-          sudo apt update
+          sudo apt-get update
+          sudo apt-get install libcairo2-dev
+          sudo apt-get install libxt-dev
       - name: Set up python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Set up miniconda
+      - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: R-ODAF
-          environment-file: environment.yml
-          python-version: ${{ matrix.python-version }}
-          mamba-version: "*"
-          auto-activate-base: false
-          auto-update-conda: true
-          use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
-      # - name: Set up R ${{ matrix.r-version }}
-      #   uses: r-lib/actions/setup-r@v2
-      #   with:
-      #     r-version: ${{ matrix.r-version }}
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: R-ODAF
+            use-mamba: true
+            python-version: ${{ matrix.python-version }}
+            mamba-version: "*"
+            auto-activate-base: false
+            auto-update-conda: true
+            use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      - uses: actions/cache@v3
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+      - name: Update environment
+        run: mamba env update -n R-ODAF -f environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
       - name: Install extra dependencies
         run: |
           R -e "chooseCRANmirror(1, graphics=FALSE); \
@@ -68,3 +87,48 @@ jobs:
       - name: Run workflow
         run: |
           snakemake --cores 8
+      - name: Render studywide QC
+        run: |
+          Rscript scripts/render_studywide_QC_report.R
+      - name: Run DESeq2
+        run: |
+          Rscript scripts/run_DESeq2.R
+      - name: Render Reports
+        run: |
+          Rscript scripts/render_DESeq2_report.R
+      - name: Generate md5sums
+        run: |
+          md5sum data/processed/count_table.tsv > checksum.count_table
+          md5sum data/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
+          md5sum analysis/QC/MultiQC_Report_data.zip > checksum.multiQC
+          md5sum analysis/QC/details/QC_per_sample.txt > checksum.QC_per_sample
+          md5sum analysis/DEG_lists/BaP/*.txt > checksums.BaP_DEGs
+          md5sum analysis/DEG_lists/CISP/*.txt > checksums.CISP_DEGs
+          md5sum analysis/pathway_analysis/BaP/*WikiPathways* > checksums.BaP_pathways
+          md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
+          md5sum analysis/BMD_and_biomarker_files/* > checksums.BMD_files
+      - name: Compare pre-processing and QC files to truth set
+        run: |
+          cmp truth_checksums/checksum.count_table checksum.count_table
+          cmp truth_checksums/checksum.metadata.QC_applied checksum.metadata.QC_applied
+          #cmp truth_checksums/checksum.multiQC checksum.multiQC
+          cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
+      - name: Compare DEG lists to truth set
+        run: |
+          cat checksums.BaP_DEGs # Can be informative if there are errors
+          cat truth_checksums/checksums.BaP_DEGs # Can be informative if there are errors
+          # There are rounding differences between different environments, e.g.:
+          # cat analysis/DEG_lists/BaP/*_significant.txt
+          cat checksums.CISP_DEGs
+          cat checksums.BaP_pathways
+          # Only check first column, because of timestamps in filenames
+          cmp <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort) \
+              <(cat checksums.BaP_DEGs | awk {'print $1'} | sort)
+          cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort) \
+              <(cat checksums.CISP_DEGs | awk {'print $1'} | sort)
+      - name: Compare pathway analysis to truth set
+        run: |
+          cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
+      - name: Compare BMD input files to truth set
+        run: |
+          cmp truth_checksums/checksums.BMD_files checksums.BMD_files
