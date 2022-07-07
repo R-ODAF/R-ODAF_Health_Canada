@@ -116,11 +116,11 @@ make_reports <- function(file_prefix,pars){
 # make reports
 if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
-
+  
   # output file prefix
   prefix <- paste0(params$platform, "_",
-                    params$project_title, "_",
-                    format(Sys.time(),'%d-%m-%Y.%H.%M'))
+                   params$project_title, "_",
+                   format(Sys.time(),'%d-%m-%Y.%H.%M'))
   
   make_reports(prefix,params)
 } else if (any(!is.na(params$display_group_filter))) {
