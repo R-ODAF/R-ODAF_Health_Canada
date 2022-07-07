@@ -145,9 +145,9 @@ if (is.na(params$display_group_facet)) {
   facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
-
-  parallel_reports <- function(facet) {
-    i <- facet
+  
+ # render_reports_parallel <- function(i) {
+  for (i in facets) {
     message(paste0("Building report for ", i, "..."))
     params$display_group_filter <- i
     prefix <- paste0(params$platform, "_",
@@ -158,9 +158,17 @@ if (is.na(params$display_group_facet)) {
     prefix <- fs::path_sanitize(prefix)
     make_reports(prefix,params)
   }
-  # Only use half the cores because this is really memory intensive for some reason
-  BiocParallel::bplapply(facets, parallel_reports, BPPARAM = BiocParallel::bpparam())
+  # parallel::mcmapply(FUN = render_reports_parallel, facets, mc.cores = params$cpus/2)
 
+  # library(doParallel)
+  #   n_cores <- parallel::detectCores()
+  #   cluster <- parallel::makeCluster(n_cores-1)
+  #   doParallel::registerDoParallel(cluster)
+  # 
+  #   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
+  #     print(facets[i])
+  #     render_reports_parallel(facets[i])
+  #   }
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
