@@ -47,8 +47,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   
   # case 3: yes facet, yes display facet
 } else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
-  if(params$group_facet != params$display_group_facet) 
+  if(params$group_facet != params$display_group_facet) {
     stop("Error: display_group_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
+  }
   stopifnot(params$group_facet == params$display_group_facet)
   display_group_filter <- params$display_group_filter
   dds <- ddsList[[display_group_filter]]
