@@ -148,8 +148,8 @@ if (is.na(params$display_group_facet)) {
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
   
- # render_reports_parallel <- function(i) {
-  for (i in facets) {
+  render_reports_parallel <- function(i) {
+  #for (i in facets) {
     message(paste0("Building report for ", i, "..."))
     params$display_group_filter <- i
     prefix <- paste0(params$platform, "_",
@@ -162,11 +162,13 @@ if (is.na(params$display_group_facet)) {
   }
   # parallel::mcmapply(FUN = render_reports_parallel, facets, mc.cores = params$cpus/2)
 
-  # library(doParallel)
-  #   n_cores <- parallel::detectCores()
-  #   cluster <- parallel::makeCluster(n_cores-1)
-  #   doParallel::registerDoParallel(cluster)
+  
+   #library(doParallel)
+     n_cores <- parallel::detectCores()
+     cluster <- parallel::makeCluster(n_cores-1)
+    doParallel::registerDoParallel(cluster)
   # 
+  parallel::clusterMap(cl = cluster, render_reports_parallel, facets)
   #   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
   #     print(facets[i])
   #     render_reports_parallel(facets[i])
