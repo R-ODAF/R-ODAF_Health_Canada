@@ -68,6 +68,7 @@ if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 # convenience function
 make_reports <- function(file_prefix,pars){
+  y <- new.env()
   if(params$generate_main_report){
     message("Generating main report")
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
@@ -76,7 +77,7 @@ make_reports <- function(file_prefix,pars){
                       encoding = "UTF-8",
                       output_file = main_file,
                       params = pars,
-                      envir = new.env())
+                      envir = y)
     
   }
   if(params$generate_extra_stats_report){
@@ -87,7 +88,7 @@ make_reports <- function(file_prefix,pars){
                       encoding = "UTF-8",
                       output_file = extra_stats_file,
                       params = pars,
-                      envir = new.env())
+                      envir = y)
     
   }
   if(params$generate_data_explorer_report){
@@ -98,7 +99,7 @@ make_reports <- function(file_prefix,pars){
                       encoding = "UTF-8",
                       output_file = data_explorer_file,
                       params = pars,
-                      envir = new.env())
+                      envir = y)
     
   }
   if(params$generate_go_pathway_report){
@@ -109,7 +110,7 @@ make_reports <- function(file_prefix,pars){
                       encoding = "UTF-8",
                       output_file = go_pathway_file,
                       params = pars,
-                      envir = new.env())
+                      envir = y)
     
   }
 }
