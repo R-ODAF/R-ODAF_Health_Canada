@@ -66,7 +66,7 @@ if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 # convenience function
 make_reports <- function(file_prefix,pars){
-  y <- new.env()
+  y <- globalenv() # new.env()
   if(params$generate_main_report){
     message("Generating main report")
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
