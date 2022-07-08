@@ -221,7 +221,7 @@ plot_DEG_heatmap <- function(rld_data){
     mat <- mat - rowMeans(mat)
     return(pheatmap(mat,
              annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
-             show_rownames = (nrow(rld_DEGs) <= 50),
+             show_rownames = (nrow(rld_data) <= 50),
              border_color = NA,
              scale = "row"))
   } else {
