@@ -74,7 +74,7 @@ render_report <- function(report_in, report_out, pars) {
 }
 
 # convenience function
-make_reports <- function(params = params, facet) {
+make_reports <- function(params = pars, facet) {
   # Determine filename prefix based on existing parameters
   # Are there ways this logic might break?
   if (is.na(params$display_group_facet)) {
@@ -142,7 +142,7 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 }
 
 #### make_reports(params, facets)
-  
+  pars <- params
   parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = params$cpus/2)
   
   #library(doParallel)
