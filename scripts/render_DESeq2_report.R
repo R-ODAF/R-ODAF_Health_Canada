@@ -104,25 +104,25 @@ make_reports <- function(params = pars, facet) {
   # Write the reports
   if(params$generate_main_report){
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-    main_file <- file.path(report_dir, paste0(file_prefix,".html"))
+    main_file <- file.path(report_dir, paste0(prefix,".html"))
     render_report(main_report, main_file, params)
   }
   if(params$generate_extra_stats_report){
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
-    extra_stats_file <- file.path(report_dir, paste0("extra_stats_",file_prefix,".html"))
+    extra_stats_file <- file.path(report_dir, paste0("extra_stats_",prefix,".html"))
     render_report(extra_stats_report, extra_stats_file, params)
   }
   if(params$generate_data_explorer_report){
     message("Generating data explorer report")
     data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
-    data_explorer_file <- file.path(report_dir, paste0("data_explorer_",file_prefix,".html"))  
+    data_explorer_file <- file.path(report_dir, paste0("data_explorer_",prefix,".html"))  
     render_report(data_explorer_report, data_explorer_file, params)
   }
   if(params$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
     go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
-    go_pathway_file <- file.path(report_dir, paste0("go_pathway_",file_prefix,".html"))
+    go_pathway_file <- file.path(report_dir, paste0("go_pathway_",prefix,".html"))
     render_report(go_pathway_report, go_pathway_file, params)
   }
 }
