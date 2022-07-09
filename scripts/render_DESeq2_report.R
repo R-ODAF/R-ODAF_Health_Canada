@@ -74,7 +74,7 @@ render_report <- function(report_in, report_out, pars) {
 }
 
 # convenience function
-make_reports <- function(params, facet) {
+make_reports <- function(params = params, facet) {
   # Determine filename prefix based on existing parameters
   # Are there ways this logic might break?
   if (is.na(params$display_group_facet)) {
@@ -143,14 +143,14 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 
 #### make_reports(params, facets)
   
-  # parallel::mcmapply(FUN = render_reports_parallel, facets, mc.cores = params$cpus/2)
+  parallel::mcmapply(FUN = make_reports, facets, mc.cores = params$cpus/2)
   
   #library(doParallel)
-  n_cores <- parallel::detectCores()
-  cluster <- parallel::makeCluster(n_cores-1)
-  doParallel::registerDoParallel(cluster)
+  #n_cores <- parallel::detectCores()
+ # cluster <- parallel::makeCluster(n_cores-1)
+#  doParallel::registerDoParallel(cluster)
   # 
-  parallel::clusterMap(cl = cluster, make_reports, params = params, facet = facets)
+ # parallel::clusterMap(cl = cluster, make_reports, params = params, facet = facets)
   #   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
   #     print(facets[i])
   #     render_reports_parallel(facets[i])
