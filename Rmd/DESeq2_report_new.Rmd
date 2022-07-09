@@ -63,7 +63,7 @@ Code sections are hidden by default but can be viewed by clicking the 'code' but
 
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"))
+source(here::here("scripts","load-facet-data.R"), local = FALSE)
 
 
 if(params$platform == "TempO-Seq"){
