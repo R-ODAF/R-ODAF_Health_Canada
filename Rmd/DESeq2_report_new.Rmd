@@ -28,8 +28,8 @@ library('tidytext')
 
 ```{r load_functions, include=F}
 
-source(here::here("scripts","data_functions.R"))
-source(here::here("scripts","DESeq_functions.R"))
+source(here::here("scripts","data_functions.R"), local = TRUE)
+source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
 has_description <- !is.na(params$project_description)
 description_text <- paste("Purpose of report:", params$project_description)
