@@ -163,9 +163,9 @@ bscols(widths = c(3,NA),
 
 ```{r PCA_function, collapse=TRUE}
 
-plot_interactive_PCA <- function(rld_data, intgroup_to_plot){
+plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
-  data_pca <- plotPCA(rld_data, intgroup = c("diet_dose","Diet","dose","RNA_extraction"), ntop = nrow(assay(rld_data)), returnData = TRUE)
+  data_pca <- plotPCA(rld_data, intgroup = all_intgroups, ntop = nrow(assay(rld_data)), returnData = TRUE)
   ## Get percent of variance explained
   percentVar <- round(100 * attr(data_pca, "percentVar"))
   ## Plot
@@ -196,20 +196,19 @@ This plot shows the first two principal components that explain the variability 
 
 
 for (g in params$intgroup_to_plot){
-  
   cat(paste0("### ",g,"\n\n"))
-  print(htmltools::tagList( plot_interactive_PCA(rld, g)))
+  print(htmltools::tagList( plot_interactive_PCA(rld, g, params$intgroup_to_plot)))
   cat("\n\n")
 }
 ```
 
-## All `r nrow(rld_DEGs)` DEGs {.tabset .tabset-fade}
+## `r nrow(rld_DEGs)` DEGs {.tabset .tabset-fade}
 
 ```{r PCA_DEGs, results='asis'}
 if (length(rld_DEGs) > 1) {
   for (g in params$intgroup_to_plot){
     cat(paste0("### ",g,"\n\n"))
-    print(htmltools::tagList( plot_interactive_PCA(rld_DEGs,g)))
+    print(htmltools::tagList( plot_interactive_PCA(rld_DEGs, g, params$intgroup_to_plot)))
     cat("\n\n")
   }
 } else {
@@ -222,7 +221,7 @@ if (length(rld_DEGs) > 1) {
 ```{r PCA_top_N, results='asis'}
 for (g in params$intgroup_to_plot){
   cat(paste0("### ",g,"\n\n"))
-  print(htmltools::tagList( plot_interactive_PCA(rld_top,g)))
+  print(htmltools::tagList( plot_interactive_PCA(rld_top,g, params$intgroup_to_plot)))
   cat("\n\n")
 } 
 ```
