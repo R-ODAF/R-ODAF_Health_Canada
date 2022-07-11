@@ -66,6 +66,13 @@ prefix <- paste0(params$platform, "_",
 p1_data <- significantResultsUnfaceted %>%
     mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
 
+
+if (length(facets) < 10) {
+  plot_size = 5 
+} else {
+  plot_size = round(sqrt(length(facets)))*1.5
+}
+
 if (length(facets) < 10) {
     p1 = ggplot(p1_data, aes(x=facet_contrast)) +
         geom_bar(aes(y=..count.., fill=facet)) +
@@ -84,7 +91,7 @@ if (length(facets) < 10) {
         xlab("Facet: contrast")
 }
 ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1,
-       width=round(sqrt(length(facets)))*1.5, height=round(sqrt(length(facets)))*1.5)
+       width=plot_size, height=plot_size, units="in", dpi=300)
 
 
 # plot filter stats
@@ -117,8 +124,7 @@ if (length(facets) < 10) {
     xlab("Facet: contrast")
 }
   
-
 ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
-       width=round(sqrt(length(facets)))*1.5, height=round(sqrt(length(facets))))
+       width=plot_size, height=plot_size, units="in", dpi=300)
 
 
