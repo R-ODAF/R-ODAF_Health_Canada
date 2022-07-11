@@ -163,6 +163,7 @@ bscols(widths = c(3,NA),
 
 ```{r PCA_function, collapse=TRUE}
 
+
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
   data_pca <- plotPCA(rld_data, intgroup = all_intgroups, ntop = nrow(assay(rld_data)), returnData = TRUE)
@@ -170,6 +171,11 @@ plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   percentVar <- round(100 * attr(data_pca, "percentVar"))
   ## Plot
   highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable? "group" too right?
+  # colour stuff
+  colour_scheme <- "Set1"
+  if(  length(unique(colData(rld_data)[,intgroup_to_plot])) > 9 ){ # max for Set1
+    colour_scheme <- "Spectral" # not my favourite but this plot isn't going to work for large numbers of colours anyway.
+  }
   p <- plot_ly(data = highlight_pca,
           x = ~PC1,
           y = ~PC2,
@@ -177,7 +183,7 @@ plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
           text = ~name,
           type = "scatter",
           mode = "markers",
-          colors = "Set1") %>%
+          colors = colour_scheme) %>%
     layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
            yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance"))
     )
@@ -192,7 +198,7 @@ This plot shows the first two principal components that explain the variability 
 
 ## All `r nrow(rld)` genes {.tabset .tabset-fade}
 
-```{r PCA_all_genes, results='asis'}
+```{r PCA_all_genes, results='asis', warning = FALSE}
 
 
 for (g in params$intgroup_to_plot){
@@ -204,7 +210,7 @@ for (g in params$intgroup_to_plot){
 
 ## `r nrow(rld_DEGs)` DEGs {.tabset .tabset-fade}
 
-```{r PCA_DEGs, results='asis'}
+```{r PCA_DEGs, results='asis', warning = FALSE}
 if (length(rld_DEGs) > 1) {
   for (g in params$intgroup_to_plot){
     cat(paste0("### ",g,"\n\n"))
@@ -218,7 +224,7 @@ if (length(rld_DEGs) > 1) {
 
 ## Top `r params$nBest` genes {.tabset .tabset-fade}
 
-```{r PCA_top_N, results='asis'}
+```{r PCA_top_N, results='asis', warning = FALSE}
 for (g in params$intgroup_to_plot){
   cat(paste0("### ",g,"\n\n"))
   print(htmltools::tagList( plot_interactive_PCA(rld_top,g, params$intgroup_to_plot)))
