@@ -77,6 +77,7 @@ render_report <- function(report_in, report_out, pars) {
 make_reports <- function(params = pars, facet) {
   # Determine filename prefix based on existing parameters
   # Are there ways this logic might break?
+  params <- as.list(params)
   if (is.na(params$display_group_facet)) {
     message("Writing a single report for whole experiment.")
     prefix <- paste0(params$platform, "_",
