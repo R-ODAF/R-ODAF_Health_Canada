@@ -113,6 +113,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
                                alpha = params$alpha,
                                pAdjustMethod = 'fdr',
                                cooksCutoff = params$cooks) # If Cooks cutoff disabled - manually inspect.
+
         res <- lfcShrink(dds,
                          contrast = currentContrast,
                          res = res,
@@ -176,7 +177,7 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
         
         allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
-        DECounts_real <- DEsamples[rowSums(Filter) == 3 & abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
+        DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
         DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
         DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
         #TODO: output quantile rule failing and spike failing genes
