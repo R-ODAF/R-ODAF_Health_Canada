@@ -252,8 +252,7 @@ This section contains plots showing the normalized counts per sample for each gr
 
 numResults <- params$nBestFeatures
 
-allResultsOrdered_logFC_filter <- dplyr::filter(allResults, abs(linearFoldChange) > params$linear_fc_filter) %>%
-  arrange(-abs(linearFoldChange))
+allResultsOrdered_logFC_filter <- significantResults %>% arrange(-abs(linearFoldChange))
 
 
 allResultsOrdered_logFC_filter %>%
@@ -278,7 +277,6 @@ allResultsOrdered_logFC_filter %>%
              size = 1) +
   theme_bw() +
   ggtitle(paste0("Top ",numResults," genes by fold change grouped by treatment"))
-
 
 ```
 
