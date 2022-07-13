@@ -11,6 +11,19 @@ replace_nulls_in_config <- function(params) {
     return(params_new)
 }
 
+
+check_required_params <- function(params){
+  required_params <- c("projectdir","dose","platform","nmr_threshold")
+  for (p in required_params){
+    if(is.na(params[p])){
+      stop(paste0("Required param ",p," was NA. You should set that param to something in config.yaml."))
+    } else if(is.null(params[p])){
+      stop(paste0("Required param ",p," was null. This shouldn't happen, as you should be running 'replace_nulls_in_config"))
+    }
+  }
+}
+
+
 load_species <- function(species){
   species_data = list()
   species_data$loaded <- FALSE
