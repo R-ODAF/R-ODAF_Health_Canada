@@ -106,14 +106,18 @@ volcano_df <-  as.data.frame(allResults) %>%
 
 volcano_df_sig <- as.data.frame(significantResults)
 
+volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter)
+volcano_status_passed <- "Passed all filters"
+volcano_status_RODAF <- "Filtered by R-ODAF criteria"
+volcano_status_FDR <- paste0("FDR >= ", params$alpha)
 
 volcano_df <- volcano_df %>%
   mutate(
     sig_group = case_when(
-      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("Linear fold change < ",params$linear_fc_filter),
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ "Filtered by R-ODAF criteria",
-      TRUE                                                                                                               ~ paste0("FDR >= ", params$alpha)
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ volcano_status_FC,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
+      TRUE                                                                                                               ~ volcano_status_FDR
     )
   )
 
@@ -160,6 +164,86 @@ bscols(widths = c(3,NA),
 ```
 
 # PCA plots
+
+```{r asdf}
+
+status_colors <- list(FDR = "#66c2a5", FC = "#8da0cb", passed = "#e78ac3", RODAF = "#FFC0CB")
+all_statuses <- list(FDR = volcano_status_FDR, FC = volcano_status_FC, passed = volcano_status_passed, RODAF = volcano_status_RODAF)
+all_status_keys <- c("FDR", "FC", "passed", "RODAF")
+
+
+x <- list()
+y <- list()
+for(cont in volcano_contrasts){
+  x[[cont]] <- list(
+    FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(log2FoldChange),
+    FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(log2FoldChange),
+    passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% pull(log2FoldChange),
+    RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% pull(log2FoldChange)
+  )
+  y[[cont]] <- list(
+    FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% mutate(log10p = -log10(padj)) %>% pull(log10p)
+  )
+}
+
+traces = c()
+
+fig <- plot_ly(type = 'scatter', mode='markers')
+for(cont in volcano_contrasts[1:3]){
+  for (status in all_status_keys){
+    fig <- fig %>% add_trace(x=x[[cont]][[status]],
+                             y=y[[cont]][[status]],
+                             mode = 'markers',
+                             marker = list(color=status_colors[[status]]),
+                             visible = FALSE,
+                             name = all_statuses[[status]])
+    traces <- c(traces, paste0(cont,"_",status))
+  }
+}
+
+
+vec_1 <- rep(FALSE, 3*length(all_status_keys))
+vec_1[1:4] <- TRUE
+vec_2 <- rep(FALSE, 3*length(all_status_keys))
+vec_2[5:8] <- TRUE
+vec_3 <- rep(FALSE, 3*length(all_status_keys))
+vec_3[9:12] <- TRUE
+list_1 <- as.list(c(FALSE, vec_1))
+list_2 <- as.list(c(FALSE, vec_2))
+list_3 <- as.list(c(FALSE, vec_3))
+
+
+# updatemenus component
+updatemenus <- list(
+  list(
+    active = 0,
+    buttons = list(
+      list(method = "restyle",
+           args = list("visible", list_1),
+           label = volcano_contrasts[1]),
+      
+      list(method = "restyle",
+           args = list("visible", list_2),
+           label = volcano_contrasts[2]),
+      
+      list(method = "restyle",
+           args = list("visible", list_3),
+           label = volcano_contrasts[3])
+    )
+  )
+)
+
+fig <- fig %>% layout(title = "Highlight Clusters",
+                      showlegend = TRUE,
+                      updatemenus = updatemenus)
+
+fig
+```
+
+# PCA plots {.tabset .tabset-fade}
 
 ```{r PCA_function, collapse=TRUE}
 
