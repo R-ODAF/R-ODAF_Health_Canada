@@ -164,10 +164,10 @@ bscols(widths = c(3,NA),
 ```
 
 # PCA plots
+Select a contrast from the dropdown list to filter by contrast.
+```{r volcano_by_contrast_new, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE}
 
-```{r volcano_by_contrast_new, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
-
-status_colors <- list(FDR = "#66c2a5", FC = "#8da0cb", passed = "#e78ac3", RODAF = "#FFC0CB")
+status_colors <- list(FDR = "#66c2a5", FC = "#8da0cb", passed = "#e78ac3", RODAF = "#fc8d62")
 all_statuses <- list(FDR = volcano_status_FDR, FC = volcano_status_FC, passed = volcano_status_passed, RODAF = volcano_status_RODAF)
 all_status_keys <- c("FDR", "FC", "passed", "RODAF")
 volcano_contrasts <- unique(allResults$contrast)
@@ -197,7 +197,7 @@ for(cont in volcano_contrasts){
                              y=y[[cont]][[status]],
                              mode = 'markers',
                              marker = list(color=status_colors[[status]]),
-                             visible = FALSE,
+                             visible = TRUE,
                              name = all_statuses[[status]])
   }
 }
