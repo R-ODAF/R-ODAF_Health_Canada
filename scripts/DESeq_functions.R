@@ -252,7 +252,7 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F)
         dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
       ## FILTERS ##
       if (filter_results == T) {
-        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < alpha & abs(deg_table$linearFoldChange) > linear_fc_filter, ]
+        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < params$alpha & abs(deg_table$linearFoldChange) > params$linear_fc_filter, ]
       }
       annotated_results[[i]] <- deg_table %>% dplyr::distinct()
     }

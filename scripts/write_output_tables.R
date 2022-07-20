@@ -1,6 +1,7 @@
 library(openxlsx)
 library(data.table)
 library(edgeR)
+library(tidyr)
 
 
 
@@ -16,6 +17,10 @@ for (current_filter in facets) {
   
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
+  filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T)  %>%
+    dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
+    arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
+    distinct(Gene_Symbol, .keep_all=TRUE) 
   
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
@@ -127,6 +132,10 @@ for (current_filter in facets) {
   write.table(significantResults,
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
+              quote = F, sep = '\t', col.names = NA)
+  write.table(filteredResults,
+              file = file.path(output_folder,
+                               paste0(prefix, "-DESeq_output_filtered_p",params$alpha,"_FC",params$linear_fc_filter,".txt")),
               quote = F, sep = '\t', col.names = NA)
   write.table(summaryTable,
               file = file.path(output_folder,
