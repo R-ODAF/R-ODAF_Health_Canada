@@ -159,26 +159,34 @@ bscols(widths = c(3,NA),
 
 ```
 
-# PCA plots {.tabset .tabset-fade}
+# PCA plots
 
 ```{r PCA_function, collapse=TRUE}
 
-plot_interactive_PCA <- function(rld_data){
+
+plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
-  data_pca <- plotPCA(rld_data, intgroup = params$design, ntop = nrow(assay(rld_data)), returnData = TRUE)
+  data_pca <- plotPCA(rld_data, intgroup = all_intgroups, ntop = nrow(assay(rld_data)), returnData = TRUE)
   ## Get percent of variance explained
   percentVar <- round(100 * attr(data_pca, "percentVar"))
   ## Plot
   highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable? "group" too right?
+  # colour stuff
+  colour_scheme <- "Set1"
+  if(  length(unique(colData(rld_data)[,intgroup_to_plot])) > 9 ){ # max for Set1
+    colour_scheme <- "Spectral" # not my favourite but this plot isn't going to work for large numbers of colours anyway.
+  }
   p <- plot_ly(data = highlight_pca,
           x = ~PC1,
           y = ~PC2,
-          color = ~group,
+          color = as.formula(paste0("~",intgroup_to_plot)),
           text = ~name,
           type = "scatter",
-          mode = "markers") %>%
+          mode = "markers",
+          colors = colour_scheme) %>%
     layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
-           yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance")))
+           yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance"))
+    )
   highlight(p, on = "plotly_click", off = "plotly_doubleclick", color = "red")
   return(p)
 }
@@ -187,24 +195,41 @@ plot_interactive_PCA <- function(rld_data){
 
 This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
-## All `r nrow(rld)` genes
 
-```{r PCA_all_genes, collapse=TRUE}
-plot_interactive_PCA(rld)
+## All `r nrow(rld)` genes {.tabset .tabset-fade}
+
+```{r PCA_all_genes, results='asis', warning = FALSE}
+
+
+for (g in params$intgroup_to_plot){
+  cat(paste0("### ",g,"\n\n"))
+  print(htmltools::tagList( plot_interactive_PCA(rld, g, params$intgroup_to_plot)))
+  cat("\n\n")
+}
 ```
 
-## DEGs  (`r nrow(rld_DEGs)` genes)
-```{r PCA_DEGs, collapse=TRUE}
+## `r nrow(rld_DEGs)` DEGs {.tabset .tabset-fade}
+
+```{r PCA_DEGs, results='asis', warning = FALSE}
 if (length(rld_DEGs) > 1) {
-  plot_interactive_PCA(rld_DEGs)
+  for (g in params$intgroup_to_plot){
+    cat(paste0("### ",g,"\n\n"))
+    print(htmltools::tagList( plot_interactive_PCA(rld_DEGs, g, params$intgroup_to_plot)))
+    cat("\n\n")
+  }
 } else {
   print("Insufficient DEGs found.")
 }
 ```
 
-## Top `r params$nBest` genes
-```{r PCA_top_N, collapse=TRUE}
-plot_interactive_PCA(rld_top)
+## Top `r params$nBest` genes {.tabset .tabset-fade}
+
+```{r PCA_top_N, results='asis', warning = FALSE}
+for (g in params$intgroup_to_plot){
+  cat(paste0("### ",g,"\n\n"))
+  print(htmltools::tagList( plot_interactive_PCA(rld_top,g, params$intgroup_to_plot)))
+  cat("\n\n")
+} 
 ```
 
 
