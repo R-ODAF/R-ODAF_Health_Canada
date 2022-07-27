@@ -17,7 +17,7 @@ for (current_filter in facets) {
   
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
-  filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T)  %>%
+  biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T)  %>%
     dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
     arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
     distinct(Gene_Symbol, .keep_all=TRUE) 
@@ -133,7 +133,7 @@ for (current_filter in facets) {
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(filteredResults,
+  write.table(biosetsFilteredResults,
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_filtered_p",params$alpha,"_FC",params$linear_fc_filter,".txt")),
               quote = F, sep = '\t', col.names = NA)
