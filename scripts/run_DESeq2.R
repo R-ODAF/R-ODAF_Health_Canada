@@ -48,7 +48,7 @@ params <- set_up_platform_params(params)
 # Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
 params$R_ODAF_plots <- FALSE
 
-check_required_params()
+check_required_params(params)
 
 ##############################################################################################
 # DATA LOADING AND PROCESSING

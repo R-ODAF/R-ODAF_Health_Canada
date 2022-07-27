@@ -40,7 +40,7 @@ paths <- set_up_paths(params)
 species_data <- load_species(params$species)
 params$species_data <- species_data
 params <- set_up_platform_params(params)
-check_required_params()
+check_required_params(params)
 
 
 skip_extra <- c("DMSO") # Remove DMSO controls as a facet
