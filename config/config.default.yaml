@@ -9,6 +9,10 @@ common:
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  chemical: "2.4.BPF" # only required for biosets output if NOT faceting on chemical (so single chemical). Chemical used
+  timepoint: "48 hours" # only required for biosets output if NOT faceting on timepoint (so single timepoint). Timepoint assessed
 
 ###### Alignment and processing pipeline parameters
 
