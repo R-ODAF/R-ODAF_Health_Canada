@@ -94,7 +94,8 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
 ```
 
 ## By contrast
-```{r volcano_by_contrast, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+Select a contrast from the dropdown list to filter by contrast.
+```{r volcano_by_contrast, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE}
 volcano_df <-  as.data.frame(allResults) %>%
     dplyr::select(c("Feature_ID",
                     "Gene_Symbol",
@@ -103,63 +104,93 @@ volcano_df <-  as.data.frame(allResults) %>%
                     "padj",
                     "contrast")) %>%
     distinct()
-
 volcano_df_sig <- as.data.frame(significantResults)
 
+volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter)
+volcano_status_passed <- "Passed all filters"
+volcano_status_RODAF <- "Filtered by R-ODAF criteria"
+volcano_status_FDR <- paste0("FDR >= ", params$alpha)
 
 volcano_df <- volcano_df %>%
   mutate(
     sig_group = case_when(
-      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ paste0("Linear fold change < ",params$linear_fc_filter),
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ "Passed all filters",
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ "Filtered by R-ODAF criteria",
-      TRUE                                                                                                               ~ paste0("FDR >= ", params$alpha)
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ volcano_status_FC,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
+      TRUE                                                                                                               ~ volcano_status_FDR
     )
   )
 
-
-volcano_df_shared <- SharedData$new(volcano_df)
+status_colors <- list(FDR = "#66c2a5", FC = "#8da0cb", passed = "#e78ac3", RODAF = "#fc8d62")
+all_statuses <- list(FDR = volcano_status_FDR, FC = volcano_status_FC, passed = volcano_status_passed, RODAF = volcano_status_RODAF)
+all_status_keys <- c("FDR", "FC", "passed", "RODAF")
 volcano_contrasts <- unique(allResults$contrast)
 
-contrast_init = volcano_contrasts[1]
-i = as.character(which(volcano_df$contrast == contrast_init))
+x <- list()
+y <- list()
+for(cont in volcano_contrasts){
+  x[[cont]] <- list(
+    FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(log2FoldChange),
+    FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(log2FoldChange),
+    passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% pull(log2FoldChange),
+    RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% pull(log2FoldChange)
+  )
+  y[[cont]] <- list(
+    FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
+    RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% mutate(log10p = -log10(padj)) %>% pull(log10p)
+  )
+}
 
-# Make a "transceiver" to set initial state of filter
-tx = crosstool(volcano_df_shared,
-               "transceiver",
-               init = i,
-               html="<span style='font-size:14pt; word-wrap:break-word;'/>",
-               height="1px",
-               channel = "filter",
-               reset = rownames(volcano_df))
 
-# Plot interactive plotly with filter on gene name
-bscols(widths = c(3,NA),
+fig <- plot_ly(type = 'scatter', mode='markers')
+for(cont in volcano_contrasts){
+  for (status in all_status_keys){
+    fig <- fig %>% add_trace(x=x[[cont]][[status]],
+                             y=y[[cont]][[status]],
+                             mode = 'markers',
+                             marker = list(color=status_colors[[status]]),
+                             visible = TRUE,
+                             name = all_statuses[[status]])
+  }
+}
+
+n_status_keys <- length(all_status_keys)
+n_contrasts <- length(volcano_contrasts)
+start_index <- 1
+all_buttons <- list()
+
+# ideally this would be done with lapply but this will work
+for (item in c(1:n_contrasts)){
+  cur_vec <- rep(FALSE, n_contrasts*n_status_keys)
+  cur_vec[start_index:(start_index+n_status_keys-1)] <- TRUE
+  start_index <- start_index + n_status_keys
+  cur_list <- as.list(c(FALSE, cur_vec))
+  cur_button <- list(
+    method = "restyle",
+    args  = list("visible", cur_list),
+    label = volcano_contrasts[item])
+  all_buttons <- append(all_buttons, list(cur_button))
+}
+
+updatemenus <- list(
   list(
-    filter_select("contrast_to_filter",
-                  "Contrast",
-                  volcano_df_shared,
-                  ~contrast,
-                  volcano_contrasts,
-                  multiple = F)
-  ),
-  list(
-    plot_ly(data = volcano_df_shared,
-            x = ~log2FoldChange,
-            y = ~-log10(padj),
-            type = 'scatter',
-            mode = 'markers',
-            color = ~sig_group,
-            text = ~Gene_Symbol) %>%
-    layout(xaxis = list(title = 'log2 Fold Change'),
-           yaxis = list(title = '-log10 adjusted p-value')),
-    # How to add title that gets updated??? Same problem with gene plots.
-    tx)
+    active = 0,
+    buttons = all_buttons
+  )
 )
 
+fig <- fig %>% layout(
+                      showlegend = TRUE,
+                      updatemenus = updatemenus,
+                      xaxis = list(title = 'log2 Fold Change'),
+                      yaxis = list(title = '-log10 adjusted p-value')
+                      )
+fig
 ```
 
-# PCA plots
+# PCA plots {.tabset .tabset-fade}
 
 ```{r PCA_function, collapse=TRUE}
 
