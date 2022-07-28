@@ -226,12 +226,15 @@ if (file.exists(remove_file)) {
   # This should be recorded somehow... Todo.
   length(remove)
   
-  test <- DESeqDesign %>% dplyr::filter(!params$treatment_var %in% remove)
-  cytotoxic <- DESeqDesign %>% dplyr::filter(params$treatment_var %in% remove)
+  # Best method is probably to use a list of unique sample IDs
+  # By default, use the first column. This could be made more robust?
+  # Should we add a parameter to specify the column to act on?  
+  test <- DESeqDesign %>% dplyr::filter(!.[[1]] %in% remove)
+  cytotoxic <- DESeqDesign %>% dplyr::filter(.[[1]] %in% remove)
   test %>% group_by(params$treatment_var) %>% dplyr::count()
   
   # Once above is correct, go ahead and make final filtered metadata
-  DESeqDesign <- DESeqDesign %>% dplyr::filter(!params$treatment_var %in% remove)
+  DESeqDesign <- DESeqDesign %>% dplyr::filter(!.[[1]] %in% remove)
   # If you've already done this, don't overwrite the backup!
   if (!file.exists(paste0(SampleKeyFile,".bak"))) {
     system(paste0("cp ",SampleKeyFile," ",paste0(SampleKeyFile,".bak")))
