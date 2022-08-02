@@ -145,21 +145,7 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 
 #### make_reports(params, facets)
   pars <- params
-<<<<<<< HEAD
-  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
-  
-  # library(doParallel)
-  # n_cores <- parallel::detectCores()
-  # cluster <- parallel::makeCluster(n_cores-1)
-  # doParallel::registerDoParallel(cluster)
 
-  # parallel::clusterMap(cl = cluster, make_reports, params = pars, facet = facets)
-    # foreach(i=seq_along(facets), .combine='c') %dopar% { # Changing to %dopar% fails.
-    #   print(facets[i])
-    #   make_reports(facet = facets[i])
-    # }
-    
-=======
   parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = params$cpus/2)
   
   #library(doParallel)
@@ -172,7 +158,6 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   #     print(facets[i])
   #     render_reports_parallel(facets[i])
   #   }
->>>>>>> 2e248fbad7d825e893abd69988faec6b96da73f5
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
