@@ -92,7 +92,7 @@ write_additional_output <- function(sampleData, DESeqDesign, intgroup, design_to
                         biomarkers,
                         stringsAsFactors = F)
     # Determine names of dose groups in which n per group > 1
-    groups_for_bmdexpress <- which(table(t(bmdexpress[1,1:ncol(bmdexpress)])) > 1) %>% names()
+    groups_for_bmdexpress <- which(table(t(bmdexpress[1,])) > 1) %>% names()
     # Rewrite bmdexpress table
     # Manually include the "Dose" and gene name column
     bmdexpress <- bmdexpress[,(bmdexpress[1,]) %in% c("Dose",groups_for_bmdexpress)]
