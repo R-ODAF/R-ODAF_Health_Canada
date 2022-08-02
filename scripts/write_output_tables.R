@@ -137,14 +137,11 @@ for (current_filter in facets) {
               quote = F, sep = '\t', col.names = NA)
   # time point, dose, dose units and cell line or species.
   # eg '2.4.BPF 48 hrs 0.001 uM MCF-7 cells.txt'
-  # if the metadata columns contains timepoint, we can get it from there, otherwise look for it in the params
-  # cells will probably have to come from the params, same with units
   # dose will be dose column
-  if(params$filter_on_timepoint){
-    biosets_fname <- paste(params$chemical,current_filter,dose,params$units,params$celltype, sep=' ')
-  } else { # assume filter on chemical
-    biosets_fname <- paste(current_filter,params$timepoint,dose,params$units,params$celltype, sep=' ')
-  }
+
+  # assume that current_filter includes the chemical + timepoint + dose
+  biosets_fname <- paste(current_filter,params$units,params$celltype, sep='_')
+  
   write.table(biosetsFilteredResults,
               file = file.path(output_folder,
                                paste0(biosets_fname, ".txt")),
