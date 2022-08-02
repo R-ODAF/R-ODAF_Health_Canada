@@ -17,12 +17,14 @@ for (current_filter in facets) {
   
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
-  biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T)  %>%
-    dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
-    arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
-    distinct(Gene_Symbol, .keep_all=TRUE) 
-  colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
 
+  if(params$write_additional_output){
+    biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T)  %>%
+      dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
+      arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
+      distinct(Gene_Symbol, .keep_all=TRUE) 
+    colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
+  }
   
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
@@ -135,17 +137,6 @@ for (current_filter in facets) {
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
               quote = F, sep = '\t', col.names = NA)
-  # time point, dose, dose units and cell line or species.
-  # eg '2.4.BPF 48 hrs 0.001 uM MCF-7 cells.txt'
-  # dose will be dose column
-
-  # assume that current_filter includes the chemical + timepoint + dose
-  biosets_fname <- paste(current_filter,params$units,params$celltype, sep='_')
-  
-  write.table(biosetsFilteredResults,
-              file = file.path(output_folder,
-                               paste0(biosets_fname, ".txt")),
-              quote = F, sep = '\t', col.names = NA)
   write.table(summaryTable,
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_all_genes.txt")),
@@ -163,8 +154,17 @@ for (current_filter in facets) {
                                paste0(prefix, "-DEG_summary.txt")),
               quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
   
+
   
-  
+  if(params$write_additional_output){
+    # assume that current_filter includes the chemical + timepoint + dose
+    biosets_fname <- paste(current_filter,params$units,params$celltype, sep='_')
+    
+    write.table(biosetsFilteredResults,
+                file = file.path(output_folder,
+                                 paste0(biosets_fname, ".txt")),
+                quote = F, sep = '\t', col.names = NA)
+  }
   ##########################
   ### Write results in Excel
   ##########################
@@ -324,58 +324,5 @@ for (current_filter in facets) {
   fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
   saveWorkbook(wb5, fname5, overwrite = TRUE)
   
-  if (!is.na(params$dose)) {
-    # Create input file...
-    lognorm.read.counts <- log2(Counts + 1)
-    bmdexpress <- as.data.frame(lognorm.read.counts)
-    bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
-                        bmdexpress,
-                        stringsAsFactors = F)
-    bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
-                        bmdexpress,
-                        stringsAsFactors = F)
-    biomarkers <- bmdexpress # Still includes all genes
-    genes_filtered <- lapply(resultsListFiltered,
-                             function(x) row.names(as.data.frame(x)))
-    genes_filtered <- unlist(genes_filtered) %>% unique()
-    bmdexpress <- rbind(bmdexpress[1,], bmdexpress[genes_filtered,]) # Remove low-quality genes
-    if (!is.na(params$group_facet)) {
-      fname <- paste0("bmdexpress_input_",
-                      paste(current_filter,
-                            collapse = "_"),
-                      ".txt")
-      fname2 <- paste0("biomarker_input_",
-                       paste(current_filter,
-                             collapse = "_"),
-                       ".txt")
-      write.table(bmdexpress,
-                  file = file.path(paths$BMD_output,
-                                   fname),
-                  quote = F,
-                  sep = "\t",
-                  row.names = F,
-                  col.names = T)
-      write.table(biomarkers,
-                  file = file.path(paths$BMD_output,
-                                   fname2),
-                  quote = F,
-                  sep = "\t",
-                  row.names = F,
-                  col.names = T)
-    } else {
-      write.table(bmdexpress,
-                  file = file.path(paths$BMD_output, "bmdexpress_input.txt"),
-                  quote = F,
-                  sep = "\t",
-                  row.names = F,
-                  col.names = T)
-      write.table(biomarkers,
-                  file = file.path(paths$BMD_output, "biomarkers_input.txt"),
-                  quote = F,
-                  sep = "\t",
-                  row.names = F,
-                  col.names = T)
-    }
-  }
 
 }
