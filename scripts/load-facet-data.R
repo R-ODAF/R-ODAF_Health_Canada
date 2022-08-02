@@ -1,6 +1,6 @@
 # input data file
-params$dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(params$dataFile) # metadata, contrasts, counts, resultsList
+dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+load(dataFile) # metadata, contrasts, counts, resultsList
 
 # reformat data based on group_facet and display_group_facet
 

@@ -79,7 +79,6 @@ render_report <- function(report_in, report_out, pars) {
 make_reports <- function(params = pars, facet) {
   # Determine filename prefix based on existing parameters
   # Are there ways this logic might break?
-  params <- as.list(params)
   if (is.na(params$display_group_facet)) {
     message("Writing a single report for whole experiment.")
     prefix <- paste0(params$platform, "_",
@@ -146,18 +145,19 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 
 #### make_reports(params, facets)
   pars <- params
-  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = params$cpus/2)
+  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
   
-  #library(doParallel)
-  #n_cores <- parallel::detectCores()
- # cluster <- parallel::makeCluster(n_cores-1)
-#  doParallel::registerDoParallel(cluster)
-  # 
- # parallel::clusterMap(cl = cluster, make_reports, params = params, facet = facets)
-  #   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
-  #     print(facets[i])
-  #     render_reports_parallel(facets[i])
-  #   }
+  # library(doParallel)
+  # n_cores <- parallel::detectCores()
+  # cluster <- parallel::makeCluster(n_cores-1)
+  # doParallel::registerDoParallel(cluster)
+
+  # parallel::clusterMap(cl = cluster, make_reports, params = pars, facet = facets)
+    # foreach(i=seq_along(facets), .combine='c') %dopar% { # Changing to %dopar% fails.
+    #   print(facets[i])
+    #   make_reports(facet = facets[i])
+    # }
+    
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
@@ -169,4 +169,4 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   # This would probably fail in cases where different numbers of contrasts exists across facets.
   # But could otherwise be useful?
   # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 
-}
+

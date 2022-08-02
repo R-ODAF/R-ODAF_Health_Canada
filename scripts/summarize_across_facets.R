@@ -36,8 +36,8 @@ skip_extra <- c("DMSO") # Remove DMSO controls as a facet
 digits = 2 # For rounding numbers
 
 # input data file
-params$dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(params$dataFile) # metadata, contrasts, counts, resultsList
+dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+load(dataFile) # metadata, contrasts, counts, resultsList
 
 allResultsUnfaceted <- data.frame()
 significantResultsUnfaceted <- data.frame()
