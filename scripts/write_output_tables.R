@@ -330,4 +330,4 @@ write_tables <- function(facet) {
   
 }
 
-parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = params$cpus)
+parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
