@@ -1,6 +1,7 @@
 library(openxlsx)
 library(data.table)
 library(edgeR)
+library(tidyr)
 
 
 
@@ -200,167 +201,52 @@ write_tables <- function(facet) {
                    headerStyle = hs1,
                    keepNA = T,
                    na.string = "NA")
-    setColWidths(wb1, sheet = 1, cols = 1:6, widths = "auto") # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
-    setColWidths(wb1, sheet = 1, cols = 7:ncol(summaryTable), widths = 13) # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
-    fname1 <- file.path(output_folder, paste0("1.", prefix, "-DESeq_by_gene.xlsx"))
-    saveWorkbook(wb1, fname1, overwrite = TRUE)
-    
-    ### All results in one table
-    wb2 <- createWorkbook()
-    modifyBaseFont(wb2, fontSize = 10, fontName = "Arial Narrow")
-    addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter))
-    freezePane(wb2, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
-    writeDataTable(wb2,
-                   sheet = 1,
-                   x = significantResults,
-                   colNames = TRUE,
-                   rowNames = F,
-                   tableStyle = "none",
-                   headerStyle = hs1,
-                   keepNA = T,
-                   na.string = "NA")
-    setColWidths(wb2, sheet = 1, cols = 1:ncol(significantResults), widths = "auto")
-    addWorksheet(wb2, "DESeq_all_results")
-    freezePane(wb2, sheet = 2, firstRow = TRUE, firstActiveCol = 4)
-    writeDataTable(wb2,
-                   sheet = 2,
-                   x = allResults,
-                   colNames = TRUE,
-                   rowNames = F,
-                   tableStyle = "none",
-                   headerStyle = hs1,
-                   keepNA = T,
-                   na.string = "NA")
-    setColWidths(wb2, sheet = 2, cols = 1:ncol(allResults), widths = "auto")
-    fname2 <- file.path(output_folder, paste0("2.", prefix, "-DESeq_all.xlsx"))
-    saveWorkbook(wb2, fname2, overwrite = TRUE)
-    
-    ### All results with different tabs for each contrast
-    wb3 <- createWorkbook()
-    modifyBaseFont(wb3, fontSize = 10, fontName = "Arial Narrow")
-    
-    short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2)
-    short_contrast_names <- stringr::str_trunc(short_contrast_names,
-                                               31,
-                                               side = "right",
-                                               ellipsis = "")
-    # Get rid of illegal characters... I'm sure there will be more some day
-    short_contrast_names <- gsub(pattern = ":",
-                                 replacement = ".",
-                                 x = short_contrast_names)
-    
-    for (i in 1:length(levels(factor(allResults$contrast)))) {
-      print(i)
-      dataToWrite <- allResults[allResults$contrast == levels(factor(allResults$contrast))[i],]
-      addWorksheet(wb3, short_contrast_names[i])
-      freezePane(wb3, sheet = i, firstRow = TRUE, firstActiveCol = 4)
-      writeDataTable(wb3,
-                     sheet = i,
-                     x = dataToWrite,
-                     colNames = TRUE,
-                     rowNames = F,
-                     tableStyle = "none",
-                     headerStyle = hs1,
-                     keepNA = T,
-                     na.string = "NA")
-      setColWidths(wb3, sheet = i, cols = 1:ncol(dataToWrite), widths = "auto")
-    }
-    fname3 <- file.path(output_folder, paste0("3.", prefix, "-DESeq_by_contrast.xlsx"))
-    saveWorkbook(wb3, fname3, overwrite = TRUE)
-    
-    ### CPM
-    wb4 <- createWorkbook()
-    modifyBaseFont(wb4, fontSize = 10, fontName = "Arial Narrow")
-    addWorksheet(wb4, "Counts per million")
-    freezePane(wb4, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
-    writeDataTable(wb4,
-                   sheet = 1,
-                   x = as.data.frame(CPMddsDF),
-                   colNames = TRUE,
-                   rowNames = F,
-                   tableStyle = "none",
-                   headerStyle = hs1,
-                   keepNA = T,
-                   na.string = "NA")
-    setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
-    fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
-    saveWorkbook(wb4, fname4, overwrite = TRUE)
-    
-    ### IPA
-    IPA <- allResults %>% 
-      distinct() %>% 
-      pivot_wider(names_from = contrast, values_from = c(log2FoldChange, linearFoldChange, lfcSE, pvalue, padj))
-    wb5 <- createWorkbook()
-    modifyBaseFont(wb5, fontSize = 10, fontName = "Arial Narrow")
-    addWorksheet(wb5, "For IPA upload")
-    freezePane(wb5, sheet = 1, firstRow = TRUE, firstActiveCol = 5)
-    writeDataTable(wb5,
-                   sheet = 1,
-                   x = as.data.frame(IPA),
-                   colNames = TRUE,
-                   rowNames = F,
-                   tableStyle = "none",
-                   headerStyle = hs1,
-                   keepNA = T,
-                   na.string = "NA")
-    setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
-    fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
-    saveWorkbook(wb5, fname5, overwrite = TRUE)
-    
-    if (!is.na(params$dose)) {
-      # Create input file...
-      lognorm.read.counts <- log2(Counts + 1)
-      bmdexpress <- as.data.frame(lognorm.read.counts)
-      bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
-                          bmdexpress,
-                          stringsAsFactors = F)
-      bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
-                          bmdexpress,
-                          stringsAsFactors = F)
-      biomarkers <- bmdexpress # Still includes all genes
-      genes_filtered <- lapply(resultsListFiltered,
-                               function(x) row.names(as.data.frame(x)))
-      genes_filtered <- unlist(genes_filtered) %>% unique()
-      bmdexpress <- rbind(bmdexpress[1,], bmdexpress[genes_filtered,]) # Remove low-quality genes
-      if (!is.na(params$group_facet)) {
-        fname <- paste0("bmdexpress_input_",
-                        paste(current_filter,
-                              collapse = "_"),
-                        ".txt")
-        fname2 <- paste0("biomarker_input_",
-                         paste(current_filter,
-                               collapse = "_"),
-                         ".txt")
-        write.table(bmdexpress,
-                    file = file.path(paths$BMD_output,
-                                     fname),
-                    quote = F,
-                    sep = "\t",
-                    row.names = F,
-                    col.names = T)
-        write.table(biomarkers,
-                    file = file.path(paths$BMD_output,
-                                     fname2),
-                    quote = F,
-                    sep = "\t",
-                    row.names = F,
-                    col.names = T)
-      } else {
-        write.table(bmdexpress,
-                    file = file.path(paths$BMD_output, "bmdexpress_input.txt"),
-                    quote = F,
-                    sep = "\t",
-                    row.names = F,
-                    col.names = T)
-        write.table(biomarkers,
-                    file = file.path(paths$BMD_output, "biomarkers_input.txt"),
-                    quote = F,
-                    sep = "\t",
-                    row.names = F,
-                    col.names = T)
-      }
-    }
+    setColWidths(wb3, sheet = i, cols = 1:ncol(dataToWrite), widths = "auto")
   }
+  fname3 <- file.path(output_folder, paste0("3.", prefix, "-DESeq_by_contrast.xlsx"))
+  saveWorkbook(wb3, fname3, overwrite = TRUE)
+  
+  ### CPM
+  wb4 <- createWorkbook()
+  modifyBaseFont(wb4, fontSize = 10, fontName = "Arial Narrow")
+  addWorksheet(wb4, "Counts per million")
+  freezePane(wb4, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
+  writeDataTable(wb4,
+                 sheet = 1,
+                 x = as.data.frame(CPMddsDF),
+                 colNames = TRUE,
+                 rowNames = F,
+                 tableStyle = "none",
+                 headerStyle = hs1,
+                 keepNA = T,
+                 na.string = "NA")
+  setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
+  fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
+  saveWorkbook(wb4, fname4, overwrite = TRUE)
+  
+  ### IPA
+  IPA <- allResults %>% 
+    distinct() %>% 
+    pivot_wider(names_from = contrast, values_from = c(log2FoldChange, linearFoldChange, lfcSE, pvalue, padj))
+  wb5 <- createWorkbook()
+  modifyBaseFont(wb5, fontSize = 10, fontName = "Arial Narrow")
+  addWorksheet(wb5, "For IPA upload")
+  freezePane(wb5, sheet = 1, firstRow = TRUE, firstActiveCol = 5)
+  writeDataTable(wb5,
+                 sheet = 1,
+                 x = as.data.frame(IPA),
+                 colNames = TRUE,
+                 rowNames = F,
+                 tableStyle = "none",
+                 headerStyle = hs1,
+                 keepNA = T,
+                 na.string = "NA")
+  setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
+  fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
+  saveWorkbook(wb5, fname5, overwrite = TRUE)
+  
+  
 }
 
-parallel::mcmapply(FUN = write_tables, facets, mc.cores = params$cpus/2)
+parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = params$cpus)
+

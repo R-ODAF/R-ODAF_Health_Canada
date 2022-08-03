@@ -26,6 +26,9 @@ params:
   technical_control: "technical_control"
   reference_rna: "reference_rna"
   solvent_control: "solvent_control"
+  write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "Some cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
 title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_title))`"
 subtitle: "`r paste(params$platform)`"
 output:

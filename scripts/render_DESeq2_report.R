@@ -79,7 +79,7 @@ render_report <- function(report_in, report_out, pars) {
 make_reports <- function(params = pars, facet) {
   # Determine filename prefix based on existing parameters
   # Are there ways this logic might break?
-  params <- as.list(params)
+  # params <- as.list(params)
   if (is.na(params$display_group_facet)) {
     message("Writing a single report for whole experiment.")
     prefix <- paste0(params$platform, "_",
@@ -146,6 +146,24 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 
 #### make_reports(params, facets)
   pars <- params
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
+  
+  # library(doParallel)
+  # n_cores <- parallel::detectCores()
+  # cluster <- parallel::makeCluster(n_cores-1)
+  # doParallel::registerDoParallel(cluster)
+
+  # parallel::clusterMap(cl = cluster, make_reports, params = pars, facet = facets)
+    # foreach(i=seq_along(facets), .combine='c') %dopar% { # Changing to %dopar% fails.
+    #   print(facets[i])
+    #   make_reports(facet = facets[i])
+    # }
+    
+=======
+>>>>>>> 5bb2bac9979de3204cd6934674124151dde80fa6
   parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = params$cpus/2)
   
   #library(doParallel)
@@ -158,6 +176,10 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   #     print(facets[i])
   #     render_reports_parallel(facets[i])
   #   }
+<<<<<<< HEAD
+=======
+>>>>>>> 2e248fbad7d825e893abd69988faec6b96da73f5
+>>>>>>> 5bb2bac9979de3204cd6934674124151dde80fa6
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
@@ -169,4 +191,4 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   # This would probably fail in cases where different numbers of contrasts exists across facets.
   # But could otherwise be useful?
   # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 
-}
+

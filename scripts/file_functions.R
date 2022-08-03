@@ -1,3 +1,6 @@
+library(edgeR)
+
+
 set_up_paths <- function(params) {
     paths <- list()
     # Other important system paths to specify in config
@@ -63,4 +66,74 @@ save_cached_data <- function(dds, RDataPath, current_filter=NULL){
     } else {
         saveRDS(dds, file = file.path(RDataPath, paste0("dds_", paste(current_filter, collapse = "_"), ".RData")))
     }
+}
+
+
+write_additional_output <- function(sampleData, DESeqDesign, intgroup, design_to_use, params){
+  dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
+                                colData   = as.data.frame(DESeqDesign),
+                                design    = get_design(design_to_use))
+  Counts <- counts(dds, normalized = FALSE) # note: no DEseq normalization
+  CPMdds <- cpm(Counts)
+  
+  if (!is.na(params$dose)) {
+    lognorm.read.counts <- log2(CPMdds + 1)
+    bmdexpress <- as.data.frame(lognorm.read.counts)
+    bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
+                        bmdexpress,
+                        stringsAsFactors = F)
+    biomarkers <- bmdexpress # Still includes all genes
+    bmdexpress <- bmdexpress[rowSums(Counts) > 5,]
+    # add a dose header line to both files
+    bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
+                        bmdexpress,
+                        stringsAsFactors = F)
+    biomarkers <- rbind(c("Dose", as.character(DESeqDesign[colnames(biomarkers)[-1],][[params$dose]])),
+                        biomarkers,
+                        stringsAsFactors = F)
+    # Determine names of dose groups in which n per group > 1
+    groups_for_bmdexpress <- which(table(t(bmdexpress[1,])) > 1) %>% names()
+    # Rewrite bmdexpress table
+    # Manually include the "Dose" and gene name column
+    bmdexpress <- bmdexpress[,(bmdexpress[1,]) %in% c("Dose",groups_for_bmdexpress)]
+    
+    if (!is.na(params$group_facet)) {
+      fname <- paste0("bmdexpress_input_",
+                      paste(current_filter,
+                            collapse = "_"),
+                      ".txt")
+      fname2 <- paste0("biomarker_input_",
+                       paste(current_filter,
+                             collapse = "_"),
+                       ".txt")
+      write.table(bmdexpress,
+                  file = file.path(paths$BMD_output,
+                                   fname),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+      write.table(biomarkers,
+                  file = file.path(paths$BMD_output,
+                                   fname2),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+    } else {
+      write.table(bmdexpress,
+                  file = file.path(paths$BMD_output, "bmdexpress_input.txt"),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+      write.table(biomarkers,
+                  file = file.path(paths$BMD_output, "biomarkers_input.txt"),
+                  quote = F,
+                  sep = "\t",
+                  row.names = F,
+                  col.names = T)
+    }
+  }
+  
 }
