@@ -103,3 +103,6 @@ genome.removed
 *.pdf
 *.html
 analysis/*
+*.bak
+*remove.txt
+data/raw/run_folders.txt
