@@ -14,6 +14,7 @@ write_tables <- function(facet) {
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
   resultsListDEGs <- overallResListDEGs[[current_filter]] # REVIEW: is this right?
+  if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
   
