@@ -205,7 +205,6 @@ if(is.na(params$group_facet)){
     }
 }
 
-# 3 lists--all genes, filtered for BMDexpress input (R-ODAF filtering only), and DEGs (p-value, fold-change, and R-ODAF filtering), 
 
 
 message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows indicate 0 DEGs passed filters"))
