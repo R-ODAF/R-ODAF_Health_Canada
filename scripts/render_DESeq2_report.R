@@ -147,7 +147,7 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
 #### make_reports(params, facets)
   pars <- params
 
-  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
+ # parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
   
   # library(doParallel)
   # n_cores <- parallel::detectCores()
