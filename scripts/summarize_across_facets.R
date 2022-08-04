@@ -51,7 +51,9 @@ for (f in facets){
   design <- designList[[f]]
 
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
-  significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
+  if (length(resultsListDEGs) > 0) {
+    significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
+  }
   
   allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
   significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
