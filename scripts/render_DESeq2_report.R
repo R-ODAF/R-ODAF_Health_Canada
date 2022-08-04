@@ -66,72 +66,79 @@ deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
 if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
-render_report <- function(report_in, report_out, pars) {
-  message("Generating report...")
-  rmarkdown::render(input = report_in,
-                    encoding = "UTF-8",
-                    output_file = report_out,
-                    params = pars,
-                    envir = new.env())
-}
-
 # convenience function
-make_reports <- function(params = pars, facet) {
-  # Determine filename prefix based on existing parameters
-  # Are there ways this logic might break?
-  # params <- as.list(params)
-  if (is.na(params$display_group_facet)) {
-    message("Writing a single report for whole experiment.")
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  } else if (any(!is.na(params$display_group_filter))) {
-    message(paste0("The group(s) of interest is (are) ",
-                   paste(params$display_group_filter, collapse = " and "),".\n",
-                   "Writing a single report for that (those) groups."))
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
-                     paste(params$display_group_filter, collapse = "_"), "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  } else {
-    message(paste0("Building report for ", facet, "..."))
-    params$display_group_filter <- facet
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
-                     facet, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  }
-  prefix <- gsub(" ", "_", prefix)
-  prefix <- fs::path_sanitize(prefix)
-
-  # Write the reports
+make_reports <- function(file_prefix,pars){
   if(params$generate_main_report){
+    message("Generating main report")
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-    main_file <- file.path(report_dir, paste0(prefix,".html"))
-    render_report(main_report, main_file, params)
+    main_file <- file.path(report_dir, paste0(file_prefix,".html"))
+    rmarkdown::render(input = main_report,
+                      encoding = "UTF-8",
+                      output_file = main_file,
+                      params = pars,
+                      envir = new.env())
+    
   }
   if(params$generate_extra_stats_report){
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
-    extra_stats_file <- file.path(report_dir, paste0("extra_stats_",prefix,".html"))
-    render_report(extra_stats_report, extra_stats_file, params)
+    extra_stats_file <- file.path(report_dir, paste0("extra_stats_",file_prefix,".html"))
+    rmarkdown::render(input = extra_stats_report,
+                      encoding = "UTF-8",
+                      output_file = extra_stats_file,
+                      params = pars,
+                      envir = new.env())
+    
   }
   if(params$generate_data_explorer_report){
     message("Generating data explorer report")
     data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
-    data_explorer_file <- file.path(report_dir, paste0("data_explorer_",prefix,".html"))  
-    render_report(data_explorer_report, data_explorer_file, params)
+    data_explorer_file <- file.path(report_dir, paste0("data_explorer_",file_prefix,".html"))  
+    rmarkdown::render(input = data_explorer_report,
+                      encoding = "UTF-8",
+                      output_file = data_explorer_file,
+                      params = pars,
+                      envir = new.env())
+    
   }
   if(params$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
     go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
-    go_pathway_file <- file.path(report_dir, paste0("go_pathway_",prefix,".html"))
-    render_report(go_pathway_report, go_pathway_file, params)
+    go_pathway_file <- file.path(report_dir, paste0("go_pathway_",file_prefix,".html"))
+    rmarkdown::render(input = go_pathway_report,
+                      encoding = "UTF-8",
+                      output_file = go_pathway_file,
+                      params = pars,
+                      envir = new.env())
+    
   }
 }
 
-# Determine whether facets are needed
-if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
+
+# make reports
+if (is.na(params$display_group_facet)) {
+  message("Writing a single report for whole experiment.")
+  
+  # output file prefix
+  prefix <- paste0(params$platform, "_",
+                   params$project_title, "_",
+                   format(Sys.time(),'%d-%m-%Y.%H.%M'))
+  
+  make_reports(prefix,params)
+} else if (any(!is.na(params$display_group_filter))) {
+  message(paste0("The group(s) of interest is (are) ",
+                 paste(params$display_group_filter, collapse = " and "),".\n",
+                 "Writing a single report for that (those) groups."))
+  # output file prefix
+  prefix <- paste0(params$platform, "_",
+                   params$project_title, "_",
+                   paste(params$display_group_filter, collapse = "_"), "_",
+                   format(Sys.time(),'%d-%m-%Y.%H.%M'))  
+  
+  make_reports(prefix,params)
+  
+} else {
+  # Remove params$exclude_groups
   facets <- DESeqDesign %>%
     filter(!(!!sym(params$display_group_facet)) %in%
              c(params$exclude_groups, skip_extra)) %>%
@@ -140,39 +147,17 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
-} else {
-  facets <- NULL
-}
-
-#### make_reports(params, facets)
-  pars <- params
-
- # parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
   
-  # library(doParallel)
-  # n_cores <- parallel::detectCores()
-  # cluster <- parallel::makeCluster(n_cores-1)
-  # doParallel::registerDoParallel(cluster)
-
-  # parallel::clusterMap(cl = cluster, make_reports, params = pars, facet = facets)
-    # foreach(i=seq_along(facets), .combine='c') %dopar% { # Changing to %dopar% fails.
-    #   print(facets[i])
-    #   make_reports(facet = facets[i])
-    # }
+  for (i in facets[1:length(facets)]) {
+    message(paste0("Building report for ", i, "..."))
+    params$display_group_filter <- i
+    prefix <- paste0(params$platform, "_",
+                     params$project_title, "_",
+                     i, "_",
+                     format(Sys.time(),'%d-%m-%Y.%H.%M'))  
     
-  parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = round(params$cpus*0.6))
-  
-  #library(doParallel)
-  #n_cores <- parallel::detectCores()
- # cluster <- parallel::makeCluster(n_cores-1)
-#  doParallel::registerDoParallel(cluster)
-  # 
- # parallel::clusterMap(cl = cluster, make_reports, params = params, facet = facets)
-  #   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
-  #     print(facets[i])
-  #     render_reports_parallel(facets[i])
-  #   }
-
+    make_reports(prefix,params)
+  }
   source(here::here(file.path("scripts","summarize_across_facets.R")))
   # TODO: reproduce these files
   # deg_files <- fs::dir_ls(deglist_dir, regexp = "\\-DEG_summary.txt$", recurse = T)
@@ -184,4 +169,4 @@ if (!is.na(params$display_group_facet) && is.na(params$display_group_filter)) {
   # This would probably fail in cases where different numbers of contrasts exists across facets.
   # But could otherwise be useful?
   # results <- deg_files %>% map_dfr(read_tsv, col_names=T, .id="source") 
-
+}
