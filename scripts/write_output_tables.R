@@ -28,6 +28,7 @@ write_tables <- function(facet) {
       distinct(Gene_Symbol, .keep_all=TRUE) 
     colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
   }
+
   
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
@@ -122,8 +123,10 @@ write_tables <- function(facet) {
   
   if(is.na(params$group_facet)){
     output_folder <- paths$DEG_output
+    biosets_folder <- paths$biosets_output
   } else{
     output_folder <- paths$DEG_output[[current_filter]]
+    biosets_folder <- paths$biosets_output[[current_filter]]
   }
   
   
@@ -160,13 +163,30 @@ write_tables <- function(facet) {
   
   
   if(params$write_additional_output){
-    # assume that current_filter includes the chemical + timepoint + dose
-    biosets_fname <- paste(current_filter,params$units,params$celltype, sep='_')
+    filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T) 
+    resultsContrasts <- str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
+    biosetsFilteredResults <- filteredResults %>%
+      bind_cols(dose=resultsContrasts) %>%
+      dplyr::select(Gene_Symbol, padj, linearFoldChange, dose)
     
-    write.table(biosetsFilteredResults,
-                file = file.path(output_folder,
-                                 paste0(biosets_fname, ".txt")),
-                quote = F, sep = '\t', col.names = NA)
+    all_doses <- unique(biosetsFilteredResults$dose)
+    for(d in all_doses){
+      bfr <- biosetsFilteredResults %>%
+        filter(dose==d) %>%
+        dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
+        arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
+        distinct(Gene_Symbol, .keep_all=TRUE) 
+      colnames(bfr) <- c("Gene","pval","fc")
+      # assume that current_filter includes the chemical + timepoint + dose
+      biosets_fname <- paste(current_filter,d,params$units,params$celltype, sep='_')
+      biosets_fname <- paste0(str_replace_all(biosets_fname, " ", "_"),".txt")
+
+      write.table(bfr,
+                  file = file.path(biosets_folder,biosets_fname),
+                  quote = F, sep = '\t', col.names = NA)
+    }
+    
+
   }
   ##########################
   ### Write results in Excel

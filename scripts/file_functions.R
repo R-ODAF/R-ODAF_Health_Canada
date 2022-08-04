@@ -23,15 +23,18 @@ set_up_paths_2 <- function(paths, params, facets){
   if (is.na(params$group_facet) || is.null(params$group_facet)) {
     paths$DEG_output <- file.path(paths$results, "DEG_lists")
     paths$pathway_analysis <- file.path(paths$results, "pathway_analysis")
+    paths$biosets_output <- paths$BMD_output
   } else {
     # make multiple outputs for different facets
     for(f in facets){
       paths$DEG_output[[f]] <- file.path(paths$results, "DEG_lists", paste0(f))
       paths$pathway_analysis[[f]] <- file.path(paths$results, "pathway_analysis", paste0(f))
+      paths$biosets_output[[f]] <- file.path(paths$BMD_output, paste0(f))
     }
   }
   lapply(paths$DEG_output, function(x) if(!dir.exists(x)) dir.create(x, recursive = TRUE))
   lapply(paths$pathway_analysis, function(x) if(!dir.exists(x)) dir.create(x, recursive = TRUE))
+  lapply(paths$biosets_output, function(x) if(!dir.exists(x)) dir.create(x, recursive = TRUE))
   return(paths)
 }
   
