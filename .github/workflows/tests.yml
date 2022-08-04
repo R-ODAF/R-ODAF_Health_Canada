@@ -132,4 +132,6 @@ jobs:
           cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
       - name: Compare BMD input files to truth set
         run: |
+          cat checksums.BMD_files # Can be informative if there are errors
+          cat truth_checksums/checksums.BMD_files # Can be informative if there are errors
           cmp truth_checksums/checksums.BMD_files checksums.BMD_files
