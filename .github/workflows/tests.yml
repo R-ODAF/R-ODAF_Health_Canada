@@ -116,12 +116,20 @@ jobs:
           cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
       - name: Compare DEG lists to truth set
         run: |
+          echo "BaP DEG checksums from this run:"
           cat checksums.BaP_DEGs # Can be informative if there are errors
+          echo "BaP DEG checksums from 'truth' set:"
           cat truth_checksums/checksums.BaP_DEGs # Can be informative if there are errors
           # There are rounding differences between different environments, e.g.:
           # cat analysis/DEG_lists/BaP/*_significant.txt
+          echo "CISP DEG checksums from this run:"
           cat checksums.CISP_DEGs
+          echo "CISP DEG checksums from 'truth' set:"
+          cat truth_checksums/checksums.CISP_DEGs # Can be informative if there are errors
+          echo "BaP pathway checksums from this run:"
           cat checksums.BaP_pathways
+          echo "BaP pathway checksums from 'truth' set:
+          cat truth_checksums/checksums.BaP_pathways
           # Only check first column, because of timestamps in filenames
           cmp <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort) \
               <(cat checksums.BaP_DEGs | awk {'print $1'} | sort)
