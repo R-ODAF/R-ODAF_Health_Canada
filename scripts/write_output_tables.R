@@ -9,15 +9,18 @@ if(is.na(params$group_facet)){
   facets <- c('all') 
 }
 
-for (current_filter in facets) {
+write_tables <- function(facet) {
+  current_filter <- facet
+  message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
   resultsListDEGs <- overallResListDEGs[[current_filter]] # REVIEW: is this right?
+  if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
   
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
-
+  
   if(params$write_additional_output){
     biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T)  %>%
       dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
@@ -29,7 +32,7 @@ for (current_filter in facets) {
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
   
-
+  
   if(params$platform == "TempO-Seq"){
     descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(descriptions) <- c("Ensembl_Gene_ID","description")
@@ -67,7 +70,7 @@ for (current_filter in facets) {
                                                        -1 / (2 ^ log2FoldChange)))
     toJoin <- toJoin[, c(1:3, 7, 4:6)]
     summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = "Feature_ID")
-  
+    
     names(summaryTable)[[ncol(summaryTable) - 2]] <- paste0("log2FoldChange_", i)
     names(summaryTable)[[ncol(summaryTable) - 1]] <- paste0("linearFoldChange_", i)
     names(summaryTable)[[ncol(summaryTable)]] <- paste0("FDR_", i)
@@ -90,7 +93,7 @@ for (current_filter in facets) {
     dplyr::ungroup() %>%
     dplyr::select(Feature_ID, padj)
   
-
+  
   summaryTable <- summaryTable %>%
     left_join(id_table, by = "Feature_ID") %>%
     left_join(maxFCs, by = "Feature_ID") %>%
@@ -128,7 +131,7 @@ for (current_filter in facets) {
   ### Write results table from DESeq2
   #######################################
   message("write results tables to txt")
-
+  
   write.table(allResults,
               file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
@@ -154,7 +157,7 @@ for (current_filter in facets) {
                                paste0(prefix, "-DEG_summary.txt")),
               quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
   
-
+  
   
   if(params$write_additional_output){
     # assume that current_filter includes the chemical + timepoint + dose
@@ -302,7 +305,7 @@ for (current_filter in facets) {
   setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
   fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
   saveWorkbook(wb4, fname4, overwrite = TRUE)
-
+  
   ### IPA
   IPA <- allResults %>% 
     distinct() %>% 
@@ -324,5 +327,7 @@ for (current_filter in facets) {
   fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
   saveWorkbook(wb5, fname5, overwrite = TRUE)
   
-
+  
 }
+
+parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))

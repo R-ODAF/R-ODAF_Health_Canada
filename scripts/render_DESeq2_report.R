@@ -118,11 +118,11 @@ make_reports <- function(file_prefix,pars){
 # make reports
 if (is.na(params$display_group_facet)) {
   message("Writing a single report for whole experiment.")
-
+  
   # output file prefix
   prefix <- paste0(params$platform, "_",
-                    params$project_title, "_",
-                    format(Sys.time(),'%d-%m-%Y.%H.%M'))
+                   params$project_title, "_",
+                   format(Sys.time(),'%d-%m-%Y.%H.%M'))
   
   make_reports(prefix,params)
 } else if (any(!is.na(params$display_group_filter))) {
@@ -147,7 +147,7 @@ if (is.na(params$display_group_facet)) {
   facets <- facets[grep(pattern = "DMSO", x = facets, invert = T)]
   message(paste0("Making multiple reports based on ",
                  params$display_group_facet ,"..."))
-
+  
   for (i in facets[1:length(facets)]) {
     message(paste0("Building report for ", i, "..."))
     params$display_group_filter <- i
