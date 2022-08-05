@@ -138,13 +138,13 @@ jobs:
           diff -q <(sort -u checksums.BaP_DEGs | awk {'print $1'}) \
                   <(grep -Fxf \
                   <(cat checksums.BaP_DEGs | awk {'print $1'}) \
-                  <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'}) | sort -u)
+                  <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort -u))
           #cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort) \
           #    <(cat checksums.CISP_DEGs | awk {'print $1'} | sort)
           diff -q <(sort -u checksums.CISP_DEGs | awk {'print $1'}) \
                   <(grep -Fxf \
                   <(cat checksums.CISP_DEGs | awk {'print $1'}) \
-                  <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'}) | sort -u)
+                  <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort -u))
       - name: Compare pathway analysis to truth set
         run: |
           cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
