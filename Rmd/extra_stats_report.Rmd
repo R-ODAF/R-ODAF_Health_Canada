@@ -1,24 +1,24 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "Default"    # Change depending on your project name
+  project_title: "GeneTox21"    # Change depending on your project name
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
-  batch_var: "batch"          # For example, multiple plates
-  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  batch_var: "Batch"          # For example, multiple plates
+  dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
-  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  celltype: "TK6 cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   species: "human"                 # one of human, mouse, rat, hamster
-  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
-  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  design: "Group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["Group"]            # experimental group of interest plus covariates; can be more than one
+  group_facet: "Chemical_S9"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
-  display_group_filter:  null # 
-  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  display_group_facet: "Chemical_S9" #  
+  display_group_filter:  "AMP +S9" # 
+  sortcol: "Dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
@@ -30,7 +30,7 @@ params:
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  biospyder_manifest_file:  "Human_S1500_Surrogate_2.0_standardized.csv"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
@@ -72,14 +72,13 @@ startTime <- Sys.time()
 
 library('knitr')
 library('kableExtra')
+
 library('RColorBrewer')
 library('pheatmap')
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 source(here::here("scripts","data_functions.R"), local = TRUE)
 
-
 species_data <- load_species(params$species)
-
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -105,16 +104,69 @@ This report contains extra statistics and plots.
 source(here::here("scripts","load-facet-data.R"), local = TRUE)
 ```
 
-# Metadata tables
-```{r tables, collapse=TRUE}
+# Metadata tables {.tabset .tabset-fade}
+
+This table shows the final list of samples that were used in the data analysis (as well as the corresponding sample information, e.g., to which experimental group samples belong).  
+
+This should be reviewed carefully to ensure that samples are correctly identified and included as intended.
+
+
+**Some samples may have already been removed in study-wide QC.**
+
+## Samples used in this report
+
+```{r metadata-report, collapse=TRUE}
+# table of sample metadata
+metadata_subset <- subset_metadata(designList[[params$display_group_filter]],
+                                   design_to_use, contrasts,
+                                   params$display_group_facet, params$display_group_filter)
+DESeqDesign_subset <- as.data.frame(metadata_subset$DESeqDesign)
+contrasts_subset <- as.data.frame(metadata_subset$contrasts)
+
+###############################################################
+### ISSUE
+###############################################################
+# This is super weird: here is where it starts to consume RAM.
+# If you substitute the table for something like data.frame(a=1:10) it runs fine.
+# So it's something about the data itself that makes it take up memory.
+# But it's a small table?! So I have no idea.
+
+knitr::kable(DESeqDesign_subset,
+            row.names =  F,
+            caption = "Samples and corresponding experimental conditions used in this report") %>%
+ kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+ scroll_box(height = "480px")
+gc()
+```
+
+## Samples from the experiment excluded in this report
+
+```{r metadata-removed, collapse=TRUE}
 
 # table of sample metadata
-metadata_table <- DESeqDesign %>% arrange(!!sym(params$design))
-knitr::kable(metadata_table,
-             row.names =  F,
-             caption = "Samples and corresponding experimental conditions used in this report") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
+removed <- DESeqDesign_subset %>% dplyr::filter(!original_names %in% DESeqDesign$original_names)
+knitr::kable(removed,
+            row.names =  F,
+            caption = "Samples and corresponding experimental conditions used in this report") %>%
+ kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+ scroll_box(height = "480px")
+```
+
+## All metadata, as provided
+
+```{r metadata-all, collapse=TRUE}
+
+# table of sample metadata
+knitr::kable(DESeqDesign,
+            row.names =  F,
+            caption = "Samples and corresponding experimental conditions used in this report") %>%
+ kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+ scroll_box(height = "480px")
+```
+
+# Data filtered by the R-ODAF criteria
+
+```{r filtered}
 
 # table of R-ODAF filtered genes
 knitr::kable(filtered_table,
@@ -122,9 +174,15 @@ knitr::kable(filtered_table,
              caption = "Number of genes filtered by R-ODAF criteria") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
   scroll_box(height = "480px")
+```
 
+# Contrasts (comparisons)
+
+The experimental comparisons of interest to be tested for this experiment are shown below.
+
+```{r contrasts}
 # table of contrasts
-knitr::kable(contrasts,
+knitr::kable(contrasts_subset,
              row.names =  F,
              col.names = c("Condition", "Control"),
              caption = "Contrasts being tested in this analysis") %>%
@@ -132,7 +190,7 @@ knitr::kable(contrasts,
   scroll_box(height = "480px")
 
 # table of #samples/group
-nSamples_table <- table(metadata_table %>% dplyr::pull(!!sym(params$design))) 
+nSamples_table <- table(DESeqDesign_subset %>% dplyr::pull(!!sym(params$design)))
 knitr::kable(nSamples_table,
              row.names =  F,
              col.names = c("Experimental group", "Number of samples in group"),
@@ -156,7 +214,6 @@ knitr::kable(summary_counts,
              caption = "Number of differentially expressed genes across each contrast") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
   scroll_box(height = "480px")
-
 
 ```
 
@@ -296,5 +353,5 @@ for (i in seq_along(resultsListAll)) {
 ```
 
 
-```{r, child='session_info.Rmd'}
+```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```

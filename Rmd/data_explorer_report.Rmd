@@ -1,7 +1,7 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "Default"    # Change depending on your project name
+  project_title: "GeneTox21"    # Change depending on your project name
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
   batch_var: "batch"          # For example, multiple plates
@@ -69,13 +69,15 @@ output:
 ```{r docSetup, include = FALSE, warning = FALSE, message = FALSE}
 #### Record start time
 startTime <- Sys.time()
-
 library('DT')
+library('plotly')
+library('crosstool')
+library('crosstalk')
 
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
 species_data <- load_species(params$species)
-
+db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -112,11 +114,20 @@ res.df.dt <- allResults %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 
+```
 
-descriptions <- AnnotationDbi::select(get(species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = res.df.dt$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+```{r 'topfeatures2delete'}
+descriptions <- AnnotationDbi::select(db,
+                                      columns = c("ENSEMBL", "GENENAME"),
+                                      keys = res.df.dt$Ensembl_Gene_ID,
+                                      keytype="ENSEMBL") %>%
+  distinct()
 colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
+```
+
+```{r 'topfeatures3delete'}
 
 if (!is.null(searchURL)) {
     res.df.dt$Gene <- paste0('<a href="',
@@ -130,6 +141,11 @@ if (!is.null(searchURL)) {
     res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
 }
 
+```
+
+```{r 'topfeatures4delete'}
+
+
 res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
                               scientific = TRUE,
                               digits = digits)
@@ -138,6 +154,10 @@ res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
                                 digits = digits)
 res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
+
+```
+
+```{r 'topfeatures5delete'}
 
 
 DT::datatable(res.df.dt,
@@ -169,6 +189,7 @@ DT::datatable(res.df.dt,
 
 
 ```
+
 # Interactive Gene-level plot
 
 This section allows the normalized counts of specific genes (or probes, in the case of TempO-Seq) to be viewed.
@@ -260,5 +281,9 @@ bscols(widths = c(2,NA),
 
 ```
 
-```{r, child='session_info.Rmd'}
+```{r disconnect, include = F}
+DBI::dbDisconnect(dbconn(db))
+```
+
+```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```
