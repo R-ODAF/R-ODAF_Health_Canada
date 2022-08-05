@@ -204,9 +204,9 @@ pars <- params
 
 BPPARAM <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
 
-#BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, BPPARAM = BPPARAM)
-#BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, BPPARAM = BPPARAM)
-#BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, BPPARAM = BPPARAM)
+BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, BPPARAM = BPPARAM)
+BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, BPPARAM = BPPARAM)
+BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, BPPARAM = BPPARAM)
 
 # Why does this use so much memory!?
 # It is knitr::kable that is the problem.
