@@ -114,7 +114,7 @@ jobs:
           cmp truth_checksums/checksum.metadata.QC_applied checksum.metadata.QC_applied
           #cmp truth_checksums/checksum.multiQC checksum.multiQC
           cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
-      - name: Compare DEG lists to truth set
+      - name: Print out checksums for DEG lists
         run: |
           echo "BaP DEG checksums from this run:"
           cat checksums.BaP_DEGs # Can be informative if there are errors
@@ -130,17 +130,19 @@ jobs:
           cat checksums.BaP_pathways
           echo "BaP pathway checksums from 'truth' set:
           cat truth_checksums/checksums.BaP_pathways
+      - name: Compare DEG lists to truth set
+        run: |
           # Only check first column, because of timestamps in filenames
           # cmp <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort) \
           #     <(cat checksums.BaP_DEGs | awk {'print $1'} | sort)
+          # cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort) \
+          #    <(cat checksums.CISP_DEGs | awk {'print $1'} | sort)
           # Instead of cmp, this code will check if ALL the checksums from the test have a corresponding match in the larger set of possible "truth" checksums.
           # This is a hack, but it should work to deal with rounding issues.
           diff -q <(sort -u checksums.BaP_DEGs | awk {'print $1'}) \
                   <(grep -Fxf \
                   <(cat checksums.BaP_DEGs | awk {'print $1'}) \
                   <(cat truth_checksums/checksums.BaP_DEGs | awk {'print $1'} | sort -u))
-          #cmp <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort) \
-          #    <(cat checksums.CISP_DEGs | awk {'print $1'} | sort)
           diff -q <(sort -u checksums.CISP_DEGs | awk {'print $1'}) \
                   <(grep -Fxf \
                   <(cat checksums.CISP_DEGs | awk {'print $1'}) \
