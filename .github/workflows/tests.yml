@@ -128,7 +128,7 @@ jobs:
           cat truth_checksums/checksums.CISP_DEGs # Can be informative if there are errors
           echo "BaP pathway checksums from this run:"
           cat checksums.BaP_pathways
-          echo "BaP pathway checksums from 'truth' set:
+          echo "BaP pathway checksums from 'truth' set:"
           cat truth_checksums/checksums.BaP_pathways
       - name: Compare DEG lists to truth set
         run: |
