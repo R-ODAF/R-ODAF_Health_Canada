@@ -1,4 +1,12 @@
 [![Tests](https://github.com/R-ODAF/R-ODAF_Health_Canada/actions/workflows/tests.yml/badge.svg)](https://github.com/R-ODAF/R-ODAF_Health_Canada/actions/workflows/tests.yml)
+<img src='https://img.shields.io/github/issues/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/issues-closed-raw/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/issues-pr-raw/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/issues-pr-closed-raw/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/languages/code-size/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/repo-size/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/directory-file-count/R-ODAF/R-ODAF_Health_Canada'>
+<img src='https://img.shields.io/github/license/R-ODAF/R-ODAF_Health_Canada'>
 
 # Omics Data Analysis Frameworks for Regulatory application (R-ODAF)
 
