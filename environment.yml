@@ -11,6 +11,7 @@ dependencies:
   - multiqc=1.12
   - snakemake
   - pandoc
+  - libstdcxx-ng
   # R CRAN
   - r-devtools
   - r-here
@@ -54,6 +55,9 @@ dependencies:
   #- r-crosstool
   #- r-cellWise
   # R Bioconductor
+  - bioconductor-go.db=3.13
+  - bioconductor-genomeinfodb=1.28
+  - bioconductor-genomeinfodbdata=1.2.6
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
