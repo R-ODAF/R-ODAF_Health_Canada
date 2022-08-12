@@ -50,6 +50,7 @@ dependencies:
   - r-ggridges
   - r-remotes
   - r-ashr
+  - r-rvcheck=0.1.8
   # Install these via different mechanism.
   #- r-crosstalk
   #- r-crosstool
