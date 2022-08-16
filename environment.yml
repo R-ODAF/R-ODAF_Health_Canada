@@ -11,7 +11,6 @@ dependencies:
   - multiqc=1.12
   - snakemake
   - pandoc
-  - libstdcxx-ng
   # R CRAN
   - r-devtools
   - r-here
@@ -69,3 +68,4 @@ dependencies:
   - bioconductor-limma
   - bioconductor-enrichplot
   - bioconductor-org.hs.eg.db
+  - bioconductor-org.mm.eg.db
