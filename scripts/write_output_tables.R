@@ -135,23 +135,23 @@ write_tables <- function(facet) {
   #######################################
   message("write results tables to txt")
   
-  write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = config$output_digits))),
+  write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(significantResults %>% mutate(across(where(is.numeric), ~ round(., digits = config$output_digits))),
+  write.table(significantResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(summaryTable %>% mutate(across(where(is.numeric), ~ round(., digits = config$output_digits))),
+  write.table(summaryTable %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_all_genes.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(CPMddsDF %>% mutate(across(where(is.numeric), ~ round(., digits = config$output_digits))),
+  write.table(CPMddsDF %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_CPM.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(Counts %>% mutate(across(where(is.numeric), ~ round(., digits = config$output_digits))),
+  write.table(Counts %>% as.data.frame() %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_normalized_counts.txt")),
               quote = F, sep = '\t', col.names = NA)
@@ -350,4 +350,7 @@ write_tables <- function(facet) {
   
 }
 
+
 parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
+
+
