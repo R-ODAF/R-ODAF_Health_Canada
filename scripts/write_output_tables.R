@@ -134,6 +134,7 @@ write_tables <- function(facet) {
   ### Write results table from DESeq2
   #######################################
   message("write results tables to txt")
+  message(paste0("Rounding numeric data to ",params$output_digits," digits."))
   
   write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
