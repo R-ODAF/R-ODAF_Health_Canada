@@ -47,6 +47,7 @@ params:
   generate_extra_stats_report: TRUE
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
+  output_digits: 5
   species_data: null
   SampleDataFile: null
   sampledata_sep: null
