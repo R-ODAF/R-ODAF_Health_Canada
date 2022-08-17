@@ -100,6 +100,12 @@ jobs:
         run: |
           head analysis/DEG_lists/BaP/*all_genes.txt
           head analysis/DEG_lists/BaP/*CPM.txt
+      - name: compare all data
+        run: |
+          diff analysis/DEG_lists/BaP/*all_genes.txt truth_data/*all_genes.txt
+      - name: compare CPM
+        run: |
+          diff analysis/DEG_lists/BaP/*CPM.txt truth_data/*CPM.txt
       - name: Generate md5sums
         run: |
           md5sum data/processed/count_table.tsv > checksum.count_table
