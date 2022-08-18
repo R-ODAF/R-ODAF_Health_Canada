@@ -134,24 +134,25 @@ write_tables <- function(facet) {
   ### Write results table from DESeq2
   #######################################
   message("write results tables to txt")
+  message(paste0("Rounding numeric data to ",params$output_digits," digits."))
   
-  write.table(allResults,
+  write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(significantResults,
+  write.table(significantResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(summaryTable,
+  write.table(summaryTable %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_all_genes.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(CPMddsDF,
+  write.table(CPMddsDF %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_CPM.txt")),
               quote = F, sep = '\t', col.names = NA)
-  write.table(Counts,
+  write.table(Counts %>% as.data.frame() %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_normalized_counts.txt")),
               quote = F, sep = '\t', col.names = NA)
@@ -350,4 +351,7 @@ write_tables <- function(facet) {
   
 }
 
+
 parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
+
+

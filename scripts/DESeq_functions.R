@@ -40,7 +40,11 @@ regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
       assay(rld) <- mat
     }
   } else {
-    rld <- vst(dds, blind)
+    if(nrow(dds) < 1000){
+      rld <-varianceStabilizingTransformation(dds, blind)
+    } else {
+      rld <- vst(dds, blind)
+    }
   }
   return(rld)
 }
