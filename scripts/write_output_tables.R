@@ -182,7 +182,7 @@ write_tables <- function(facet) {
       biosets_fname <- paste(current_filter,d,params$units,params$celltype, sep='_')
       biosets_fname <- paste0(str_replace_all(biosets_fname, " ", "_"),".txt")
 
-      write.table(bfr,
+      write.table(bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
                   file = file.path(biosets_folder,biosets_fname),
                   quote = F, sep = '\t', col.names = NA)
     }
