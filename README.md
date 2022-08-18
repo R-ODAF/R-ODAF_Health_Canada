@@ -34,6 +34,12 @@ There may be other tools that are more applicable to your goals. Indeed, if you 
 
 In its current state of development, this repository should be used by individuals (or teams) experienced with running R in a Linux-based environment. It is necessary to understand scripting and how to process data. We encourage users to learn if they are interested in pursuing this type of data analysis; to that end, we provide a users guide below detailing the steps required to process data, and best practices for using this analysis pipeline.
 
+## Annotation versions
+
+For reasons of reproducibility, this respository uses the following annotation versions:
+* org.Hs.eg.db 3.14.0
+* org.Mm.eg.db 3.14.0
+
 # Getting Started
 
 ## Cloning the repository
