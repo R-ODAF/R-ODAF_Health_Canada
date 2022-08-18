@@ -93,6 +93,12 @@ jobs:
       - name: Run DESeq2
         run: |
           Rscript scripts/run_DESeq2.R
+      - name: compare BaP bioset
+        run: |
+          diff analysis/BMD_and_biomarker_files/BaP/*.txt truth_data/BaP*.txt
+      - name: compare CISP bioset
+        run: |
+          diff analysis/BMD_and_biomarker_files/CISP/*.txt truth_data/CISP*.txt
       - name: Render Reports
         run: |
           Rscript scripts/render_DESeq2_report.R
