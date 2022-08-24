@@ -202,19 +202,26 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
 
 pars <- params
 
-BPPARAM <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
-
-BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, BPPARAM = BPPARAM)
-BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, BPPARAM = BPPARAM)
-BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, BPPARAM = BPPARAM)
-
-# Why does this use so much memory!?
-# It is knitr::kable that is the problem.
-# See the extra stats Rmd for details, the chunk named metadata-report
-reduced_cpus <- round(params$cpus*0.2)
-if (reduced_cpus < 1) { reduced_cpus = 1 }
-BPPARAM <- BiocParallel::MulticoreParam(workers = reduced_cpus )
-BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, BPPARAM = BPPARAM)
+if (params$parallel){
+  BPPARAM <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
+  
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, BPPARAM = BPPARAM)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, BPPARAM = BPPARAM)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, BPPARAM = BPPARAM)
+  
+  # Why does this use so much memory!?
+  # It is knitr::kable that is the problem.
+  # See the extra stats Rmd for details, the chunk named metadata-report
+  reduced_cpus <- round(params$cpus*0.2)
+  if (reduced_cpus < 1) { reduced_cpus = 1 }
+  BPPARAM <- BiocParallel::MulticoreParam(workers = params$cpus )
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, BPPARAM = BPPARAM)
+} else {
+  base::mapply(FUN = make_main_reports, facet = facets)
+  base::mapply(FUN = make_data_reports, facet = facets)
+  base::mapply(FUN = make_pathway_reports, facet = facets)
+  base::mapply(FUN = make_stats_reports, facet = facets)
+}
 
 # Add back after troubleshooting above code...
 source(here::here(file.path("scripts","summarize_across_facets.R")))
