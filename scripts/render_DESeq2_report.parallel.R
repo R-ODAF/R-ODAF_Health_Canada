@@ -82,6 +82,7 @@ render_report <- function(report_in, report_out, pars) {
                     params = pars,
                     envir = new.env(),
                     clean = TRUE,
+                    run_pandoc = TRUE,
                     intermediates_dir = random_tmp)
   system(paste0("rm -rf ", random_tmp))
 }
@@ -135,6 +136,7 @@ make_stats_reports <- function(params = pars, facet) {
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
     extra_stats_file <- file.path(report_dir, paste0("extra_stats_",prefix,".html"))
+    options(pandoc.stack.size = "128m")
     render_report(extra_stats_report, extra_stats_file, params)
   }
 }
@@ -212,9 +214,9 @@ if (params$parallel){
   # Why does this use so much memory!?
   # It is knitr::kable that is the problem.
   # See the extra stats Rmd for details, the chunk named metadata-report
-  reduced_cpus <- round(params$cpus*0.2)
+  reduced_cpus <- round(params$cpus*0.5)
   if (reduced_cpus < 1) { reduced_cpus = 1 }
-  BPPARAM <- BiocParallel::MulticoreParam(workers = params$cpus )
+  BPPARAM <- BiocParallel::MulticoreParam(workers = reduced_cpus )
   BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, BPPARAM = BPPARAM)
 } else {
   base::mapply(FUN = make_main_reports, facet = facets)

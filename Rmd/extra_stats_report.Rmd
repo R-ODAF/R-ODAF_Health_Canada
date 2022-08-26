@@ -71,8 +71,8 @@ output:
 #### Record start time
 startTime <- Sys.time()
 
-library('knitr')
-library('kableExtra')
+library('flextable')
+
 
 library('RColorBrewer')
 library('pheatmap')
@@ -116,7 +116,7 @@ This should be reviewed carefully to ensure that samples are correctly identifie
 
 ## Samples used in this report
 
-```{r metadata-report, collapse=TRUE}
+```{r metadata-report, collapse=TRUE, eval=TRUE}
 # table of sample metadata
 metadata_subset <- subset_metadata(designList[[params$display_group_filter]],
                                    design_to_use, contrasts,
@@ -131,73 +131,96 @@ contrasts_subset <- as.data.frame(metadata_subset$contrasts)
 # If you substitute the table for something like data.frame(a=1:10) it runs fine.
 # So it's something about the data itself that makes it take up memory.
 # But it's a small table?! So I have no idea.
+# 
+# knitr::kable(DESeqDesign_subset,
+#             row.names =  F,
+#             caption = "Samples and corresponding experimental conditions used in this report") %>%
+#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#  scroll_box(height = "480px")
+set_flextable_defaults(
+  font.family = "Arial", font.size = 10, 
+  border.color = "gray")
 
-knitr::kable(DESeqDesign_subset,
-            row.names =  F,
-            caption = "Samples and corresponding experimental conditions used in this report") %>%
- kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
- scroll_box(height = "480px")
-gc()
+flextable(DESeqDesign_subset) %>% 
+  add_footer_lines("Samples and corresponding experimental conditions used in this report")
 ```
 
 ## Samples from the experiment excluded in this report
 
-```{r metadata-removed, collapse=TRUE}
+```{r metadata-removed, collapse=TRUE, eval=TRUE}
 
 # table of sample metadata
 removed <- DESeqDesign_subset %>% dplyr::filter(!original_names %in% DESeqDesign$original_names)
-knitr::kable(removed,
-            row.names =  F,
-            caption = "Samples and corresponding experimental conditions used in this report") %>%
- kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
- scroll_box(height = "480px")
+# knitr::kable(removed,
+#             row.names =  F,
+#             caption = "Samples and corresponding experimental conditions used in this report") %>%
+#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#  scroll_box(height = "480px")
+flextable(removed) %>%
+  add_footer_lines("Samples and removed from this report")
 ```
 
 ## All metadata, as provided
 
-```{r metadata-all, collapse=TRUE}
+```{r metadata-all, collapse=TRUE, eval=TRUE}
+
+#knitr::kable(DESeqDesign,
+#            row.names =  F,
+#            caption = "Samples and corresponding experimental conditions used in this report")
 
 # table of sample metadata
-knitr::kable(DESeqDesign,
-            row.names =  F,
-            caption = "Samples and corresponding experimental conditions used in this report") %>%
- kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
- scroll_box(height = "480px")
+# knitr::kable(DESeqDesign,
+#             row.names =  F,
+#             caption = "Samples and corresponding experimental conditions used in this report") %>%
+#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#  scroll_box(height = "480px")
+flextable(DESeqDesign) %>%
+  add_footer_lines("All samples, including removed ones")
 ```
 
 # Data filtered by the R-ODAF criteria
 
-```{r filtered}
+```{r filtered, eval=TRUE}
 
 # table of R-ODAF filtered genes
-knitr::kable(filtered_table,
-             row.names =  F,
-             caption = "Number of genes filtered by R-ODAF criteria") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
+# knitr::kable(filtered_table,
+#              row.names =  F,
+#              caption = "Number of genes filtered by R-ODAF criteria") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#   scroll_box(height = "480px")
+
+flextable(filtered_table) %>%
+  add_footer_lines("Number of genes filtered by R-ODAF criteria")
 ```
 
 # Contrasts (comparisons)
 
 The experimental comparisons of interest to be tested for this experiment are shown below.
 
-```{r contrasts}
+```{r contrasts, eval=TRUE}
 # table of contrasts
-knitr::kable(contrasts_subset,
-             row.names =  F,
-             col.names = c("Condition", "Control"),
-             caption = "Contrasts being tested in this analysis") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
+# knitr::kable(contrasts_subset,
+#              row.names =  F,
+#              col.names = c("Condition", "Control"),
+#              caption = "Contrasts being tested in this analysis") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#   scroll_box(height = "480px")
+flextable(contrasts_subset) %>%
+  set_header_labels(V1 = "Condition", V2 = "Control") %>%
+  add_footer_lines("Contrasts being tested in this analysis")
 
 # table of #samples/group
 nSamples_table <- table(DESeqDesign_subset %>% dplyr::pull(!!sym(params$design)))
-knitr::kable(nSamples_table,
-             row.names =  F,
-             col.names = c("Experimental group", "Number of samples in group"),
-             caption = "Number of samples in each experimental group used in this report") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
+# knitr::kable(nSamples_table,
+#              row.names =  F,
+#              col.names = c("Experimental group", "Number of samples in group"),
+#              caption = "Number of samples in each experimental group used in this report") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#   scroll_box(height = "480px")
+flextable(as.data.frame(nSamples_table)) %>%
+  set_header_labels(Var1 = "Experimental group", Freq = "Number of samples in group") %>%
+  add_footer_lines("Number of samples in each experimental group used in this report")
+
 
 # table of #DEGs/contrast 
 summary_counts <- data.frame()
@@ -209,13 +232,15 @@ for(comp in comparisons){ # by comparison
     summary_counts <- rbind(summary_counts, row)
 }
 
-knitr::kable(summary_counts,
-             row.names =  F,
-             col.names = c("Contrast", "Number of DEGs"),
-             caption = "Number of differentially expressed genes across each contrast") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
-
+# knitr::kable(summary_counts,
+#              row.names =  F,
+#              col.names = c("Contrast", "Number of DEGs"),
+#              caption = "Number of differentially expressed genes across each contrast") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#   scroll_box(height = "480px")
+flextable(summary_counts) %>%
+  set_header_labels(comparison="Contrast", DEG="Number of DEGs") %>%
+  add_footer_lines("Number of differentially expressed genes across each contrast")
 ```
 
 
@@ -225,7 +250,7 @@ knitr::kable(summary_counts,
 
 This section shows the number of reads obtained for sample groups included in the report.  
 
-```{r nReads_boxplot, collapse=TRUE}
+```{r nReads_boxplot, collapse=TRUE, eval=TRUE}
 df<-data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
 df$original_names = rownames(df)
@@ -249,7 +274,7 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 ## Sample-to-sample distances {.tabset .tabset-fade}
 
 ### All genes
-```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10}
+```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10, eval=TRUE}
 
 plot_sample_heatmap <- function(current_rld){
   ## Obtain the sample euclidean distances
@@ -275,13 +300,13 @@ plot_sample_heatmap(rld)
 ```
 
 ### DEGs only
-```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10}
+```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10, eval=TRUE}
 # DEGs only
 plot_sample_heatmap(rld_DEGs)
 ```
 
 ### Most `r params$nBest` variable genes only
-```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10}
+```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10, eval=TRUE}
 # 100 most variable genes
 plot_sample_heatmap(rld_top)
 ```
@@ -289,7 +314,7 @@ plot_sample_heatmap(rld_top)
 ## P-value Distributions {.tabset .tabset-fade}
 
 ### Distribution of unadjusted p-values
-```{r pvalue_distribution}
+```{r pvalue_distribution, eval=TRUE}
 ggplot(data.frame(allResults), aes(x = pvalue)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of unadjusted p-values') +
@@ -300,7 +325,7 @@ ggplot(data.frame(allResults), aes(x = pvalue)) +
 
 
 ### Distribution of adjusted p-values
-```{r adjusted_pvalue_distribution}
+```{r adjusted_pvalue_distribution, eval=TRUE}
 ggplot(data.frame(allResults), aes(x = padj)) +
     geom_histogram(alpha = .5, position = 'identity', bins = 50) +
     labs(title = 'Histogram of adjusted p-values') +
@@ -310,7 +335,7 @@ ggplot(data.frame(allResults), aes(x = padj)) +
 ```
 
 ### Summary table of (unadjusted) p-value distribution
-```{r pvalue_distribution_table}
+```{r pvalue_distribution_table, eval=TRUE}
 ## Split features by different p-value cutoffs
 pval_table <- lapply(c(1e-04, 0.001, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5,
     0.6, 0.7, 0.8, 0.9, 1), function(x) {
@@ -319,11 +344,13 @@ pval_table <- lapply(c(1e-04, 0.001, 0.01, 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5,
 pval_table <- do.call(rbind, pval_table)
 #kable(pval_table, format = 'markdown', align = c('c', 'c'))
 
-knitr::kable(pval_table,
-             row.names =  F,
-             caption = "Summary of the distribution of the p-values") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-  scroll_box(height = "480px")
+# knitr::kable(pval_table,
+#              row.names =  F,
+#              caption = "Summary of the distribution of the p-values") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
+#   scroll_box(height = "480px")
+flextable(pval_table) %>%
+  add_footer_lines("Summary of the distribution of the p-values")
 ```
 
 
@@ -334,7 +361,7 @@ This section contains three groups of MA plots (see [Wikipedia](https://en.wikip
 
 This group of plots shows `alpha` = `r metadata(resultsListAll[[1]])$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
 
-```{r MA_plots, results='asis'}
+```{r MA_plots, results='asis', eval=TRUE}
 foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
 ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
 
