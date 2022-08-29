@@ -1,7 +1,7 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "GeneTox21"    # Change depending on your project name
+  project_title: "Default"    # Change depending on your project name
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
   batch_var: "Batch"          # For example, multiple plates
