@@ -115,9 +115,6 @@ res.df.dt <- allResults %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 
-```
-
-```{r 'topfeatures2delete'}
 descriptions <- AnnotationDbi::select(db,
                                       columns = c("ENSEMBL", "GENENAME"),
                                       keys = res.df.dt$Ensembl_Gene_ID,
@@ -125,10 +122,6 @@ descriptions <- AnnotationDbi::select(db,
   distinct()
 colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
-
-```
-
-```{r 'topfeatures3delete'}
 
 if (!is.null(searchURL)) {
     res.df.dt$Gene <- paste0('<a href="',
@@ -142,11 +135,6 @@ if (!is.null(searchURL)) {
     res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
 }
 
-```
-
-```{r 'topfeatures4delete'}
-
-
 res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
                               scientific = TRUE,
                               digits = digits)
@@ -156,9 +144,7 @@ res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
 res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
 
-```
 
-```{r 'topfeatures5delete'}
 
 
 DT::datatable(res.df.dt,
