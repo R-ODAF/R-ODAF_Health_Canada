@@ -14,7 +14,7 @@ params:
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
   display_group_facet: null #  
@@ -156,8 +156,7 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
 ## By contrast
 
 Select a contrast from the dropdown list to filter by contrast.
-
-```{r volcano_by_contrast, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE}
+```{r volcano_by_contrast, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE, eval = !(params$platform == "RNA-Seq")}
 volcano_df <-  as.data.frame(allResults) %>%
     dplyr::select(c("Feature_ID",
                     "Gene_Symbol",
@@ -261,22 +260,11 @@ fig <- fig %>% layout(
 fig
 ```
 
+
 # PCA plots {.tabset .tabset-fade}
 
 ```{r PCA_function, collapse=TRUE}
 
-# Useful links...
-# https://stackoverflow.com/questions/45756446/interactively-change-color-of-points-in-traces-in-r-plotly
-# https://stackoverflow.com/questions/68471610/r-plotly-dropdown-variable-selection-with-color
-# https://plotly.com/r/dropdowns/
-# https://stackoverflow.com/questions/63940025/menu-or-buttons-to-select-by-which-variable-style-the-plot-in-r-plotly
-# https://stackoverflow.com/questions/51261228/interactively-select-a-grouping-variable-in-plotly
-# https://plotly.com/r/custom-buttons/#update-button
-# https://plotly-r.com/client-side-linking.html
-# https://meghansaha.github.io/NYS_MH_Programs/
-# https://www.thetidytrekker.com/post/dull-dashboards
-
-# https://rstudio.github.io/crosstalk/using.html
 
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
@@ -284,26 +272,30 @@ plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Get percent of variance explained
   percentVar <- round(100 * attr(data_pca, "percentVar"))
   ## Plot
-  highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable? "group" too right?
+  highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable?
   # colour stuff
   colour_scheme <- "Set1"
   if(  length(unique(colData(rld_data)[,intgroup_to_plot])) > 9 ){ # max for Set1
     colour_scheme <- "Spectral" # not my favourite but this plot isn't going to work for large numbers of colours anyway.
   }
   p <- plot_ly(data = highlight_pca,
-          x = ~PC1,
-          y = ~PC2,
-          color = as.formula(paste0("~",intgroup_to_plot)),
-          text = ~name,
-          type = "scatter",
-          mode = "markers",
-          colors = colour_scheme) %>%
+               x = ~PC1,
+               y = ~PC2,
+               color = as.formula(paste0("~",intgroup_to_plot)),
+               text = ~name,
+               type = "scatter",
+               mode = "markers",
+               colors = colour_scheme) %>%
     layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
            yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance"))
     )
   highlight(p, on = "plotly_click", off = "plotly_doubleclick", color = "red")
+
+  
   return(p)
 }
+
+plot_ly() %>% layout(autosize = F, width = 10, height = 10)# need this initialization for the following plots to show up
 
 ```
 
@@ -313,8 +305,6 @@ This plot shows the first two principal components that explain the variability 
 ## All `r nrow(rld)` genes {.tabset .tabset-fade}
 
 ```{r PCA_all_genes, results='asis', warning = FALSE}
-
-
 for (g in params$intgroup_to_plot){
   cat(paste0("### ",g,"\n\n"))
   print(htmltools::tagList( plot_interactive_PCA(rld, g, params$intgroup_to_plot)))
@@ -345,7 +335,6 @@ for (g in params$intgroup_to_plot){
   cat("\n\n")
 } 
 ```
-
 
 # DEG heatmaps {.tabset .tabset-fade}
 ```{R heatmap_function}
