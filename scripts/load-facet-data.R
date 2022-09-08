@@ -75,3 +75,9 @@ rld_top_heatmap <- rld[select_heatmap,]
 allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
 significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
 
+ordered_contrast_strings <- contrasts %>% mutate(contrast_string = paste(V1,'vs',V2,sep=" ")) %>% pull(contrast_string)
+
+
+allResults$contrast <- factor(allResults$contrast, levels = ordered_contrast_strings)
+significantResults$contrast <- factor(significantResults$contrast, levels = ordered_contrast_strings)
+
