@@ -87,7 +87,6 @@ db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 
 ```{r load_functions, include=F}
 
-source(here::here("scripts","data_functions.R"), local = TRUE)
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
 has_description <- !is.na(params$project_description)

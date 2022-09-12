@@ -14,7 +14,7 @@ params:
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
   display_group_facet: null #  
@@ -76,6 +76,7 @@ library('clusterProfiler')
 library('enrichplot')
 
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
+source(here::here("scripts","data_functions.R"), local = TRUE)
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
@@ -128,7 +129,7 @@ id_table_entrez <- params$biospyder %>%
 probeIDDEGs <- data.frame(genes=significantResults[["Feature_ID"]])
 names(probeIDDEGs)[names(probeIDDEGs) == 'genes'] <- "Feature_ID"
 
-DEGs <- dplyr::left_join(probeIDDEGs, id_table_entrez)
+DEGs <- dplyr::left_join(probeIDDEGs, id_table_entrez, by = "Feature_ID")
 entrezDEGs <- as.character(DEGs$Entrez_ID)
 entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)] %>% unique()
 
@@ -387,7 +388,7 @@ This section uses clusterProfiler `enricher()` to detect enriched gene sets usin
 
 ```{r 'pathway_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis, warning = FALSE, message = FALSE}
 plotList <- list()
-contrasts <- unique(significantResults$contrast)
+contrasts <- levels(significantResults$contrast)
 for (i in seq_along(contrasts) ){
   entrezDEGs <- dplyr::left_join(significantResults %>% filter(contrast == contrasts[i]),
                                  id_table_entrez,
@@ -436,7 +437,7 @@ This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways a
 ```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
-contrasts <- unique(allResults$contrast)
+contrasts <- levels(allResults$contrast)
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
                                 id_table_entrez,

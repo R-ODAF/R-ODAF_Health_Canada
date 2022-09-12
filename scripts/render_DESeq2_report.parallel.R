@@ -64,6 +64,28 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 
+# TODO: make this use get_facets below
+# set up display_facets if necessary
+# the display_facets array will be all facets if group_filter is not set, and the filter otherwise
+if(!is.na(params$display_group_facet)){
+  if(!is.na(params$display_group_filter)){
+    display_facets <- params$display_group_filter
+  }else {
+    # Remove params$exclude_groups
+    display_facets <- DESeqDesign %>%
+      filter(!(!!sym(params$display_group_facet)) %in%
+               c(params$exclude_groups, skip_extra)) %>%
+      pull(params$display_group_facet) %>% 
+      unique()
+    display_facets <- display_facets[grep(pattern = "DMSO", x = display_facets, invert = T)]
+    
+  }
+} else {
+  display_facets <- NA
+}
+
+paths <- set_up_paths_3(paths,params,display_facets)
+
 # Make directory for DESeq2 Reports
 report_dir <- file.path(projectdir, "analysis", "DEG_reports")
 deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")

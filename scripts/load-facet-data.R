@@ -1,6 +1,16 @@
+
+source(here::here("scripts","data_functions.R"), local = TRUE)
+
 # input data file
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(dataFile) # metadata, contrasts, counts, resultsList
+#load(dataFile) # metadata, contrasts, counts, resultsList
+attach(dataFile)
+ddsList<-ddsList
+overallResListAll<-overallResListAll
+overallResListDEGs<-overallResListDEGs
+rldList<-rldList
+mergedDEGsList<-mergedDEGsList
+detach()
 
 # reformat data based on group_facet and display_group_facet
 
@@ -22,7 +32,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListDEGs_all <- overallResListDEGs[['all']]
   rld_all <- rldList[['all']]
   mergedDEGs_all <- mergedDEGsList[['all']]
-  
+
   metadata_subset <- subset_metadata(designList[['all']], design_to_use, contrasts, params$display_group_facet, display_group_filter)
   DESeqDesign_subset <- metadata_subset$DESeqDesign
   contrasts_subset <- metadata_subset$contrasts
