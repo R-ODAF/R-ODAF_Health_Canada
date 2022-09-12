@@ -492,9 +492,7 @@ for (i in seq_along(contrasts)) {
 }
 ```
 
-```{r disconnect, include = F}
-DBI::dbDisconnect(dbconn(db))
-```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+
+```{r, child='session_info.Rmd'}
 ```
