@@ -95,7 +95,7 @@ jobs:
           Rscript scripts/run_DESeq2.R
       - name: Render Reports
         run: |
-          Rscript scripts/render_DESeq2_report.R
+          Rscript scripts/render_DESeq2_report.parallel.R
       - name: Generate md5sums
         run: |
           md5sum data/processed/count_table.tsv > checksum.count_table

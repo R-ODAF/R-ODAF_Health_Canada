@@ -54,10 +54,8 @@ detach()
 
 digits = 2 # For rounding numbers
 
-
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
-
 
 # Read in metadata
 DESeqDesign <- read.delim(SampleKeyFile,
@@ -76,38 +74,39 @@ if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 render_report <- function(report_in, report_out, pars) {
   message("Generating report...")
-  #random_tmp <- paste0("intermediates_", stringi::stri_rand_strings(1, 10))
+  random_tmp <- file.path("/tmp",paste0("intermediates_", stringi::stri_rand_strings(1, 10)))
   rmarkdown::render(input = report_in,
                     encoding = "UTF-8",
                     output_file = report_out,
+                    #output_dir = random_tmp,
                     params = pars,
                     envir = new.env(),
-                    clean = TRUE) #,
-                    #intermediates_dir = random_tmp)
-  #system(paste0("rm -rf ", random_tmp))
+                    clean = TRUE,
+                    run_pandoc = TRUE,
+                    intermediates_dir = random_tmp)
+  system(paste0("rm -rf ", random_tmp))
 }
 
 # Determine filename prefix based on existing parameters
-get_prefix <- function(params = pars, facet) {
-    # Are there ways this logic might break?
-  # params <- as.list(params)
-  if (is.na(params$display_group_facet)) {
+get_prefix <- function(pars, facet) {
+  # Are there ways this logic might break?
+  if (is.na(pars$display_group_facet)) {
     message("Writing a single report for whole experiment.")
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
+    prefix <- paste0(pars$platform, "_",
+                     pars$project_title, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  } else if (any(!is.na(params$display_group_filter))) {
+  } else if (any(!is.na(pars$display_group_filter))) {
     message(paste0("The group(s) of interest is (are) ",
-                   paste(params$display_group_filter, collapse = " and "),".\n",
+                   paste(pars$display_group_filter, collapse = " and "),".\n",
                    "Writing a single report for that (those) groups."))
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
-                     paste(params$display_group_filter, collapse = "_"), "_",
+    prefix <- paste0(pars$platform, "_",
+                     pars$project_title, "_",
+                     paste(pars$display_group_filter, collapse = "_"), "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'))
   } else {
     message(paste0("Building report for ", facet, "..."))
-    prefix <- paste0(params$platform, "_",
-                     params$project_title, "_",
+    prefix <- paste0(pars$platform, "_",
+                     pars$project_title, "_",
                      facet, "_",
                      format(Sys.time(),'%d-%m-%Y.%H.%M'))
   }
@@ -116,52 +115,50 @@ get_prefix <- function(params = pars, facet) {
   return(prefix)
 }
 
-  
-  # Write the reports
-make_main_reports <- function(params = pars, facet) {
-  params$display_group_filter <- facet
-  random_tmp <- paste0("intermediates_", stringi::stri_rand_strings(1, 15))
-  params$temp_dir <- file.path('/tmp',random_tmp)
-  dir.create(params$temp_dir)
-  prefix <- get_prefix(facet = facet)
-    if(params$generate_main_report){
+# Write the reports
+# These are the functions that run in parallel
+# Necessary to run them per-facet and get the file prefix within each instance
+make_main_reports <- function(pars, facet) {
+  pars$display_group_filter <- facet
+  prefix <- get_prefix(pars = pars, facet = facet)
+  if(pars$generate_main_report){
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
     main_file <- file.path(report_dir, paste0(prefix,".html"))
-    render_report(main_report, main_file, params)
-    # delete temp directory
-    unlink(params$temp_dir, recursive = TRUE)
+    render_report(main_report, main_file, pars)
   }
 }
-make_stats_reports <- function(params = pars, facet) {
-  params$display_group_filter <- facet
-  prefix <- get_prefix(facet = facet)
-  if(params$generate_extra_stats_report){
+
+make_stats_reports <- function(pars, facet) {
+  pars$display_group_filter <- facet
+  prefix <- get_prefix(pars = pars, facet = facet)
+  if(pars$generate_extra_stats_report){
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
     extra_stats_file <- file.path(report_dir, paste0("extra_stats_",prefix,".html"))
-    render_report(extra_stats_report, extra_stats_file, params)
+    options(pandoc.stack.size = "128m")
+    render_report(extra_stats_report, extra_stats_file, pars)
   }
 }
 
-make_data_reports <- function(params = pars, facet) {
-  params$display_group_filter <- facet
-  prefix <- get_prefix(facet = facet)
-  if(params$generate_data_explorer_report){
+make_data_reports <- function(pars, facet) {
+  pars$display_group_filter <- facet
+  prefix <- get_prefix(pars = pars, facet = facet)
+  if(pars$generate_data_explorer_report){
     message("Generating data explorer report")
     data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
     data_explorer_file <- file.path(report_dir, paste0("data_explorer_",prefix,".html"))  
-    render_report(data_explorer_report, data_explorer_file, params)
+    render_report(data_explorer_report, data_explorer_file, pars)
   }
 }
 
-make_pathway_reports <- function(params = pars, facet)  {
-  params$display_group_filter <- facet
-  prefix <- get_prefix(facet = facet)
-  if(params$generate_go_pathway_report){
+make_pathway_reports <- function(pars, facet)  {
+  pars$display_group_filter <- facet
+  prefix <- get_prefix(pars = pars, facet = facet)
+  if(pars$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
     go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
     go_pathway_file <- file.path(report_dir, paste0("go_pathway_",prefix,".html"))
-    render_report(go_pathway_report, go_pathway_file, params)
+    render_report(go_pathway_report, go_pathway_file, pars)
   }
 }
 
@@ -180,14 +177,15 @@ get_facets <- function(metadata = DESeqDesign,
   return(facets)
 }
 
-# Determine whether facets are needed and what they should be
-# case 1: no facet, no display facet
+# Determine whether facets are needed
+# And if so, what they should be
+  # Case 1: no facet, no display facet
 if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   facets <- NULL
-  # case 2: no facet, yes display facet
+  # Case 2: no facet, yes display facet
 } else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
   facets <- get_facets()
-  # case 3: yes facet, yes display facet
+  # Case 3: yes facet, yes display facet
 } else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
   if(params$group_facet != params$display_group_facet) {
     stop("Error: display_group_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
@@ -198,59 +196,37 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
                                 FUN = function(i) length(i)>=1),
                          arr.ind = T))
   facets <- facets[facets %in% hasDEGs]
-  # case 4: yes facet, no display facet, this one doesn't make sense
+  # Case 4: yes facet, no display facet, this one doesn't make sense
 } else {
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
 
-#### make_reports(params, facets)
-pars <- params
 
-# parallel::mcmapply(FUN = make_reports, facet = facets, mc.cores = 30)
+if (params$parallel){
+  BPPARAM <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
+  
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = BPPARAM)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = BPPARAM)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = BPPARAM)
+  
+  # Why does this use so much memory!?
+  # It is knitr::kable that is the problem.
+  # See the extra stats Rmd for details, the chunk named metadata-report
+  reduced_cpus <- round(params$cpus*0.5)
+  if (reduced_cpus < 1) { reduced_cpus = 1 }
+  BPPARAM <- BiocParallel::MulticoreParam(workers = reduced_cpus )
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = BPPARAM)
+} else {
+  base::mapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params))
+}
 
-# library(doParallel)
-# n_cores <- parallel::detectCores()
-# cluster <- parallel::makeCluster(n_cores-1)
-# doParallel::registerDoParallel(cluster)
+# Add back after troubleshooting above code...
+source(here::here(file.path("scripts","summarize_across_facets.R")))
 
-# parallel::clusterMap(cl = cluster, make_reports, params = pars, facet = facets)
-# foreach(i=seq_along(facets), .combine='c') %dopar% { # Changing to %dopar% fails.
-#   print(facets[i])
-#   make_reports(facet = facets[i])
-# }
-
-BPPARAM <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.4))
-
-BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, BPPARAM = SerialParam())
-# BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, BPPARAM = BPPARAM)
-# BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, BPPARAM = BPPARAM)
-# BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, BPPARAM = BPPARAM)
-
-
-
-# parallel::mcmapply(FUN = make_main_reports, facet = facets,
-#                    mc.preschedule = F,
-#                    mc.cores = round(params$cpus*0.7))
-# 
-# parallel::mcmapply(FUN = make_pathway_reports, facet = facets,
-#                    mc.preschedule = F,
-#                    mc.cores = round(params$cpus*0.7))
-# 
-# parallel::mcmapply(FUN = make_data_reports, facet = facets,
-#                    mc.preschedule = F,
-#                    mc.cores = round(params$cpus*0.7))
-
-
-#library(doParallel)
-#n_cores <- parallel::detectCores()
-# cluster <- parallel::makeCluster(n_cores-1)
-#  doParallel::registerDoParallel(cluster)
-# 
-# parallel::clusterMap(cl = cluster, make_reports, params = params, facet = facets)
-#   foreach(i=seq_along(facets), .combine='c', .export = ls(globalenv())) %dopar% { # Changing to %dopar% fails.
-#     print(facets[i])
-#     render_reports_parallel(facets[i])
-#   }
-
-# source(here::here(file.path("scripts","summarize_across_facets.R")))
+# NOTE Manually clean up temporary files
+# This is required because of the clean_tmpfiles_mod() workaround!
+system("rm -rf /tmp/intermediates_*")

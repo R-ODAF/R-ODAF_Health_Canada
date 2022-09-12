@@ -48,6 +48,7 @@ params:
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   output_digits: 5
+  parallel: FALSE
   species_data: null
   SampleDataFile: null
   sampledata_sep: null
@@ -71,7 +72,6 @@ output:
 #### Record start time
 startTime <- Sys.time()
 
-library('knitr')
 library('kableExtra')
 library('pheatmap')
 library('here')
@@ -79,6 +79,9 @@ library('crosstalk')
 library('crosstool')
 library('plotly')
 library('tidytext')
+
+species_data <- load_species(params$species)
+db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 ```
 
 
@@ -121,21 +124,22 @@ Code sections are hidden by default but can be viewed by clicking the 'code' but
 ```{r load_facet_data, include=FALSE}
 source(here::here("scripts","load-facet-data.R"), local = TRUE)
 
-
 if(params$platform == "TempO-Seq"){
   id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
 } else {
-  id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+  id_table <- AnnotationDbi::select(db,
+                                    columns = c("ENSEMBL", "SYMBOL"),
+                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
   colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
   id_table$Feature_ID <- id_table$Ensembl_Gene_ID
 }
-
 
 ```
 
 # Volcano plots
 
 ## All data
+
 ```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
@@ -150,7 +154,9 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
 ```
 
 ## By contrast
+
 Select a contrast from the dropdown list to filter by contrast.
+
 ```{r volcano_by_contrast, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE}
 volcano_df <-  as.data.frame(allResults) %>%
     dplyr::select(c("Feature_ID",
@@ -448,5 +454,10 @@ nocite: '@*'
 
 <div id="refs"></div>
 
-```{r, child='session_info.Rmd'}
+
+```{r disconnect, include = F}
+DBI::dbDisconnect(dbconn(db))
+```
+
+```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```
