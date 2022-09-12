@@ -77,7 +77,7 @@ library('enrichplot')
 
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
-species_data <- load_species(params$species)
+species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
