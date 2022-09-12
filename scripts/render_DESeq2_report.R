@@ -37,7 +37,7 @@ if (is.na(projectdir)) {
 }
 
 paths <- set_up_paths(params)
-species_data <- load_species(params$species)
+species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 params$species_data <- species_data
 params <- set_up_platform_params(params)
 check_required_params(params)

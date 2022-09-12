@@ -330,10 +330,10 @@ for (g in params$intgroup_to_plot){
 ```{R heatmap_function}
 plot_DEG_heatmap <- function(rld_data){
   mat <- assay(rld_data) %>%
-  as_tibble(rownames="Ensembl_Gene_ID") %>%
-  left_join(dplyr::select(id_table, c("Ensembl_Gene_ID", "Gene_Symbol")), by="Ensembl_Gene_ID") %>%
-  mutate(label = paste0(Gene_Symbol," : ",Ensembl_Gene_ID)) %>%
-  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  as_tibble(rownames="Feature_ID") %>%
+  left_join(id_table, by="Feature_ID") %>%
+  mutate(label = paste0(Gene_Symbol," : ",Feature_ID)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
   column_to_rownames("label")
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
@@ -413,7 +413,8 @@ plotCounts_gg <- function(i, d, intgroup) {
                        intgroup = intgroup,
                        returnData = TRUE)
     plot_title <- paste(id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])],
-                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[["Feature_ID"]])])
+                        id_table[["Ensembl_Gene_ID"]][grep(i, id_table[["Feature_ID"]])],
+                        id_table[["Feature_ID"]][grep(i, id_table[["Feature_ID"]])])
     if (ncol(plotdata) > 2) {
       colorCol = 3
     } else {colorCol = 2}

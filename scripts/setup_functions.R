@@ -24,7 +24,7 @@ check_required_params <- function(params){
 }
 
 
-load_species <- function(species){
+load_species <- function(species, wiki, manifest){
   species_data = list()
   species_data$loaded <- FALSE
   if (species == "human") {
@@ -32,33 +32,33 @@ load_species <- function(species){
     library('org.Hs.eg.db')
     species_data$orgdb <- "org.Hs.eg.db"
     species_data$species_sci <- "Homo sapiens"
-    species_data$wiki <- params$wikipathways_filename
+    species_data$wiki <- wiki
     species_data$ensembl_species <- "hsapiens_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
     species_data$kegg_organism <- "hsa"
-    species_data$temposeq_manifest <- params$biospyder_manifest_file
+    species_data$temposeq_manifest <- manifest
     species_data$loaded <- TRUE
   } else if (species == "mouse") {
     # Mouse:
     library('org.Mm.eg.db')
     species_data$orgdb <- "org.Mm.eg.db"
     species_data$species_sci <- "Mus musculus"
-    species_data$wiki <- params$wikipathways_filename
+    species_data$wiki <- wiki
     species_data$ensembl_species <- "mmusculus_gene_ensembl"
     species_data$species_gene_symbol <- "mgi_symbol"
     species_data$kegg_organism <- "mmu"
-    species_data$temposeq_manifest <- params$biospyder_manifest_file
+    species_data$temposeq_manifest <- manifest
     species_data$loaded <- TRUE
   } else if (species == "rat") {
     # Rat: 
     library('org.Rn.eg.db')
     species_data$orgdb <- "org.Rn.eg.db"
     species_data$species_sci <- "Rattus norvegicus"
-    species_data$wiki <- params$wikipathways_filename
+    species_data$wiki <- wiki
     species_data$ensembl_species <- "rnorvegicus_gene_ensembl"
     species_data$species_gene_symbol <- "rgd_symbol"
     species_data$kegg_organism <- "rno"
-    species_data$temposeq_manifest <- params$biospyder_manifest_file
+    species_data$temposeq_manifest <- manifest
     species_data$loaded <- TRUE
   } else if (species == "hamster") {
     # Golden hamster:

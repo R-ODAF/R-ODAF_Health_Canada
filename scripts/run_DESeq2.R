@@ -37,7 +37,7 @@ paths <- set_up_paths(params)
 
 get_analysis_id <- get_analysis_id(params)
 
-species_data <- load_species(params$species)
+species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 params$species_data <- species_data
 # ensembl <- useMart("ensembl",
 #                    dataset = species_data$ensembl_species,
