@@ -88,7 +88,9 @@ render_report <- function(report_in, report_out, pars) {
 }
 
 # Determine filename prefix based on existing parameters
-get_prefix <- function(pars, facet) {
+get_prefix <- function(prefix_pars, prefix_facet) {
+  pars <- prefix_pars
+  facet <- prefix_facet
   # Are there ways this logic might break?
   if (is.na(pars$display_group_facet)) {
     message("Writing a single report for whole experiment.")
@@ -120,7 +122,7 @@ get_prefix <- function(pars, facet) {
 # Necessary to run them per-facet and get the file prefix within each instance
 make_main_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(pars = pars, facet = facet)
+  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_main_report){
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
     main_file <- file.path(report_dir, paste0(prefix,".html"))
@@ -130,7 +132,7 @@ make_main_reports <- function(pars, facet) {
 
 make_stats_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(pars = pars, facet = facet)
+  prefix <- get_prefix(prefix_pars = pars, facet = facet)
   if(pars$generate_extra_stats_report){
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
@@ -142,7 +144,7 @@ make_stats_reports <- function(pars, facet) {
 
 make_data_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(pars = pars, facet = facet)
+  prefix <-get_prefix(prefix_pars = pars, facet = facet)
   if(pars$generate_data_explorer_report){
     message("Generating data explorer report")
     data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
@@ -153,7 +155,7 @@ make_data_reports <- function(pars, facet) {
 
 make_pathway_reports <- function(pars, facet)  {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(pars = pars, facet = facet)
+  prefix <- get_prefix(prefix_pars = pars, facet = facet)
   if(pars$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
     go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
