@@ -72,14 +72,14 @@ deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
 if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
-render_report <- function(report_in, report_out, pars) {
+render_report <- function(report_in, report_out, render_pars) {
   message("Generating report...")
   random_tmp <- file.path("/tmp",paste0("intermediates_", stringi::stri_rand_strings(1, 10)))
   rmarkdown::render(input = report_in,
                     encoding = "UTF-8",
                     output_file = report_out,
                     #output_dir = random_tmp,
-                    params = pars,
+                    params = render_pars,
                     envir = new.env(),
                     clean = TRUE,
                     run_pandoc = TRUE,
@@ -132,7 +132,7 @@ make_main_reports <- function(pars, facet) {
 
 make_stats_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(prefix_pars = pars, facet = facet)
+  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_extra_stats_report){
     message("Generating extra stats report")
     extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
@@ -144,7 +144,7 @@ make_stats_reports <- function(pars, facet) {
 
 make_data_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
-  prefix <-get_prefix(prefix_pars = pars, facet = facet)
+  prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_data_explorer_report){
     message("Generating data explorer report")
     data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
@@ -155,7 +155,7 @@ make_data_reports <- function(pars, facet) {
 
 make_pathway_reports <- function(pars, facet)  {
   pars$display_group_filter <- facet
-  prefix <- get_prefix(prefix_pars = pars, facet = facet)
+  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
     go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
