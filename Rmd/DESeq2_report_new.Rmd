@@ -204,7 +204,7 @@ for(cont in volcano_contrasts){
     passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
     RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% mutate(log10p = -log10(padj)) %>% pull(log10p)
   )
-  volcano_labs <- list(
+  volcano_labs[[cont]] <- list(
     FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(Gene_Symbol),
     FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(Gene_Symbol),
     passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% pull(Gene_Symbol),
@@ -219,6 +219,7 @@ for(cont in volcano_contrasts){
     fig <- fig %>% add_trace(x=x[[cont]][[status]],
                              y=y[[cont]][[status]],
                              text=volcano_labs[[cont]][[status]],
+                             hoverinfo='text',
                              mode = 'markers',
                              marker = list(color=status_colors[[status]]),
                              visible = TRUE,
