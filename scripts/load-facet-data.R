@@ -10,6 +10,9 @@ overallResListAll<-overallResListAll
 overallResListDEGs<-overallResListDEGs
 rldList<-rldList
 mergedDEGsList<-mergedDEGsList
+designList<-designList
+design_to_use<-design_to_use
+contrasts<-contrasts
 detach()
 
 # reformat data based on group_facet and display_group_facet

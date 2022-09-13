@@ -133,6 +133,7 @@ if(params$platform == "TempO-Seq"){
   id_table$Feature_ID <- id_table$Ensembl_Gene_ID
 }
 
+
 ```
 
 # Volcano plots
@@ -344,10 +345,11 @@ plot_DEG_heatmap <- function(rld_data){
   mutate(label = paste0(Gene_Symbol," : ",Feature_ID)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
   column_to_rownames("label")
+  browser()
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
     return(pheatmap(mat,
-             annotation_col =  as.data.frame(colData(rld_DEGs)[, intgroup, drop = F]),
+             annotation_col =  as.data.frame(colData(rld_DEGs)[, params$intgroup_to_plot, drop = F]),
              show_rownames = (nrow(rld_data) <= 50),
              border_color = NA,
              scale = "row"))
