@@ -80,7 +80,7 @@ library('crosstool')
 library('plotly')
 library('tidytext')
 
-species_data <- load_species(params$species)
+species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 ```
 
