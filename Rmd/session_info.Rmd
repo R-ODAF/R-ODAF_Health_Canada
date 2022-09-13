@@ -36,7 +36,7 @@ round(totalTime, digits = 3)
 
 ```{r reproducibility3, echo = FALSE}
 options(width = 120)
-session_info()
+sessioninfo::session_info()
 
 ```
 
