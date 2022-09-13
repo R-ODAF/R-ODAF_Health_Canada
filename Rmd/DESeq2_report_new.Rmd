@@ -53,8 +53,8 @@ params:
   SampleDataFile: null
   sampledata_sep: null
   MinCount: null
-  alpha: null
-  linear_fc_filter: null
+  alpha: 0.05
+  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -190,6 +190,7 @@ volcano_contrasts <- unique(allResults$contrast)
 
 x <- list()
 y <- list()
+volcano_labs <- list()
 for(cont in volcano_contrasts){
   x[[cont]] <- list(
     FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(log2FoldChange),
@@ -203,6 +204,12 @@ for(cont in volcano_contrasts){
     passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% mutate(log10p = -log10(padj)) %>% pull(log10p),
     RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% mutate(log10p = -log10(padj)) %>% pull(log10p)
   )
+  volcano_labs <- list(
+    FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(Gene_Symbol),
+    FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(Gene_Symbol),
+    passed = subset(volcano_df, contrast == cont & sig_group == volcano_status_passed) %>% pull(Gene_Symbol),
+    RODAF = subset(volcano_df, contrast == cont & sig_group == volcano_status_RODAF) %>% pull(Gene_Symbol)
+  )
 }
 
 
@@ -211,6 +218,7 @@ for(cont in volcano_contrasts){
   for (status in all_status_keys){
     fig <- fig %>% add_trace(x=x[[cont]][[status]],
                              y=y[[cont]][[status]],
+                             text=volcano_labs[[cont]][[status]],
                              mode = 'markers',
                              marker = list(color=status_colors[[status]]),
                              visible = TRUE,
