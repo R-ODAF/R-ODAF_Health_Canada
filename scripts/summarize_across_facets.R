@@ -33,7 +33,6 @@ params$species_data <- species_data
 params <- set_up_platform_params(params)
 
 skip_extra <- c("DMSO") # Remove DMSO controls as a facet
-digits = 2 # For rounding numbers
 
 # input data file
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))

@@ -52,8 +52,6 @@ attach(dataFile)
 mergedDEGsList <- mergedDEGsList
 detach()
 
-digits = 2 # For rounding numbers
-
 # Identify where metadata can be found
 SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
