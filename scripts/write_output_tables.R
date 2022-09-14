@@ -351,7 +351,9 @@ write_tables <- function(facet) {
   
 }
 if (params$parallel){
-  parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
+  biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
+  BiocParallel::bpmapply(FUN = write_tables, facet = facets, BPPARAM = biocluster)
+  #parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
 } else {
   mapply(FUN = write_tables, facet = facets)
 }
