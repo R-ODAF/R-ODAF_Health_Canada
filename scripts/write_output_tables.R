@@ -4,12 +4,12 @@ library(edgeR)
 library(tidyr)
 
 
-
 if(is.na(params$group_facet)){
   facets <- c('all') 
 }
 
 write_tables <- function(facet) {
+  db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
   current_filter <- facet
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
@@ -35,11 +35,11 @@ write_tables <- function(facet) {
   
   
   if(params$platform == "TempO-Seq"){
-    descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+    descriptions <- AnnotationDbi::select(db, columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(descriptions) <- c("Ensembl_Gene_ID","description")
     id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID, description)
   } else {
-    id_table <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
+    id_table <- AnnotationDbi::select(db, columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
     id_table$Feature_ID <- id_table$Ensembl_Gene_ID
   }
@@ -348,6 +348,7 @@ write_tables <- function(facet) {
   fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
   saveWorkbook(wb5, fname5, overwrite = TRUE)
   
+  DBI::dbDisconnect(dbconn(db))
   
 }
 if (params$parallel){
