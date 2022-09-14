@@ -53,8 +53,8 @@ params:
   SampleDataFile: null
   sampledata_sep: null
   MinCount: null
-  alpha: null
-  linear_fc_filter: null
+  alpha: 0.05
+  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -108,6 +108,7 @@ source(here::here("scripts","load-facet-data.R"), local = TRUE)
 This table shows the significant DEGs (passing all filtering criteria) ordered by their absolute fold change. Use the search function to find your feature of interest or sort by one of the columns. You can limit to a single contrast if desired.
 
 ```{r 'topFeatures', results = 'asis', warning = FALSE, message = FALSE}
+human_rounding <- 2
 searchURL <- "http://www.ncbi.nlm.nih.gov/gene/?term="
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
@@ -137,10 +138,10 @@ if (!is.null(searchURL)) {
 
 res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
                               scientific = TRUE,
-                              digits = digits)
+                              digits = human_rounding)
 res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
                                 scientific = TRUE,
-                                digits = digits)
+                                digits = human_rounding)
 res.df.dt <- res.df.dt %>%
   dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
 
@@ -172,7 +173,7 @@ DT::datatable(res.df.dt,
                                                     'Gene',
                                                     'Ensembl_Gene_ID',
                                                     'Feature_ID')),
-                  digits)
+                  human_rounding)
 
 
 ```
