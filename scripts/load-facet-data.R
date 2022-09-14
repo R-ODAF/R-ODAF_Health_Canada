@@ -13,6 +13,7 @@ mergedDEGsList<-mergedDEGsList
 designList<-designList
 design_to_use<-design_to_use
 contrasts<-contrasts
+filtered_table<-filtered_table
 detach()
 
 # reformat data based on group_facet and display_group_facet
@@ -42,11 +43,10 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   
   dds_subset <- subset_data(dds_all, DESeqDesign_subset)
   rld_subset <- subset_data(rld_all, DESeqDesign_subset)
-  
   contrast_strings <- contrasts_subset %>% mutate(contrast_string = paste(V1,V2,sep="_vs_")) %>% pull(contrast_string)
   resultsListAll_subset <- resultsListAll_all[contrast_strings]
   resultsListDEGs_subset <- resultsListDEGs_all[contrast_strings]
-  
+
   # note, in this case the merged DEGs will be for the whole experiment, not the display facet
   DESeqDesign <- DESeqDesign_subset
   contrasts <- contrasts_subset

@@ -118,11 +118,6 @@ This should be reviewed carefully to ensure that samples are correctly identifie
 
 ```{r metadata-report, collapse=TRUE, eval=TRUE}
 # table of sample metadata
-metadata_subset <- subset_metadata(designList[[params$display_group_filter]],
-                                   design_to_use, contrasts,
-                                   params$display_group_facet, params$display_group_filter)
-DESeqDesign_subset <- as.data.frame(metadata_subset$DESeqDesign)
-contrasts_subset <- as.data.frame(metadata_subset$contrasts)
 
 set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
@@ -241,7 +236,7 @@ plot_sample_heatmap <- function(current_rld){
   sampleDists <- dendextend::sort_dist_mat(sampleDists)
   sampleDistMatrix <- as.matrix(sampleDists)
   
-  distances_df <- as.data.frame(colData(current_rld)[, intgroup, drop = F])
+  distances_df <- as.data.frame(colData(current_rld)[, params$intgroup, drop = F])
   
   ## Define colors to use for the heatmap
   colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)

@@ -141,6 +141,7 @@ if(params$platform == "TempO-Seq"){
 ## All data
 
 ```{r volcano_plot_all, fig.width = 8, fig.height = 6, warning = TRUE, collapse = TRUE}
+
 ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
   geom_point(size = 0.5, alpha = 0.3) +
   geom_point(data = significantResults, size = 0.5, alpha = 0.9, color = "red") +
@@ -289,7 +290,7 @@ plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
     layout(xaxis = list(title = paste0("PC1: ", percentVar[1] ,"% variance")),
            yaxis = list(title = paste0("PC2: ", percentVar[2] ,"% variance"))
     )
-  highlight(p, on = "plotly_click", off = "plotly_doubleclick", color = "red")
+  plotly::highlight(p, on = "plotly_click", off = "plotly_doubleclick", color = "red")
 
   
   return(p)
@@ -345,7 +346,6 @@ plot_DEG_heatmap <- function(rld_data){
   mutate(label = paste0(Gene_Symbol," : ",Feature_ID)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
   column_to_rownames("label")
-  browser()
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
     return(pheatmap(mat,
