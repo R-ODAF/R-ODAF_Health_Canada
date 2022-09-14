@@ -53,8 +53,8 @@ params:
   SampleDataFile: null
   sampledata_sep: null
   MinCount: null
-  alpha: null
-  linear_fc_filter: null
+  alpha: 0.05
+  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
