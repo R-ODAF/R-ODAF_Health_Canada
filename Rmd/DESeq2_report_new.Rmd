@@ -352,7 +352,7 @@ plot_DEG_heatmap <- function(rld_data){
              annotation_col =  as.data.frame(colData(rld_DEGs)[, params$intgroup_to_plot, drop = F]),
              show_rownames = (nrow(rld_data) <= 50),
              border_color = NA,
-             scale = "row"))
+             scale = "none"))
   } else {
     return("No DEGs found.")
   }

@@ -135,7 +135,7 @@ subset_data <- function(sampleData, DESeqDesign){
 subset_results <- function(res, DESeqDesign){
   # Reorder the metadata table to correspond to the order of columns in the count data
   DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-  sampleData_subset <- sampleData[,DESeqDesign_sorted$original_names]
-  return(sampleData_subset)
+  res_subset <- res[,DESeqDesign_sorted$original_names]
+  return(res_subset)
   
 }

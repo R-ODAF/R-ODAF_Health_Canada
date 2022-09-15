@@ -203,7 +203,6 @@ counts_by_group <- counts_by_group %>%
   left_join(DESeqDesign %>% dplyr::select(c(!!sym(params$design),original_names)),
             by = c("Sample" = "original_names"))
 names(counts_by_group)[4] <- "group"
-counts_by_group$group <- droplevels(counts_by_group$group) # Remove groups not in facet
 
 # Filter by absolute fold change to include a reasonable number of genes
 genesToSelect <- allResults %>%

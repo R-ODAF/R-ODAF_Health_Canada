@@ -14,6 +14,8 @@ designList<-designList
 design_to_use<-design_to_use
 contrasts<-contrasts
 filtered_table<-filtered_table
+DESeqDesign<-DESeqDesign # original unfaceted design
+DESeqDesign_original <- DESeqDesign
 detach()
 
 # reformat data based on group_facet and display_group_facet
@@ -25,6 +27,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListDEGs <- overallResListDEGs[['all']]
   rld <- rldList[['all']]
   mergedDEGs <- mergedDEGsList[['all']]
+  
+  DESeqDesign_subset<-DESeqDesign
+  contrasts_subset<-contrasts
   
   # case 2: no facet, yes display facet
 } else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
@@ -47,15 +52,14 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListAll_subset <- resultsListAll_all[contrast_strings]
   resultsListDEGs_subset <- resultsListDEGs_all[contrast_strings]
 
-  # note, in this case the merged DEGs will be for the whole experiment, not the display facet
   DESeqDesign <- DESeqDesign_subset
   contrasts <- contrasts_subset
   dds <- dds_subset
   resultsListAll <- resultsListAll_subset
   resultsListDEGs <- resultsListDEGs_subset
   rld <- rld_subset
+  # note, in this case the merged DEGs will be for the whole experiment, not the display facet
   mergedDEGs <- mergedDEGs_all
-  
   # TODO: add some tests here to make sure everything worked properly
   
   # case 3: yes facet, yes display facet
@@ -93,4 +97,3 @@ ordered_contrast_strings <- contrasts %>% mutate(contrast_string = paste(V1,'vs'
 
 allResults$contrast <- factor(allResults$contrast, levels = ordered_contrast_strings)
 significantResults$contrast <- factor(significantResults$contrast, levels = ordered_contrast_strings)
-

@@ -119,6 +119,7 @@ This should be reviewed carefully to ensure that samples are correctly identifie
 ```{r metadata-report, collapse=TRUE, eval=TRUE}
 # table of sample metadata
 
+
 set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
   border.color = "gray")
