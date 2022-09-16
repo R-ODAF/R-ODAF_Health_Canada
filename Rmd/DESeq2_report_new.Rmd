@@ -44,7 +44,7 @@ params:
   cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
   filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
   generate_main_report: TRUE
-  generate_extra_stats_report: TRUE
+  generate_stats_report: TRUE
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   output_digits: 5
