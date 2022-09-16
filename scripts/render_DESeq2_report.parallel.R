@@ -80,11 +80,20 @@ if(!is.na(params$display_group_facet)){
     display_facets <- display_facets[grep(pattern = "DMSO", x = display_facets, invert = T)]
     
   }
+  display_facets <- get_facets()
+  # Which facets have DEGs?
+  hasDEGs <- names(which(sapply(X = mergedDEGsList,
+                                FUN = function(i) length(i)>=1),
+                         arr.ind = T))
+  display_facets <- display_facets[display_facets %in% hasDEGs]
+  # Case 4: yes facet, no display facet, this one doesn't make sense
 } else {
-  display_facets <- NA
+  stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
+
 paths <- set_up_paths_3(paths,params,display_facets)
+
 
 # Make directory for DESeq2 Reports
 report_dir <- file.path(projectdir, "analysis", "DEG_reports")
@@ -223,20 +232,28 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
+
+
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
-  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  if (params$generate_main_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  if (params$generate_data_explorer_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  if (params$generate_go_pathway_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  Sys.sleep(60)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  Sys.sleep(60)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  Sys.sleep(60)
+  # Why does this use so much memory!?
+  # It is knitr::kable that is the problem.
+  # See the extra stats Rmd for details, the chunk name metadata-report
+  #reduced_cpus <- round(params$cpus*0.5)
+  #if (reduced_cpus < 1) { reduced_cpus = 1 }
+  #biocluster <- BiocParallel::MulticoreParam(workers = reduced_cpus )
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
 } else {
-  base::mapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params))
 }
 
 # Add back after troubleshooting above code...
