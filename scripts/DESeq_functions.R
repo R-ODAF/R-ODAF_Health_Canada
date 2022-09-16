@@ -4,7 +4,7 @@ get_design <- function(design){
 }
 
 
-learn_deseq_model <- function(sd, des, intgroup, design, params){
+learn_deseq_model <- function(sd, des, design, params){
     current_design <- get_design(design)
     dds <- DESeqDataSetFromMatrix(countData = round(sd),
                                     colData   = as.data.frame(des),
