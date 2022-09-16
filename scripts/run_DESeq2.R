@@ -134,6 +134,7 @@ paths <- set_up_paths_2(paths,params,facets)
 
 ddsList <- list()
 designList <- list()
+contrastsList <- list()
 overallResListAll <- list()
 overallResListFiltered <- list()
 overallResListDEGs <- list()
@@ -154,6 +155,7 @@ if(is.na(params$group_facet)){
     overallResListFiltered[['all']] <- DESeq_results$resListFiltered
     overallResListDEGs[['all']] <- DESeq_results$resListDEGs
     designList[['all']] <- DESeqDesign
+    contrastsList[['all']] <- contrasts
     rldList[['all']] <- rld
     mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
     filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
