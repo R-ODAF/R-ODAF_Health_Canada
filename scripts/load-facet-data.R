@@ -11,6 +11,7 @@ overallResListDEGs<-overallResListDEGs
 rldList<-rldList
 mergedDEGsList<-mergedDEGsList
 designList<-designList
+contrastsList<-contrastsList
 design_to_use<-design_to_use
 contrasts<-contrasts
 filtered_table<-filtered_table
@@ -74,7 +75,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   rld <- rldList[[display_group_filter]]
   mergedDEGs <- mergedDEGsList[[display_group_filter]]
   DESeqDesign_subset <- designList[[display_group_filter]]
-  contrasts <- contrasts
+  contrasts_subset <- contrastsList[[display_group_filter]]
   # case 4: yes facet, no display facet, this one doesn't make sense
 } else {
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")

@@ -172,6 +172,7 @@ if(is.na(params$group_facet)){
         }
         ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
+        contrastsList[[current_filter]] <- contrasts_subset
         rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
         DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
         overallResListAll[[current_filter]] <- DESeq_results$resListAll
@@ -214,4 +215,4 @@ message(paste(capture.output(summary_counts), collapse="\n"))
 source(here::here("scripts","write_output_tables.R"))
 
 # save DESeq results to a file
-save(ddsList, designList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, filtered_table, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
+save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, DESeqDesign, facets, contrasts, intgroup, design_to_use, paths, filtered_table, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
