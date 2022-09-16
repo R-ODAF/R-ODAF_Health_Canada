@@ -178,7 +178,9 @@ flextable(contrasts_subset) %>%
   add_footer_lines("Contrasts being tested in this analysis")
 
 # table of #samples/group
-nSamples_table <- table(DESeqDesign_subset %>% dplyr::pull(!!sym(params$design)))
+nSamples_table <- table(DESeqDesign_subset %>% 
+                          mutate_all(list(~ str_c(.))) %>%
+                          dplyr::pull(!!sym(params$design)))
 
 flextable(as.data.frame(nSamples_table)) %>%
   set_header_labels(Var1 = "Experimental group", Freq = "Number of samples in group") %>%
@@ -337,7 +339,7 @@ for (i in seq_along(resultsListAll)) {
 
 ```
 
-## Standard Deviation vs  {.tabset .tabset-fade}
+## Standard Deviation vs Mean Counts  {.tabset .tabset-fade}
 
 This section shows how standard deviation changes across the range of counts.
 
