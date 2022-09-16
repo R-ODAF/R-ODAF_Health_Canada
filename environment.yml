@@ -65,6 +65,7 @@ dependencies:
   - bioconductor-clusterProfiler
   - bioconductor-edgeR
   - bioconductor-DESeq2
+  - bioconductor-vsn
   - bioconductor-ComplexHeatmap
   - bioconductor-limma
   - bioconductor-enrichplot
