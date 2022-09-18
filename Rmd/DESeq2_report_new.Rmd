@@ -14,7 +14,7 @@ params:
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  intgroup_to_plot: ["group","timepoint","chemical"] # for PCA plots, add tabs for one or more groups to color
+  intgroup_to_plot: ["group"] # for PCA plots, add tabs for one or more groups to color
   group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
   display_group_facet: null #  
@@ -265,6 +265,14 @@ fig
 
 ```{r PCA_function, collapse=TRUE}
 
+# Useful links...
+# https://stackoverflow.com/questions/45756446/interactively-change-color-of-points-in-traces-in-r-plotly
+# https://stackoverflow.com/questions/68471610/r-plotly-dropdown-variable-selection-with-color
+# https://plotly.com/r/dropdowns/
+# https://stackoverflow.com/questions/63940025/menu-or-buttons-to-select-by-which-variable-style-the-plot-in-r-plotly
+# https://stackoverflow.com/questions/51261228/interactively-select-a-grouping-variable-in-plotly
+# https://plotly.com/r/custom-buttons/#update-button
+# https://plotly-r.com/client-side-linking.html
 
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
