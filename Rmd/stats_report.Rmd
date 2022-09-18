@@ -71,8 +71,7 @@ output:
 startTime <- Sys.time()
 
 library('flextable')
-
-
+library('vsn')
 library('RColorBrewer')
 library('pheatmap')
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
