@@ -72,7 +72,7 @@ save_cached_data <- function(dds, RDataPath, current_filter=NULL){
 }
 
 
-write_additional_output <- function(sampleData, DESeqDesign, intgroup, design_to_use, params){
+write_additional_output <- function(sampleData, DESeqDesign, design_to_use, params){
   dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
                                 colData   = as.data.frame(DESeqDesign),
                                 design    = get_design(design_to_use))

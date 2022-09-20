@@ -131,12 +131,12 @@ make_main_reports <- function(pars, facet) {
 make_stats_reports <- function(pars, facet) {
   pars$display_group_filter <- facet
   prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
-  if(pars$generate_extra_stats_report){
-    message("Generating extra stats report")
-    extra_stats_report <- file.path(projectdir, "Rmd", "extra_stats_report.Rmd")
-    extra_stats_file <- file.path(report_dir, paste0("extra_stats_",prefix,".html"))
+  if(pars$generate_stats_report){
+    message("Generating stats report")
+    stats_report <- file.path(projectdir, "Rmd", "stats_report.Rmd")
+    stats_file <- file.path(report_dir, paste0("stats_",prefix,".html"))
     options(pandoc.stack.size = "128m")
-    render_report(extra_stats_report, extra_stats_file, pars)
+    render_report(stats_report, stats_file, pars)
   }
 }
 
@@ -201,16 +201,14 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
-
-
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
   BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_main_report == T) {Sys.sleep(60)}
   BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_data_explorer_report == T) {Sys.sleep(60)}
   BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_go_pathway_report == T) {Sys.sleep(60)}
   # Why does this use so much memory!?
   # It is knitr::kable that is the problem.
   # See the extra stats Rmd for details, the chunk name metadata-report
@@ -226,7 +224,7 @@ if (params$parallel){
 }
 
 # Add back after troubleshooting above code...
-source(here::here(file.path("scripts","summarize_across_facets.R")))
+#source(here::here(file.path("scripts","summarize_across_facets.R")))
 
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!

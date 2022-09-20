@@ -144,9 +144,9 @@ filtered_table <- data.frame()
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
     if(params$write_additional_output){
-      write_additional_output(sampleData, DESeqDesign, intgroup, design_to_use, params)
+      write_additional_output(sampleData, DESeqDesign, design_to_use, params)
     }
-    dds <- learn_deseq_model(sampleData, DESeqDesign, intgroup, design_to_use, params)
+    dds <- learn_deseq_model(sampleData, DESeqDesign, design_to_use, params)
     rld <- regularize_data(dds, original_design, covariates, params$batch_var)
     DESeq_results <- get_DESeq_results(dds, DESeqDesign, contrasts, design_to_use, params, NA, paths$DEG_output)
     ddsList[['all']] <- dds
@@ -168,9 +168,9 @@ if(is.na(params$group_facet)){
         check_data(sampleData_subset, DESeqDesign_subset, contrasts_subset)
         
         if(params$write_additional_output){
-          write_additional_output(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
+          write_additional_output(sampleData_subset, DESeqDesign_subset, design_to_use, params)
         }
-        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, intgroup, design_to_use, params)
+        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, DESeqDesign_subset, design_to_use, params)
         designList[[current_filter]] <- DESeqDesign_subset
         rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
         DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)

@@ -14,6 +14,7 @@ params:
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
   group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
   display_group_facet: null #  
@@ -25,7 +26,6 @@ params:
   exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
   include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
-  use_cached_RData: FALSE        # If possible, load the saved RData for dds object and gene IDs
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
@@ -44,7 +44,7 @@ params:
   cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
   filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
   generate_main_report: TRUE
-  generate_extra_stats_report: TRUE
+  generate_stats_report: TRUE
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   output_digits: 5
@@ -265,6 +265,18 @@ fig
 
 ```{r PCA_function, collapse=TRUE}
 
+# Useful links...
+# https://stackoverflow.com/questions/45756446/interactively-change-color-of-points-in-traces-in-r-plotly
+# https://stackoverflow.com/questions/68471610/r-plotly-dropdown-variable-selection-with-color
+# https://plotly.com/r/dropdowns/
+# https://stackoverflow.com/questions/63940025/menu-or-buttons-to-select-by-which-variable-style-the-plot-in-r-plotly
+# https://stackoverflow.com/questions/51261228/interactively-select-a-grouping-variable-in-plotly
+# https://plotly.com/r/custom-buttons/#update-button
+# https://plotly-r.com/client-side-linking.html
+# https://meghansaha.github.io/NYS_MH_Programs/
+# https://www.thetidytrekker.com/post/dull-dashboards
+
+# https://rstudio.github.io/crosstalk/using.html
 
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis

@@ -1,31 +1,31 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "Default"    # Change depending on your project name
+  project_title: "Liver toxic chemicals"    # Change depending on your project name
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
-  batch_var: "Batch"          # For example, multiple plates
-  dose: "Dose"               # If there is a dose in the experiment; otherwise use NULL
+  batch_var: "batch"          # For example, multiple plates
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
-  write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
-  celltype: "TK6 cells" # only required for biosets output. Cell type or species used
+  write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "Liver spheroids" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   species: "human"                 # one of human, mouse, rat, hamster
-  design: "Group"                # single experimental group of interest; entries in this column must match the contrast names.
-  intgroup: ["Group"]            # experimental group of interest plus covariates; can be more than one
-  group_facet: "Chemical_S9"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
+  group_facet: "chemical_timepoint"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
-  display_group_facet: "Chemical_S9" #  
-  display_group_filter:  "AMP +S9" # 
-  sortcol: "Dose"                # Optionally, a column by which to sort the contrasts
+  display_group_facet: "chemical_timepoint" #  
+  display_group_filter:  "estradiol 10d" # 
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
   include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
   include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
-  use_cached_RData: FALSE        # If possible, load the saved RData for dds object and gene IDs
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
@@ -44,7 +44,7 @@ params:
   cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
   filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
   generate_main_report: TRUE
-  generate_extra_stats_report: TRUE
+  generate_stats_report: TRUE
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   output_digits: 5
@@ -72,8 +72,7 @@ output:
 startTime <- Sys.time()
 
 library('flextable')
-
-
+library('vsn')
 library('RColorBrewer')
 library('pheatmap')
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
@@ -85,11 +84,11 @@ species_data <- load_species(params$species, params$wikipathways_filename, param
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
 ---
-title: "`r params$platform` DEG analysis - extra stats"
+title: "`r params$platform` DEG analysis - metadata and statistics"
 ---
 
 
-# `r params$project_title` - Extra stats {-}
+# `r params$project_title` - metadata and statistics {-}
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
 
@@ -100,7 +99,7 @@ Report prepared for: `r params$project_name`
 
 ***
 
-This report contains extra statistics and plots.
+This report contains metadata, statistics, and plots related to the experiment.
 
 ```{r load_facet_data, include=FALSE}
 source(here::here("scripts","load-facet-data.R"), local = TRUE)
@@ -125,19 +124,6 @@ metadata_subset <- subset_metadata(designList[[params$display_group_filter]],
 DESeqDesign_subset <- as.data.frame(metadata_subset$DESeqDesign)
 contrasts_subset <- as.data.frame(metadata_subset$contrasts)
 
-###############################################################
-### ISSUE
-###############################################################
-# This is super weird: here is where it starts to consume RAM.
-# If you substitute the table for something like data.frame(a=1:10) it runs fine.
-# So it's something about the data itself that makes it take up memory.
-# But it's a small table?! So I have no idea.
-# 
-# knitr::kable(DESeqDesign_subset,
-#             row.names =  F,
-#             caption = "Samples and corresponding experimental conditions used in this report") %>%
-#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#  scroll_box(height = "480px")
 set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
   border.color = "gray")
@@ -151,12 +137,8 @@ flextable(DESeqDesign_subset) %>%
 ```{r metadata-removed, collapse=TRUE, eval=TRUE}
 
 # table of sample metadata
-removed <- DESeqDesign_subset %>% dplyr::filter(!original_names %in% DESeqDesign$original_names)
-# knitr::kable(removed,
-#             row.names =  F,
-#             caption = "Samples and corresponding experimental conditions used in this report") %>%
-#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#  scroll_box(height = "480px")
+removed <- DESeqDesign %>% dplyr::filter(!original_names %in% DESeqDesign_subset$original_names)
+
 flextable(removed) %>%
   add_footer_lines("Samples and removed from this report")
 ```
@@ -165,16 +147,6 @@ flextable(removed) %>%
 
 ```{r metadata-all, collapse=TRUE, eval=TRUE}
 
-#knitr::kable(DESeqDesign,
-#            row.names =  F,
-#            caption = "Samples and corresponding experimental conditions used in this report")
-
-# table of sample metadata
-# knitr::kable(DESeqDesign,
-#             row.names =  F,
-#             caption = "Samples and corresponding experimental conditions used in this report") %>%
-#  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#  scroll_box(height = "480px")
 flextable(DESeqDesign) %>%
   add_footer_lines("All samples, including removed ones")
 ```
@@ -184,11 +156,11 @@ flextable(DESeqDesign) %>%
 ```{r filtered, eval=TRUE}
 
 # table of R-ODAF filtered genes
-# knitr::kable(filtered_table,
-#              row.names =  F,
-#              caption = "Number of genes filtered by R-ODAF criteria") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#   scroll_box(height = "480px")
+
+if (!is.na(params$display_group_filter)) {
+  filtered_table <- filtered_table %>%
+    dplyr::filter(facet == params$display_group_filter)
+}
 
 flextable(filtered_table) %>%
   add_footer_lines("Number of genes filtered by R-ODAF criteria")
@@ -200,28 +172,19 @@ The experimental comparisons of interest to be tested for this experiment are sh
 
 ```{r contrasts, eval=TRUE}
 # table of contrasts
-# knitr::kable(contrasts_subset,
-#              row.names =  F,
-#              col.names = c("Condition", "Control"),
-#              caption = "Contrasts being tested in this analysis") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#   scroll_box(height = "480px")
+
 flextable(contrasts_subset) %>%
   set_header_labels(V1 = "Condition", V2 = "Control") %>%
   add_footer_lines("Contrasts being tested in this analysis")
 
 # table of #samples/group
-nSamples_table <- table(DESeqDesign_subset %>% dplyr::pull(!!sym(params$design)))
-# knitr::kable(nSamples_table,
-#              row.names =  F,
-#              col.names = c("Experimental group", "Number of samples in group"),
-#              caption = "Number of samples in each experimental group used in this report") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#   scroll_box(height = "480px")
+nSamples_table <- table(DESeqDesign_subset %>% 
+                          mutate_all(list(~ str_c(.))) %>%
+                          dplyr::pull(!!sym(params$design)))
+
 flextable(as.data.frame(nSamples_table)) %>%
   set_header_labels(Var1 = "Experimental group", Freq = "Number of samples in group") %>%
   add_footer_lines("Number of samples in each experimental group used in this report")
-
 
 # table of #DEGs/contrast 
 summary_counts <- data.frame()
@@ -233,12 +196,7 @@ for(comp in comparisons){ # by comparison
     summary_counts <- rbind(summary_counts, row)
 }
 
-# knitr::kable(summary_counts,
-#              row.names =  F,
-#              col.names = c("Contrast", "Number of DEGs"),
-#              caption = "Number of differentially expressed genes across each contrast") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive", full_width = F, position = "left")) %>%
-#   scroll_box(height = "480px")
+# Does this spit out NA for contrasts where there are no DEGs? It should
 flextable(summary_counts) %>%
   set_header_labels(comparison="Contrast", DEG="Number of DEGs") %>%
   add_footer_lines("Number of differentially expressed genes across each contrast")
@@ -378,6 +336,25 @@ for (i in seq_along(resultsListAll)) {
                  ylim = ylims_for_ma_plots)
   cat('  \n\n')
 }
+
+```
+
+## Standard Deviation vs Mean Counts  {.tabset .tabset-fade}
+
+This section shows how standard deviation changes across the range of counts.
+
+### Regularized counts
+
+```{r SD_plots_log, eval=TRUE}
+vsn::meanSdPlot(assay(rld))
+
+```
+
+### log2(n + 1) normalized counts
+
+```{r SD_plots_rld, eval=TRUE}
+sd_log <- normTransform(dds)
+vsn::meanSdPlot(assay(sd_log))
 
 ```
 
