@@ -365,7 +365,7 @@ wpid2gene
 wpid2name
 matches <- wpid2gene %>% filter(gene %in% entrezDEGs)
 
-if(is.na(params$display_group_filter)){
+if(is.null(params$display_group_filter)){
   pathway_output_dir <- paths$pathway_analysis
 } else {
   pathway_output_dir <- paths$pathway_analysis[[params$display_group_filter]]
