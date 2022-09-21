@@ -296,7 +296,11 @@ plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   return(p)
 }
 
-plot_ly() %>% layout(autosize = F, width = 10, height = 10)# need this initialization for the following plots to show up
+if(params$platform == "RNA-Seq"){
+  plot_ly() %>% plotly::layout(autosize = F, width = 10, height = 10)
+  # need this initialization for the following plots to show up
+  # since plotly isn't properly initialized in a loop and the volcano above isn't run for RNA-seq
+}
 
 ```
 
