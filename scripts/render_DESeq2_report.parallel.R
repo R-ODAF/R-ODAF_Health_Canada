@@ -231,11 +231,11 @@ make_pathway_reports <- function(pars, facet)  {
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
   BiocParallel::bpmapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_main_report == T) {Sys.sleep(60)}
   BiocParallel::bpmapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_data_explorer_report  == T) {Sys.sleep(60)}
   BiocParallel::bpmapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  Sys.sleep(60)
+  if (params$generate_go_pathway_report  == T) {Sys.sleep(60)}
   # Why does this use so much memory!?
   # It is knitr::kable that is the problem.
   # See the extra stats Rmd for details, the chunk name metadata-report
