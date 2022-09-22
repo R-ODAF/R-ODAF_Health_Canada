@@ -59,6 +59,7 @@ DESeq2:
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
   exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  exclude_groups_column: null       # Optionally, specify a different column for excluding groups.
   include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
   include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment

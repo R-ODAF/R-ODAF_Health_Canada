@@ -7,11 +7,13 @@ filter_metadata <- function(exp_metadata, params, design){
             dplyr::filter(!original_names %in% params$exclude_samples)
     }
     # exclude groups
+    # If we haven't set exclude_groups_column, use the main params$design and assume they mean experimental groups from that
+    if (is.na(params$exclude_groups_column)) {params$exclude_groups_column = params$design}
     if (any(!is.na(params$exclude_groups))) {
         exp_metadata <- exp_metadata %>%
-            dplyr::filter(!(!!sym(design)) %in% params$exclude_groups)
+            dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups)
         contrasts_to_filter <- exp_metadata %>% 
-            dplyr::filter(!(!!sym(design)) %in% params$exclude_groups) %>%
+            dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups) %>%
             pull(design) %>% 
             unique()
         contrasts <- contrasts %>%
