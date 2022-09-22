@@ -79,7 +79,8 @@ source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 source(here::here("scripts","data_functions.R"), local = TRUE)
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-
+# Put flextables on the left by default
+knitr::opts_chunk$set(ft.align='left')
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -163,7 +164,8 @@ if (!is.na(params$display_group_filter)) {
 }
 
 flextable(filtered_table) %>%
-  add_footer_lines("Number of genes filtered by R-ODAF criteria")
+  add_footer_lines("Number of genes filtered by R-ODAF criteria") %>%
+  flextable::autofit()
 ```
 
 # Contrasts (comparisons)
@@ -175,7 +177,8 @@ The experimental comparisons of interest to be tested for this experiment are sh
 
 flextable(contrasts_subset) %>%
   set_header_labels(V1 = "Condition", V2 = "Control") %>%
-  add_footer_lines("Contrasts being tested in this analysis")
+  add_footer_lines("Contrasts being tested in this analysis") %>%
+  flextable::autofit()
 
 # table of #samples/group
 nSamples_table <- table(DESeqDesign_subset %>% 
@@ -184,7 +187,8 @@ nSamples_table <- table(DESeqDesign_subset %>%
 
 flextable(as.data.frame(nSamples_table)) %>%
   set_header_labels(Var1 = "Experimental group", Freq = "Number of samples in group") %>%
-  add_footer_lines("Number of samples in each experimental group used in this report")
+  add_footer_lines("Number of samples in each experimental group used in this report") %>%
+  flextable::autofit()
 
 # table of #DEGs/contrast 
 summary_counts <- data.frame()
@@ -199,7 +203,8 @@ for(comp in comparisons){ # by comparison
 # Does this spit out NA for contrasts where there are no DEGs? It should
 flextable(summary_counts) %>%
   set_header_labels(comparison="Contrast", DEG="Number of DEGs") %>%
-  add_footer_lines("Number of differentially expressed genes across each contrast")
+  add_footer_lines("Number of differentially expressed genes across each contrast")  %>%
+  flextable::autofit()
 ```
 
 
