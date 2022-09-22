@@ -12,25 +12,11 @@ filter_metadata <- function(exp_metadata, params, design){
     if (any(!is.na(params$exclude_groups))) {
         exp_metadata <- exp_metadata %>%
             dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups)
-        contrasts_to_filter <- exp_metadata %>% 
-            dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups) %>%
-            pull(design) %>% 
-            unique()
-        contrasts <- contrasts %>%
-            dplyr::filter(V1 %in% contrasts_to_filter)
-        if (params$strict_contrasts == T) {
-            contrasts <- contrasts %>%
-                dplyr::filter(V2 %in% contrasts_to_filter)
         }
     }
     if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
         exp_metadata <- exp_metadata %>%
             dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
-        limit_contrasts <- exp_metadata %>%
-            pull(!!sym(design)) %>%
-            unique() %>%
-            as.character()
-        contrasts <- contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
     }
     return(exp_metadata)
 }
@@ -139,5 +125,4 @@ subset_results <- function(res, exp_metadata){
   exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
   res_subset <- res[,exp_metadata_sorted$original_names]
   return(res_subset)
-  
 }
