@@ -107,9 +107,12 @@ source(here::here("scripts","load-facet-data.R"), local = TRUE)
 
 This table shows the significant DEGs (passing all filtering criteria) ordered by their absolute fold change. Use the search function to find your feature of interest or sort by one of the columns. You can limit to a single contrast if desired.
 
+The links will search the NCBI and Ensembl sites for the gene of interest. Note that for genes without designated symbols, Ensembl usually has a result while NCBI does not.
+
 ```{r 'topFeatures', results = 'asis', warning = FALSE, message = FALSE}
 human_rounding <- 2
-searchURL <- "http://www.ncbi.nlm.nih.gov/gene/?term="
+searchURL_NCBI <- "http://www.ncbi.nlm.nih.gov/gene/?term="
+searchURL_Ensembl <- "https://ensembl.org/Multi/Search/Results?q="
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
   dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter) %>%
@@ -124,17 +127,25 @@ descriptions <- AnnotationDbi::select(db,
 colnames(descriptions) <- c("Ensembl_Gene_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
-if (!is.null(searchURL)) {
-    res.df.dt$Gene <- paste0('<a href="',
-                             searchURL,
-                             res.df.dt$Ensembl_Gene_ID,
-                             '" rel="noopener noreferrer" target="_blank">',
-                             res.df.dt$Ensembl_Gene_ID,
-                             '<br/>',
-                             res.df.dt$Gene_Symbol,
-                             '</a>')
-    res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
-}
+res.df.dt$URLs <- paste0('<a href="',
+                         searchURL_NCBI,
+                         res.df.dt$Ensembl_Gene_ID,
+                         '" rel="noopener noreferrer" target="_blank">',
+                         'NCBI</a><br/>',
+                         '<a href="',
+                         searchURL_Ensembl,
+                         res.df.dt$Ensembl_Gene_ID,
+                         '" rel="noopener noreferrer" target="_blank">',
+                         'Ensembl</a>')
+
+res.df.dt <- res.df.dt %>% dplyr::relocate(URLs)
+
+res.df.dt$Gene <- paste0(res.df.dt$Ensembl_Gene_ID,
+                         '<br/>',
+                         res.df.dt$Gene_Symbol)
+
+res.df.dt <- res.df.dt %>% dplyr::relocate(Gene)
+
 
 res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
                               scientific = TRUE,
@@ -142,12 +153,6 @@ res.df.dt[, 'padj'] <- format(res.df.dt[, 'padj'],
 res.df.dt[, 'pvalue'] <- format(res.df.dt[, 'pvalue'],
                                 scientific = TRUE,
                                 digits = human_rounding)
-res.df.dt <- res.df.dt %>%
-  dplyr::select(-c(Gene_Symbol, Ensembl_Gene_ID))
-
-
-
-
 DT::datatable(res.df.dt,
           options = list(pagingType = 'full_numbers',
                          pageLength = 20,
@@ -159,7 +164,7 @@ DT::datatable(res.df.dt,
                                      'pdf',
                                      'print',
                                      'colvis'),
-                         columnDefs = list(list(visible = FALSE, targets = c(1, 2, 4, 5)))),
+                         columnDefs = list(list(visible = FALSE, targets = c(2,3, 4, 5, 7, 8, 9)))),
           escape = FALSE,
           extensions = 'Buttons',
           rownames = FALSE,
@@ -171,6 +176,8 @@ DT::datatable(res.df.dt,
                                                     'contrast',
                                                     'description',
                                                     'Gene',
+                                                    'Gene_Symbol',
+                                                    'URLs',
                                                     'Ensembl_Gene_ID',
                                                     'Feature_ID')),
                   human_rounding)
