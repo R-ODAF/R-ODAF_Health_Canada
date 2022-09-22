@@ -82,6 +82,7 @@ jobs:
           git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
           cd test-data
           git checkout ${GITHUB_REF##*/}
+          cd ..
           rm -r data # Remove existing directory before replacing w/ test data
           rm -r config # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
