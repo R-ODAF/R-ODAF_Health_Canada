@@ -106,8 +106,8 @@ load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
 
 set_up_platform_params <-function(params){
     species_data <- params$species_data
-    SampleDataFile <- file.path(paths$processed, "count_table.tsv")
-    params$SampleDataFile <- SampleDataFile
+    count_data_file <- file.path(paths$processed, "count_table.tsv")
+    params$count_data_file <- count_data_file
     params$sampledata_sep = "\t"
   # set some additional parameters based on platform
   if (params$platform == "RNA-Seq") {

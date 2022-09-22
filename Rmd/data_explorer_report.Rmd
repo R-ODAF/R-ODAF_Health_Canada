@@ -50,7 +50,7 @@ params:
   output_digits: 5
   parallel: FALSE
   species_data: null
-  SampleDataFile: null
+  count_data_file: null
   sampledata_sep: null
   MinCount: null
   alpha: 0.05
@@ -207,7 +207,7 @@ counts_by_group <- counts_by_group %>%
 
 # Annotate table with experimental group of interest (params$design)
 counts_by_group <- counts_by_group %>%
-  left_join(DESeqDesign %>% dplyr::select(c(!!sym(params$design),original_names)),
+  left_join(exp_metadata %>% dplyr::select(c(!!sym(params$design),original_names)),
             by = c("Sample" = "original_names"))
 names(counts_by_group)[4] <- "group"
 

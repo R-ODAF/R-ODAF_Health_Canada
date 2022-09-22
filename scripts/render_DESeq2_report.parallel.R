@@ -56,21 +56,21 @@ mergedDEGsList <- mergedDEGsList
 detach()
 
 # Identify where metadata can be found
-SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+exp_metadata_file <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
 # Read in metadata
-DESeqDesign <- read.delim(SampleKeyFile,
+exp_metadata <- read.delim(exp_metadata_file,
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,
                           quote = "\"",
                           row.names = 1) # Column must have unique IDs!!
-DESeqDesign$original_names <- rownames(DESeqDesign)
+exp_metadata$original_names <- rownames(exp_metadata)
 
 
 
 # Generic function to build and filter facets
-get_facets <- function(metadata = DESeqDesign,
+get_facets <- function(metadata = exp_metadata,
                        exclude = params$exclude_groups,
                        display_facet = params$display_group_facet,
                        skip_extra = "DMSO") {

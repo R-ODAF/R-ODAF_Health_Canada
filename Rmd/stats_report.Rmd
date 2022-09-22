@@ -50,7 +50,7 @@ params:
   output_digits: 5
   parallel: FALSE
   species_data: null
-  SampleDataFile: null
+  count_data_file: null
   sampledata_sep: null
   MinCount: null
   alpha: null
@@ -125,7 +125,7 @@ set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
   border.color = "gray")
 
-flextable(DESeqDesign_subset) %>% 
+flextable(exp_metadata_subset) %>% 
   add_footer_lines("Samples and corresponding experimental conditions used in this report")
 ```
 
@@ -134,7 +134,7 @@ flextable(DESeqDesign_subset) %>%
 ```{r metadata-removed, collapse=TRUE, eval=TRUE}
 
 # table of sample metadata
-removed <- DESeqDesign %>% dplyr::filter(!original_names %in% DESeqDesign_subset$original_names)
+removed <- exp_metadata %>% dplyr::filter(!original_names %in% exp_metadata_subset$original_names)
 
 flextable(removed) %>%
   add_footer_lines("Samples and removed from this report")
@@ -144,7 +144,7 @@ flextable(removed) %>%
 
 ```{r metadata-all, collapse=TRUE, eval=TRUE}
 
-flextable(DESeqDesign) %>%
+flextable(exp_metadata) %>%
   add_footer_lines("All samples, including removed ones")
 ```
 
@@ -177,7 +177,7 @@ flextable(contrasts_subset) %>%
   flextable::autofit()
 
 # table of #samples/group
-nSamples_table <- table(DESeqDesign_subset %>% 
+nSamples_table <- table(exp_metadata_subset %>% 
                           mutate_all(list(~ str_c(.))) %>%
                           dplyr::pull(!!sym(params$design)))
 
@@ -215,7 +215,7 @@ df<-data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
 df$original_names = rownames(df)
 df2 <- df %>%
-    left_join(DESeqDesign) %>%
+    left_join(exp_metadata) %>%
     dplyr::select(original_names,sym(design_to_use),nReads)
 
 ggplot(df2, aes_string(x=design_to_use, y="nReads") )+

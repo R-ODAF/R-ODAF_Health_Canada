@@ -52,12 +52,12 @@ set_up_paths_3 <- function(paths,params,display_facets){
   
   
 
-load_cached_data <- function(RDataPath, params, sampleData, facets=NULL){
+load_cached_data <- function(RDataPath, params, count_data, facets=NULL){
     if(!is.na(params$group_facet)){
         ddsList = list()
         for (current_filter in facets) {
             dds <- readRDS(file = file.path(RDataPath, paste0("dds_", paste(current_filter, collapse = "_"), ".RData")))
-            if (!identical(as.data.frame(round(counts(dds))), round(sampleData), 0)) {
+            if (!identical(as.data.frame(round(counts(dds))), round(count_data), 0)) {
                 stop("Attempted to load a cached file that contained non-identical count data, exiting")
             }
             ddsList[[current_filter]] <- dds
@@ -67,7 +67,7 @@ load_cached_data <- function(RDataPath, params, sampleData, facets=NULL){
     if (file.exists(file.path(RDataPath, "dds.RData")) ) {
         print(paste("Already found DESeq2 object from previous run; loading from disk."))
         dds <- readRDS(file.path(RDataPath, "dds.RData"))
-        if (!identical(as.data.frame(round(counts(dds))), round(sampleData), 0)) {
+        if (!identical(as.data.frame(round(counts(dds))), round(count_data), 0)) {
             stop("Attempted to load a cached file that contained non-identical count data, exiting")
         }
     }
@@ -84,9 +84,9 @@ save_cached_data <- function(dds, RDataPath, current_filter=NULL){
 }
 
 
-write_additional_output <- function(sampleData, DESeqDesign, design_to_use, params){
-  dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
-                                colData   = as.data.frame(DESeqDesign),
+write_additional_output <- function(count_data, exp_metadata, design_to_use, params){
+  dds <- DESeqDataSetFromMatrix(countData = round(count_data),
+                                colData   = as.data.frame(exp_metadata),
                                 design    = get_design(design_to_use))
   Counts <- counts(dds, normalized = FALSE) # note: no DEseq normalization
   CPMdds <- cpm(Counts)
@@ -100,10 +100,10 @@ write_additional_output <- function(sampleData, DESeqDesign, design_to_use, para
     biomarkers <- bmdexpress # Still includes all genes
     bmdexpress <- bmdexpress[rowSums(Counts) > 5,]
     # add a dose header line to both files
-    bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
+    bmdexpress <- rbind(c("Dose", as.character(exp_metadata[colnames(bmdexpress)[-1],][[params$dose]])),
                         bmdexpress,
                         stringsAsFactors = F)
-    biomarkers <- rbind(c("Dose", as.character(DESeqDesign[colnames(biomarkers)[-1],][[params$dose]])),
+    biomarkers <- rbind(c("Dose", as.character(exp_metadata[colnames(biomarkers)[-1],][[params$dose]])),
                         biomarkers,
                         stringsAsFactors = F)
     # Determine names of dose groups in which n per group > 1
