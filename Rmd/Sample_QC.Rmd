@@ -397,19 +397,19 @@ dendro_before_tech_ctrls <- 1 - cor(as.matrix(cpm %>% dplyr::select(all_of(tech_
                                            method = "spearman")
 
 if (length(dendro_before_tech_ctrls) > 2) {
-  exp_metadataTechCtrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
+  exp_metadata_tech_ctrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_before_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_before_tech_ctrls), method = "average"))
   
   dendro_before_tech_ctrls <- as.dendrogram(dendro_before_tech_ctrls)
-  colors_to_use <- as.numeric(as.factor(exp_metadataTechCtrls[,dendro_color_by]))
+  colors_to_use <- as.numeric(as.factor(exp_metadata_tech_ctrls[,dendro_color_by]))
   ordered_colors <- colors_to_use[order.dendrogram(dendro_before_tech_ctrls)]
   labels_colors(dendro_before_tech_ctrls) <- ordered_colors
   
-  original_names <- exp_metadataTechCtrls[,"original_names"]
+  original_names <- exp_metadata_tech_ctrls[,"original_names"]
   original_names <- original_names[order.dendrogram(dendro_before_tech_ctrls)]
   
-  labels_to_use <- exp_metadataTechCtrls[,dendro_color_by]
+  labels_to_use <- exp_metadata_tech_ctrls[,dendro_color_by]
   labels_to_use <- labels_to_use[order.dendrogram(dendro_before_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
@@ -452,19 +452,19 @@ CairoPDF(file = file.path(paths$details,
 dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
                                   method = "spearman")
 
-exp_metadataExpSamples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
 
 dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
 
 dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadataExpSamples[,treatment_var]))
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,treatment_var]))
 ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
 labels_colors(dendro_before_all_exp_samples) <- ordered_colors
 
-original_names <- exp_metadataExpSamples[,"original_names"]
+original_names <- exp_metadata_exp_samples[,"original_names"]
 original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
 
-labels_to_use <- exp_metadataExpSamples[,dendro_color_by]
+labels_to_use <- exp_metadata_exp_samples[,dendro_color_by]
 labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
 labels_to_use <- paste(labels_to_use, original_names)
 
@@ -490,19 +490,19 @@ CairoPDF(file = file.path(paths$details,
 dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
                                   method = "spearman")
 
-exp_metadataExpSamples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
 
 dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
 
 dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadataExpSamples[,dendro_color_by]))
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,dendro_color_by]))
 ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
 labels_colors(dendro_before_all_exp_samples) <- ordered_colors
 
-original_names <- exp_metadataExpSamples[,"original_names"]
+original_names <- exp_metadata_exp_samples[,"original_names"]
 original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
 
-labels_to_use <- exp_metadataExpSamples[,dendro_color_by]
+labels_to_use <- exp_metadata_exp_samples[,dendro_color_by]
 labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
 labels_to_use <- paste(labels_to_use, original_names)
 
@@ -760,7 +760,7 @@ Click on the tabs below to see the robust PCA and Pearson correlations for all s
 
 
 ```{r group-correlation-setup}
-facets <- unique(exp_metadataExpSamples[,treatment_var])
+facets <- unique(exp_metadata_exp_samples[,treatment_var])
 cor_list <- list()
 ```
 
@@ -769,7 +769,7 @@ cor_list <- list()
 
 for (i in seq_along(facets)) {
   cat("###", facets[i], "  \n\n")
-  samples_in_facet <- exp_metadataExpSamples[exp_metadataExpSamples[treatment_var] == facets[i],
+  samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[treatment_var] == facets[i],
                                             "original_names"]
   if (length(samples_in_facet) < 2) { next }
   cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
@@ -812,7 +812,7 @@ Sometimes it might be necessary to zoom in to see the required level of granular
 ```{r,  fig.width = 9, fig.height = 10}
 cor_df1 <- as.data.frame(ref_correlations_samples)
 cor_df1$original_names <- row.names(cor_df1)
-cor_df2 <- exp_metadataExpSamples[c(treatment_var,"original_names")]
+cor_df2 <- exp_metadata_exp_samples[c(treatment_var,"original_names")]
 # STUDY WIDE CORRELATION MEANS
 cor_distribution_all <- left_join(cor_df1, cor_df2) %>%
     mutate(mean = rowMeans(across(where(is.numeric)))) %>%
@@ -1287,19 +1287,19 @@ dendro_after_tech_ctrls <- 1 - cor(as.matrix(cpm %>%
                                             dplyr::select(-all_of(outliers[outliers %in% tech_ctrl_names]))),
                                 method = "spearman")
 if (length(dendro_after_tech_ctrls) > 2) {
-  exp_metadataTechCtrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
+  exp_metadata_tech_ctrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
   dendro_after_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_after_tech_ctrls), method = "average"))
   
   dendro_after_tech_ctrls <- as.dendrogram(dendro_after_tech_ctrls)
-  colors_to_use <- as.numeric(as.factor(exp_metadataTechCtrls[,dendro_color_by]))
+  colors_to_use <- as.numeric(as.factor(exp_metadata_tech_ctrls[,dendro_color_by]))
   ordered_colors <- colors_to_use[order.dendrogram(dendro_after_tech_ctrls)]
   labels_colors(dendro_after_tech_ctrls) <- ordered_colors
   
-  original_names <- exp_metadataTechCtrls[,"original_names"]
+  original_names <- exp_metadata_tech_ctrls[,"original_names"]
   original_names <- original_names[order.dendrogram(dendro_after_tech_ctrls)]
   
-  labels_to_use <- exp_metadataTechCtrls[,dendro_color_by]
+  labels_to_use <- exp_metadata_tech_ctrls[,dendro_color_by]
   labels_to_use <- labels_to_use[order.dendrogram(dendro_after_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
@@ -1337,19 +1337,19 @@ dendro_after_all_exp_samples <- 1-cor(as.matrix(cpm %>%
                                             dplyr::select(-all_of(outliers[outliers %in% sample_names]))),
                                   method = "spearman")
 
-exp_metadataExpSamples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
 
 dendro_after_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_after_all_exp_samples), method = "average"))
 
 dendro_after_all_exp_samples <- as.dendrogram(dendro_after_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadataExpSamples[,unlist(exp_groups)[1]]))
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,unlist(exp_groups)[1]]))
 ordered_colors <- colors_to_use[order.dendrogram(dendro_after_all_exp_samples)]
 labels_colors(dendro_after_all_exp_samples) <- ordered_colors
 
-original_names <- exp_metadataExpSamples[,"original_names"]
+original_names <- exp_metadata_exp_samples[,"original_names"]
 original_names <- original_names[order.dendrogram(dendro_after_all_exp_samples)]
 
-labels_to_use <- exp_metadataExpSamples[,dendro_color_by]
+labels_to_use <- exp_metadata_exp_samples[,dendro_color_by]
 labels_to_use <- labels_to_use[order.dendrogram(dendro_after_all_exp_samples)]
 labels_to_use <- paste(labels_to_use, original_names)
 
@@ -1381,19 +1381,19 @@ dendro_after_all_exp_samples <- 1-cor(as.matrix(cpm %>%
                                                  dplyr::select(-all_of(outliers[outliers %in% sample_names]))),
                                      method = "spearman")
 
-exp_metadataExpSamples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
 
 dendro_after_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_after_all_exp_samples), method = "average"))
 
 dendro_after_all_exp_samples <- as.dendrogram(dendro_after_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadataExpSamples[,dendro_color_by]))
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,dendro_color_by]))
 ordered_colors <- colors_to_use[order.dendrogram(dendro_after_all_exp_samples)]
 labels_colors(dendro_after_all_exp_samples) <- ordered_colors
 
-original_names <- exp_metadataExpSamples[,"original_names"]
+original_names <- exp_metadata_exp_samples[,"original_names"]
 original_names <- original_names[order.dendrogram(dendro_after_all_exp_samples)]
 
-labels_to_use <- exp_metadataExpSamples[,dendro_color_by]
+labels_to_use <- exp_metadata_exp_samples[,dendro_color_by]
 labels_to_use <- labels_to_use[order.dendrogram(dendro_after_all_exp_samples)]
 labels_to_use <- paste(labels_to_use, original_names)
 
