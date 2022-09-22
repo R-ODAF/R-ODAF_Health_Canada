@@ -12,7 +12,6 @@ filter_metadata <- function(exp_metadata, params){
     if (any(!is.na(params$exclude_groups))) {
         exp_metadata <- exp_metadata %>%
             dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups)
-        }
     }
     if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
         exp_metadata <- exp_metadata %>%
