@@ -266,7 +266,7 @@ ggplot(summary_stats %>%
                        "unmapped_tooshort_percent")),
        aes(x=name, y=value)) +
   geom_jitter(alpha = 0.1) +
-  geom_violin() +
+  geom_violin(fill = "transparent") +
   facet_wrap(name~., scales = "free")
 
 stat_metrics %>%
