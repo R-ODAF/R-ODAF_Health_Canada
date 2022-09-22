@@ -1,6 +1,23 @@
+
+source(here::here("scripts","data_functions.R"), local = TRUE)
+
 # input data file
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(dataFile) # metadata, contrasts, counts, resultsList
+#load(dataFile) # metadata, contrasts, counts, resultsList
+attach(dataFile)
+ddsList<-ddsList
+overallResListAll<-overallResListAll
+overallResListDEGs<-overallResListDEGs
+rldList<-rldList
+mergedDEGsList<-mergedDEGsList
+designList<-designList
+contrastsList<-contrastsList
+design_to_use<-design_to_use
+contrasts<-contrasts
+filtered_table<-filtered_table
+DESeqDesign<-DESeqDesign # original unfaceted design
+DESeqDesign_original <- DESeqDesign
+detach()
 
 # reformat data based on group_facet and display_group_facet
 
@@ -12,6 +29,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   rld <- rldList[['all']]
   mergedDEGs <- mergedDEGsList[['all']]
   
+  DESeqDesign_subset<-DESeqDesign
+  contrasts_subset<-contrasts
+  
   # case 2: no facet, yes display facet
 } else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
   # the data isn't already faceted but we need to extract the facet we need
@@ -22,27 +42,25 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListDEGs_all <- overallResListDEGs[['all']]
   rld_all <- rldList[['all']]
   mergedDEGs_all <- mergedDEGsList[['all']]
-  
+
   metadata_subset <- subset_metadata(designList[['all']], design_to_use, contrasts, params$display_group_facet, display_group_filter)
   DESeqDesign_subset <- metadata_subset$DESeqDesign
   contrasts_subset <- metadata_subset$contrasts
   
   dds_subset <- subset_data(dds_all, DESeqDesign_subset)
   rld_subset <- subset_data(rld_all, DESeqDesign_subset)
-  
   contrast_strings <- contrasts_subset %>% mutate(contrast_string = paste(V1,V2,sep="_vs_")) %>% pull(contrast_string)
   resultsListAll_subset <- resultsListAll_all[contrast_strings]
   resultsListDEGs_subset <- resultsListDEGs_all[contrast_strings]
-  
-  # note, in this case the merged DEGs will be for the whole experiment, not the display facet
+
   DESeqDesign <- DESeqDesign_subset
   contrasts <- contrasts_subset
   dds <- dds_subset
   resultsListAll <- resultsListAll_subset
   resultsListDEGs <- resultsListDEGs_subset
   rld <- rld_subset
+  # note, in this case the merged DEGs will be for the whole experiment, not the display facet
   mergedDEGs <- mergedDEGs_all
-  
   # TODO: add some tests here to make sure everything worked properly
   
   # case 3: yes facet, yes display facet
@@ -56,7 +74,8 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListDEGs <- overallResListDEGs[[display_group_filter]]
   rld <- rldList[[display_group_filter]]
   mergedDEGs <- mergedDEGsList[[display_group_filter]]
-  
+  DESeqDesign_subset <- designList[[display_group_filter]]
+  contrasts_subset <- contrastsList[[display_group_filter]]
   # case 4: yes facet, no display facet, this one doesn't make sense
 } else {
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
@@ -75,3 +94,8 @@ rld_top_heatmap <- rld[select_heatmap,]
 allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
 significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
 
+ordered_contrast_strings <- contrasts %>% mutate(contrast_string = paste(V1,'vs',V2,sep=" ")) %>% pull(contrast_string)
+
+
+allResults$contrast <- factor(allResults$contrast, levels = ordered_contrast_strings)
+significantResults$contrast <- factor(significantResults$contrast, levels = ordered_contrast_strings)

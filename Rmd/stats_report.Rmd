@@ -12,10 +12,10 @@ params:
   celltype: "Liver spheroids" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   species: "human"                 # one of human, mouse, rat, hamster
-  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
-  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
-  intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
-  group_facet: "chemical_timepoint"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  design: "Group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["Group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
+  group_facet: "Chemical_S9"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
   display_group_facet: "chemical_timepoint" #  
   display_group_filter:  "estradiol 10d" # 
@@ -119,11 +119,7 @@ This should be reviewed carefully to ensure that samples are correctly identifie
 
 ```{r metadata-report, collapse=TRUE, eval=TRUE}
 # table of sample metadata
-metadata_subset <- subset_metadata(designList[[params$display_group_filter]],
-                                   design_to_use, contrasts,
-                                   params$display_group_facet, params$display_group_filter)
-DESeqDesign_subset <- as.data.frame(metadata_subset$DESeqDesign)
-contrasts_subset <- as.data.frame(metadata_subset$contrasts)
+
 
 set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
@@ -246,7 +242,7 @@ plot_sample_heatmap <- function(current_rld){
   sampleDists <- dendextend::sort_dist_mat(sampleDists)
   sampleDistMatrix <- as.matrix(sampleDists)
   
-  distances_df <- as.data.frame(colData(current_rld)[, intgroup, drop = F])
+  distances_df <- as.data.frame(colData(current_rld)[, params$intgroup, drop = F])
   
   ## Define colors to use for the heatmap
   colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)

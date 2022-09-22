@@ -19,6 +19,8 @@ clean_tmpfiles_mod <- function() {
   message("Calling clean_tmpfiles_mod()")
 }
 
+single_facet_constant = "single_facet_constant_12345" # Used internally; don't have a facet named this.
+
 assignInNamespace("clean_tmpfiles", clean_tmpfiles_mod, ns = "rmarkdown")
 
 source(here::here("scripts","file_functions.R"))
@@ -38,6 +40,7 @@ if (is.na(projectdir)) {
   projectdir <- here::here()
   params$projectdir <- projectdir
 }
+
 
 paths <- set_up_paths(params)
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
@@ -64,6 +67,52 @@ DESeqDesign <- read.delim(SampleKeyFile,
                           row.names = 1) # Column must have unique IDs!!
 DESeqDesign$original_names <- rownames(DESeqDesign)
 
+
+
+# Generic function to build and filter facets
+get_facets <- function(metadata = DESeqDesign,
+                       exclude = params$exclude_groups,
+                       display_facet = params$display_group_facet,
+                       skip_extra = "DMSO") {
+  facets <- metadata %>%
+    filter(!(!!sym(display_facet)) %in%
+             c(exclude, skip_extra)) %>%
+    pull(display_facet) %>% 
+    unique()
+  message(paste0("Making multiple reports based on ",
+                 display_facet ,"..."))
+  return(facets)
+}
+
+# Determine whether facets are needed
+# And if so, what they should be
+# Case 1: no facet, no display facet
+if(is.na(params$group_facet) && is.na(params$display_group_facet)){
+  display_facets <- single_facet_constant
+  # Case 2: no facet, yes display facet
+} else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
+  display_facets <- get_facets()
+  # Case 3: yes facet, yes display facet
+} else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
+  if(params$group_facet != params$display_group_facet) {
+    stop("Error: display_group_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
+  }
+  display_facets <- get_facets()
+  # Which facets have DEGs?
+  hasDEGs <- names(which(sapply(X = mergedDEGsList,
+                                FUN = function(i) length(i)>=1),
+                         arr.ind = T))
+  display_facets <- display_facets[display_facets %in% hasDEGs]
+  # Case 4: yes facet, no display facet, this one doesn't make sense
+} else {
+  stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
+}
+
+
+
+paths <- set_up_paths_3(paths,params,display_facets)
+
+
 # Make directory for DESeq2 Reports
 report_dir <- file.path(projectdir, "analysis", "DEG_reports")
 deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
@@ -84,6 +133,7 @@ render_report <- function(report_in, report_out, render_pars) {
                     intermediates_dir = random_tmp)
   system(paste0("rm -rf ", random_tmp))
 }
+
 
 # Determine filename prefix based on existing parameters
 get_prefix <- function(prefix_pars, prefix_facet) {
@@ -119,7 +169,11 @@ get_prefix <- function(prefix_pars, prefix_facet) {
 # These are the functions that run in parallel
 # Necessary to run them per-facet and get the file prefix within each instance
 make_main_reports <- function(pars, facet) {
-  pars$display_group_filter <- facet
+  if(facet == single_facet_constant){
+    pars$display_group_filter <- NULL
+  } else {
+    pars$display_group_filter <- facet
+  }
   prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_main_report){
     main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
@@ -129,7 +183,11 @@ make_main_reports <- function(pars, facet) {
 }
 
 make_stats_reports <- function(pars, facet) {
-  pars$display_group_filter <- facet
+  if(facet == single_facet_constant){
+    pars$display_group_filter <- NULL
+  } else {
+    pars$display_group_filter <- facet
+  }
   prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_stats_report){
     message("Generating stats report")
@@ -141,7 +199,11 @@ make_stats_reports <- function(pars, facet) {
 }
 
 make_data_reports <- function(pars, facet) {
-  pars$display_group_filter <- facet
+  if(facet == single_facet_constant){
+    pars$display_group_filter <- NULL
+  } else {
+    pars$display_group_filter <- facet
+  }
   prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_data_explorer_report){
     message("Generating data explorer report")
@@ -152,7 +214,11 @@ make_data_reports <- function(pars, facet) {
 }
 
 make_pathway_reports <- function(pars, facet)  {
-  pars$display_group_filter <- facet
+  if(facet == single_facet_constant){
+    pars$display_group_filter <- NULL
+  } else {
+    pars$display_group_filter <- facet
+  }
   prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
   if(pars$generate_go_pathway_report){
     message("Generating GO and pathway analysis report")
@@ -162,59 +228,26 @@ make_pathway_reports <- function(pars, facet)  {
   }
 }
 
-# Generic function to build and filter facets
-get_facets <- function(metadata = DESeqDesign,
-                       exclude = params$exclude_groups,
-                       display_facet = params$display_group_facet,
-                       skip_extra = "DMSO") {
-  facets <- metadata %>%
-    filter(!(!!sym(display_facet)) %in%
-             c(exclude, skip_extra)) %>%
-    pull(display_facet) %>% 
-    unique()
-  message(paste0("Making multiple reports based on ",
-                 display_facet ,"..."))
-  return(facets)
-}
-
-# Determine whether facets are needed
-# And if so, what they should be
-  # Case 1: no facet, no display facet
-if(is.na(params$group_facet) && is.na(params$display_group_facet)){
-  facets <- NULL
-  # Case 2: no facet, yes display facet
-} else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
-  facets <- get_facets()
-  # Case 3: yes facet, yes display facet
-} else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
-  if(params$group_facet != params$display_group_facet) {
-    stop("Error: display_group_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
-  }
-  facets <- get_facets()
-  # Which facets have DEGs?
-  hasDEGs <- names(which(sapply(X = mergedDEGsList,
-                                FUN = function(i) length(i)>=1),
-                         arr.ind = T))
-  facets <- facets[facets %in% hasDEGs]
-  # Case 4: yes facet, no display facet, this one doesn't make sense
-} else {
-  stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
-}
-
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
-  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
   if (params$generate_main_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  if (params$generate_data_explorer_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
-  if (params$generate_go_pathway_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  if (params$generate_data_explorer_report  == T) {Sys.sleep(60)}
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  if (params$generate_go_pathway_report  == T) {Sys.sleep(60)}
+  # Why does this use so much memory!?
+  # It is knitr::kable that is the problem.
+  # See the extra stats Rmd for details, the chunk name metadata-report
+  #reduced_cpus <- round(params$cpus*0.5)
+  #if (reduced_cpus < 1) { reduced_cpus = 1 }
+  #biocluster <- BiocParallel::MulticoreParam(workers = reduced_cpus )
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
 } else {
-  base::mapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params))
 }
 
 # Add back after troubleshooting above code...
