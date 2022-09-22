@@ -28,7 +28,7 @@ jobs:
         r-version: ['4.1.1']
         python-version: ['3.7']
         seq_type: ['temposeq'] # add later... , 'rnaseq']
-        config_version: ['parallel_faceted.yaml', 'sequential_nonfaceted.yaml']
+        config_version: ['parallel_faceted.yaml', 'sequential_nonfaceted.yaml', 'parallel_display_faceted.yaml']
     runs-on: ${{ matrix.os }}
     defaults:
       run:
