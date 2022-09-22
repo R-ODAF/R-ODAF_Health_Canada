@@ -1,6 +1,6 @@
 # filter metadata
 # this only applies to specifically included/excluded data, not the facet filtering
-filter_metadata <- function(exp_metadata, params, design){
+filter_metadata <- function(exp_metadata, params){
     # exclude samples
     if (any(!is.na(params$exclude_samples))) {
         exp_metadata <- exp_metadata %>% 
@@ -49,7 +49,7 @@ sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
 
 process_data_and_metadata <- function(count_data, exp_metadata, contrasts, intgroup, design, params){
     count_data <- filter_data(count_data, exp_metadata, params$nmr_threshold)
-    exp_metadata <- filter_metadata(exp_metadata, params, design)
+    exp_metadata <- filter_metadata(exp_metadata, params)
     exp_metadata <- format_and_sort_metadata(exp_metadata, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
         contrasts <- sort_contrasts(exp_metadata, contrasts, design, params$sortcol)
