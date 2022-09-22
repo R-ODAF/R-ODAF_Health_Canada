@@ -56,10 +56,10 @@ mergedDEGsList <- mergedDEGsList
 detach()
 
 # Identify where metadata can be found
-SampleKeyFile <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+exp_metadata_file <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
 
 # Read in metadata
-exp_metadata <- read.delim(SampleKeyFile,
+exp_metadata <- read.delim(exp_metadata_file,
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,

@@ -174,15 +174,15 @@ if (params$collapse_replicates == T) {
 # B. Tab delimited sample information file with at least 2 columns:
 #    1. sample names identical to the column names of sampleData
 #    2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
-SampleKeyFile <- file.path(paths$metadata, "metadata.txt")
+exp_metadata_file <- file.path(paths$metadata, "metadata.txt")
 # Check if the metadata was previously backed up.
 # If so, restore it before doing the new manual sample removal.
 # This is done to ensure we start with the full list of samples from the start.
-if (file.exists(paste0(SampleKeyFile,".bak"))) {
-    system(paste0("cp ",paste0(SampleKeyFile,".bak "),SampleKeyFile))
+if (file.exists(paste0(exp_metadata_file,".bak"))) {
+    system(paste0("cp ",paste0(exp_metadata_file,".bak "),exp_metadata_file))
   }
 
-exp_metadata <- read.delim(SampleKeyFile,
+exp_metadata <- read.delim(exp_metadata_file,
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,
@@ -240,11 +240,11 @@ if (file.exists(remove_file)) {
   # Once above is correct, go ahead and make final filtered metadata
   exp_metadata <- exp_metadata %>% dplyr::filter(!.[[1]] %in% remove)
   # If you've already done this, don't overwrite the backup!
-  if (!file.exists(paste0(SampleKeyFile,".bak"))) {
-    system(paste0("cp ",SampleKeyFile," ",paste0(SampleKeyFile,".bak")))
+  if (!file.exists(paste0(exp_metadata_file,".bak"))) {
+    system(paste0("cp ",exp_metadata_file," ",paste0(exp_metadata_file,".bak")))
   }
   write.table(exp_metadata,
-              SampleKeyFile,
+              exp_metadata_file,
               sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
   d <- exp_metadata
 }
