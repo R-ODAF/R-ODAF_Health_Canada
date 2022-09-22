@@ -144,8 +144,8 @@ if (params$collapse_replicates == T) {
                             names_to = c('.value','flowcell'),
                             names_pattern = '(.*)_(.*)')
   df[is.na(df)] <- 0
-  count_dataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
-  results <- count_dataTable[, lapply(.SD,sum), by = "X"]
+  sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- sd_collapse[, lapply(.SD,sum), by = "X"]
   return(results)
   }
   count_data <- collapse_reps(count_data_file)
