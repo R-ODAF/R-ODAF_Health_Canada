@@ -1,16 +1,16 @@
 # filter metadata
 # this only applies to specifically included/excluded data, not the facet filtering
-filter_metadata <- function(DESeqDesign, params, design){
+filter_metadata <- function(exp_metadata, params, design){
     # exclude samples
     if (any(!is.na(params$exclude_samples))) {
-        DESeqDesign <- DESeqDesign %>% 
+        exp_metadata <- exp_metadata %>% 
             dplyr::filter(!original_names %in% params$exclude_samples)
     }
     # exclude groups
     if (any(!is.na(params$exclude_groups))) {
-        DESeqDesign <- DESeqDesign %>%
+        exp_metadata <- exp_metadata %>%
             dplyr::filter(!(!!sym(design)) %in% params$exclude_groups)
-        contrasts_to_filter <- DESeqDesign %>% 
+        contrasts_to_filter <- exp_metadata %>% 
             dplyr::filter(!(!!sym(design)) %in% params$exclude_groups) %>%
             pull(design) %>% 
             unique()
@@ -22,35 +22,35 @@ filter_metadata <- function(DESeqDesign, params, design){
         }
     }
     if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
-        DESeqDesign <- DESeqDesign %>%
+        exp_metadata <- exp_metadata %>%
             dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
-        limit_contrasts <- DESeqDesign %>%
+        limit_contrasts <- exp_metadata %>%
             pull(!!sym(design)) %>%
             unique() %>%
             as.character()
         contrasts <- contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
     }
-    return(DESeqDesign)
+    return(exp_metadata)
 }
 
-format_and_sort_metadata <- function(DESeqDesign, intgroup, design, sortcol){
+format_and_sort_metadata <- function(exp_metadata, intgroup, design, sortcol){
     # Intgroups need to be factors for DESeq2
     # make sure the levels are sorted for plotting later
     for(int in intgroup){
-        DESeqDesign[int] <- factor(DESeqDesign[[int]], levels=mixedsort(unique(DESeqDesign[[int]])))
+        exp_metadata[int] <- factor(exp_metadata[[int]], levels=mixedsort(unique(exp_metadata[[int]])))
     }
     # if sortcol is defined, sort the design variable based on that
     if (!is.na(sortcol)){
-        design_factor_reordered <- factor(DESeqDesign[[design]],
-                                        levels = unique(DESeqDesign[[design]][mixedorder(DESeqDesign[[sortcol]])]),
+        design_factor_reordered <- factor(exp_metadata[[design]],
+                                        levels = unique(exp_metadata[[design]][mixedorder(exp_metadata[[sortcol]])]),
                                         ordered = FALSE)
-        DESeqDesign[[design]] <- design_factor_reordered
+        exp_metadata[[design]] <- design_factor_reordered
     }
-    return(DESeqDesign)
+    return(exp_metadata)
 }
 
-sort_contrasts <- function(DESeqDesign, contrasts, design, sortcol){
-    ordered_design <- DESeqDesign[mixedorder(DESeqDesign[,params$sortcol]),] %>%
+sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
+    ordered_design <- exp_metadata[mixedorder(exp_metadata[,params$sortcol]),] %>%
         dplyr::select(design) %>%
         dplyr::pull()
     ordered_contrasts <- contrasts %>%
@@ -59,25 +59,25 @@ sort_contrasts <- function(DESeqDesign, contrasts, design, sortcol){
     return(ordered_contrasts)
 }
 
-process_data_and_metadata <- function(sampleData, DESeqDesign, contrasts, intgroup, design, params){
-    sampleData <- filter_data(sampleData, DESeqDesign, params$nmr_threshold)
-    DESeqDesign <- filter_metadata(DESeqDesign, params, design)
-    DESeqDesign <- format_and_sort_metadata(DESeqDesign, intgroup, design, params$sortcol)
+process_data_and_metadata <- function(sampleData, exp_metadata, contrasts, intgroup, design, params){
+    sampleData <- filter_data(sampleData, exp_metadata, params$nmr_threshold)
+    exp_metadata <- filter_metadata(exp_metadata, params, design)
+    exp_metadata <- format_and_sort_metadata(exp_metadata, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
-        contrasts <- sort_contrasts(DESeqDesign, contrasts, design, params$sortcol)
+        contrasts <- sort_contrasts(exp_metadata, contrasts, design, params$sortcol)
     }
-    check_data(sampleData, DESeqDesign, contrasts)
-    return(list(sampleData=sampleData, DESeqDesign=DESeqDesign, contrasts=contrasts))
+    check_data(sampleData, exp_metadata, contrasts)
+    return(list(sampleData=sampleData, exp_metadata=exp_metadata, contrasts=contrasts))
 }
 
 # filter count data based on minimum counts. Does not do facet filtering
-filter_data <- function(sampleData, DESeqDesign, threshold){
+filter_data <- function(sampleData, exp_metadata, threshold){
     # First data clean-up: replace NA & remove samples with total readcount < threshold 
     sampleData[ is.na(sampleData) ] <- 0 
     sampleData <- sampleData[,(colSums(sampleData) > threshold)] # reads required per sample
     #sampleData <- sampleData[(rowSums(sampleData) > 1),] # reads required per gene
-    DESeqDesign <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-    sampleData <- sampleData[,DESeqDesign$original_names]
+    exp_metadata <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
+    sampleData <- sampleData[,exp_metadata$original_names]
     return(sampleData)
 }
 
@@ -110,8 +110,8 @@ load_count_data <- function(SampleDataFile, sampledata_sep){
 }
 
 # subset metadata based on facet + filter
-subset_metadata <- function(DESeqDesign, design, contrasts, current_facet, current_filter){
-    contrasts_to_filter <- DESeqDesign %>%
+subset_metadata <- function(exp_metadata, design, contrasts, current_facet, current_filter){
+    contrasts_to_filter <- exp_metadata %>%
         dplyr::filter(!!sym(current_facet) %in% current_filter) %>% # NOTE: Not sure if %in% or == is better here.
         pull(design) %>% 
         unique()
@@ -119,23 +119,23 @@ subset_metadata <- function(DESeqDesign, design, contrasts, current_facet, curre
     if (params$strict_contrasts == T) {
         contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
     }
-    DESeqDesign_subset <- DESeqDesign %>% dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) )
-    #levels(DESeqDesign_subset[design,]) <- unlist(contrasts_subset) %>% unique()
-    return(list(DESeqDesign=DESeqDesign_subset, contrasts=contrasts_subset))
+    exp_metadata_subset <- exp_metadata %>% dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) )
+    #levels(exp_metadata_subset[design,]) <- unlist(contrasts_subset) %>% unique()
+    return(list(exp_metadata=exp_metadata_subset, contrasts=contrasts_subset))
 }
 
 # subset count data to samples in metadata
-subset_data <- function(sampleData, DESeqDesign){
+subset_data <- function(sampleData, exp_metadata){
     # Reorder the metadata table to correspond to the order of columns in the count data
-    DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-    sampleData_subset <- sampleData[,DESeqDesign_sorted$original_names]
+    exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
+    sampleData_subset <- sampleData[,exp_metadata_sorted$original_names]
     return(sampleData_subset)
 }
 
-subset_results <- function(res, DESeqDesign){
+subset_results <- function(res, exp_metadata){
   # Reorder the metadata table to correspond to the order of columns in the count data
-  DESeqDesign_sorted <- DESeqDesign[DESeqDesign$original_names %in% colnames(sampleData),]
-  res_subset <- res[,DESeqDesign_sorted$original_names]
+  exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
+  res_subset <- res[,exp_metadata_sorted$original_names]
   return(res_subset)
   
 }

@@ -84,9 +84,9 @@ save_cached_data <- function(dds, RDataPath, current_filter=NULL){
 }
 
 
-write_additional_output <- function(sampleData, DESeqDesign, design_to_use, params){
+write_additional_output <- function(sampleData, exp_metadata, design_to_use, params){
   dds <- DESeqDataSetFromMatrix(countData = round(sampleData),
-                                colData   = as.data.frame(DESeqDesign),
+                                colData   = as.data.frame(exp_metadata),
                                 design    = get_design(design_to_use))
   Counts <- counts(dds, normalized = FALSE) # note: no DEseq normalization
   CPMdds <- cpm(Counts)
@@ -100,10 +100,10 @@ write_additional_output <- function(sampleData, DESeqDesign, design_to_use, para
     biomarkers <- bmdexpress # Still includes all genes
     bmdexpress <- bmdexpress[rowSums(Counts) > 5,]
     # add a dose header line to both files
-    bmdexpress <- rbind(c("Dose", as.character(DESeqDesign[colnames(bmdexpress)[-1],][[params$dose]])),
+    bmdexpress <- rbind(c("Dose", as.character(exp_metadata[colnames(bmdexpress)[-1],][[params$dose]])),
                         bmdexpress,
                         stringsAsFactors = F)
-    biomarkers <- rbind(c("Dose", as.character(DESeqDesign[colnames(biomarkers)[-1],][[params$dose]])),
+    biomarkers <- rbind(c("Dose", as.character(exp_metadata[colnames(biomarkers)[-1],][[params$dose]])),
                         biomarkers,
                         stringsAsFactors = F)
     # Determine names of dose groups in which n per group > 1

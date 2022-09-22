@@ -15,8 +15,8 @@ contrastsList<-contrastsList
 design_to_use<-design_to_use
 contrasts<-contrasts
 filtered_table<-filtered_table
-DESeqDesign<-DESeqDesign # original unfaceted design
-DESeqDesign_original <- DESeqDesign
+exp_metadata<-exp_metadata # original unfaceted design
+exp_metadata_original <- exp_metadata
 detach()
 
 # reformat data based on group_facet and display_group_facet
@@ -29,7 +29,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   rld <- rldList[['all']]
   mergedDEGs <- mergedDEGsList[['all']]
   
-  DESeqDesign_subset<-DESeqDesign
+  exp_metadata_subset<-exp_metadata
   contrasts_subset<-contrasts
   
   # case 2: no facet, yes display facet
@@ -44,16 +44,16 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   mergedDEGs_all <- mergedDEGsList[['all']]
 
   metadata_subset <- subset_metadata(designList[['all']], design_to_use, contrasts, params$display_group_facet, display_group_filter)
-  DESeqDesign_subset <- metadata_subset$DESeqDesign
+  exp_metadata_subset <- metadata_subset$exp_metadata
   contrasts_subset <- metadata_subset$contrasts
   
-  dds_subset <- subset_data(dds_all, DESeqDesign_subset)
-  rld_subset <- subset_data(rld_all, DESeqDesign_subset)
+  dds_subset <- subset_data(dds_all, exp_metadata_subset)
+  rld_subset <- subset_data(rld_all, exp_metadata_subset)
   contrast_strings <- contrasts_subset %>% mutate(contrast_string = paste(V1,V2,sep="_vs_")) %>% pull(contrast_string)
   resultsListAll_subset <- resultsListAll_all[contrast_strings]
   resultsListDEGs_subset <- resultsListDEGs_all[contrast_strings]
 
-  DESeqDesign <- DESeqDesign_subset
+  exp_metadata <- exp_metadata_subset
   contrasts <- contrasts_subset
   dds <- dds_subset
   resultsListAll <- resultsListAll_subset
@@ -74,7 +74,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListDEGs <- overallResListDEGs[[display_group_filter]]
   rld <- rldList[[display_group_filter]]
   mergedDEGs <- mergedDEGsList[[display_group_filter]]
-  DESeqDesign_subset <- designList[[display_group_filter]]
+  exp_metadata_subset <- designList[[display_group_filter]]
   contrasts_subset <- contrastsList[[display_group_filter]]
   # case 4: yes facet, no display facet, this one doesn't make sense
 } else {

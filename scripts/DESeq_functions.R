@@ -49,7 +49,7 @@ regularize_data <- function(dds, design, covariates, batch_param, blind=FALSE){
   return(rld)
 }
 
-get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, current_group_filter, outdir){
+get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, current_group_filter, outdir){
     # Initial setup for DESeq2 contrasts
     resListAll <- list()
     resListFiltered <- list()
@@ -67,11 +67,11 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
 
         message(contrast_string)
 
-        DESeqDesign_subset <- as.matrix(DESeqDesign[DESeqDesign[, design] %in% c(condition1, condition2),])
+        exp_metadata_subset <- as.matrix(exp_metadata[exp_metadata[, design] %in% c(condition1, condition2),])
         
         # sanity checks
         stopifnot(exprs = {
-            nrow(DESeqDesign_subset) > 0
+            nrow(exp_metadata_subset) > 0
         })
 
         # Filter results using R-ODAF filters
@@ -81,14 +81,14 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         
         # Apply the "Relevance" condition
         message(paste0("Filtering genes: 75% of at least 1 group need to be above ", params$MinCount, " CPM"))
-        SampPerGroup <- table(DESeqDesign_subset[, design])
+        SampPerGroup <- table(exp_metadata_subset[, design])
         if (!SampPerGroup[condition2] > 1) { next }
         
         for (gene in 1:nrow(dds)) {
           CountsPass <- NULL
           for (group in 1:length(SampPerGroup)) {
-            sampleCols <- grep(names(SampPerGroup)[group], DESeqDesign_subset[, design], fixed = T)
-            sampleNamesGroup <- DESeqDesign_subset[sampleCols, "original_names"]
+            sampleCols <- grep(names(SampPerGroup)[group], exp_metadata_subset[, design], fixed = T)
+            sampleNamesGroup <- exp_metadata_subset[sampleCols, "original_names"]
             Check <- sum(CPMdds[gene,sampleNamesGroup] >= params$MinCount) >= 0.75 * SampPerGroup[group]
             CountsPass <- c(CountsPass, Check)
           }
@@ -139,12 +139,12 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
         for (gene in 1:nrow(DECounts)) {
             # Check the median against third quantile
             quantilePass <- NULL
-            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],DESeqDesign_subset[,design], fixed = T)
-            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],DESeqDesign_subset[,design], fixed = T)
+            sampleColsg1 <- grep(dimnames(SampPerGroup)[[1]][1],exp_metadata_subset[,design], fixed = T)
+            sampleColsg2 <- grep(dimnames(SampPerGroup)[[1]][2],exp_metadata_subset[,design], fixed = T)
             
             # Same problem as above, use names explictly
-            sampleNames_g1 <- DESeqDesign_subset[sampleColsg1, "original_names"]
-            sampleNames_g2 <- DESeqDesign_subset[sampleColsg2, "original_names"]
+            sampleNames_g1 <- exp_metadata_subset[sampleColsg1, "original_names"]
+            sampleNames_g2 <- exp_metadata_subset[sampleColsg2, "original_names"]
             
             Check <- median(as.numeric(DECounts[gene, sampleNames_g1])) > quantile(DECounts[gene, sampleNames_g2], 0.75)[[1]]
             quantilePass <- c(quantilePass, Check)
@@ -161,8 +161,8 @@ get_DESeq_results <- function(dds, DESeqDesign, contrasts, design, params, curre
             # Check for spikes 
             spikePass <- NULL
             for (group in 1:length(SampPerGroup)) {
-                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], DESeqDesign_subset[ ,design], fixed = T)
-                sampleNamesSpike <- DESeqDesign_subset[sampleColsSpike, "original_names"]
+                sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], exp_metadata_subset[ ,design], fixed = T)
+                sampleNamesSpike <- exp_metadata_subset[sampleColsSpike, "original_names"]
                 if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
                   Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=
                     1.4 * (SampPerGroup[group])^(-0.66)
