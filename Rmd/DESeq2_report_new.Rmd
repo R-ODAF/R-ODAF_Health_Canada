@@ -264,7 +264,7 @@ fig
 
 # PCA plots {.tabset .tabset-fade}
 
-```{r PCA_function, collapse=TRUE}
+```{r PCA_function, collapse=TRUE, out.width="10px", out.height="10px"}
 
 
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
