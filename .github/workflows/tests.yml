@@ -28,6 +28,7 @@ jobs:
         r-version: ['4.1.1']
         python-version: ['3.7']
         seq_type: ['temposeq'] # add later... , 'rnaseq']
+        config_version: ['parallel_faceted.yaml', 'sequential_nonfaceted.yaml']
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -83,6 +84,7 @@ jobs:
           rm -r data # Remove existing directory before replacing w/ test data
           rm -r config # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
+          mv config/${{matrix.config_version}} config/config.yaml
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
       - name: Run workflow
         run: |
