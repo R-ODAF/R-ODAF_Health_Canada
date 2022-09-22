@@ -19,24 +19,24 @@ learn_deseq_model <- function(sd, des, design, params){
     return(dds)
 }
 
-# covariates are used to calculate within-group variability. Nuisance parameters are removed (e.g. for visualization) See:
+# covariates are used to calculate within-group variability. Batch is considered a nuisance parameter and is removed (e.g. for visualization) See:
 # http://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#why-after-vst-are-there-still-batches-in-the-pca-plot
-regularize_data <- function(dds, design, covariates, nuisance, blind=FALSE){
-  if (!is.na(nuisance)) {
+regularize_data <- function(dds, design, covariates, batch_param, blind=FALSE){
+  if (!is.na(batch_param)) {
     rld <- vst(dds, blind)
 
     mat <- assay(rld)
     if(!is.na(covariates)){
       condition <- formula(paste0("~",
                                   design,
-                                  paste0(covariates[!covariates %in% nuisance],collapse = " + ")))
+                                  paste0(covariates[!covariates %in% batch_param],collapse = " + ")))
       
     } else {
       condition <- formula(paste0("~", design))
     }
     mm <- model.matrix(condition, colData(rld))
-    if (length(unique(rld[[nuisance]])) > 1) {
-      mat <- limma::removeBatchEffect(mat, batch = rld[[nuisance]], design = mm)
+    if (length(unique(rld[[batch_param]])) > 1) {
+      mat <- limma::removeBatchEffect(mat, batch = rld[[batch_param]], design = mm)
       assay(rld) <- mat
     }
   } else {
