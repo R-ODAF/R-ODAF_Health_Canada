@@ -133,7 +133,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ############################################################################
 
 # A. File with read counts
-SampleDataFile <- file.path(paths$processed,"count_table.tsv")
+count_data_file <- file.path(paths$processed,"count_table.tsv")
 if (params$collapse_replicates == T) {
   collapse_reps <- function(filepath) {
   df <- read.table(file = filepath,
@@ -144,18 +144,18 @@ if (params$collapse_replicates == T) {
                             names_to = c('.value','flowcell'),
                             names_pattern = '(.*)_(.*)')
   df[is.na(df)] <- 0
-  sampleDataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
-  results <- sampleDataTable[, lapply(.SD,sum), by = "X"]
+  count_dataTable <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- count_dataTable[, lapply(.SD,sum), by = "X"]
   return(results)
   }
-  sampleData <- collapse_reps(SampleDataFile)
-  write.table(sampleData,
+  count_data <- collapse_reps(count_data_file)
+  write.table(count_data,
               file = file.path(paths$processed,"count_table_collapsed.tsv"),
               sep = "\t",
               quote = F,
               row.names = F)
   } else {
-  sampleData <- read.table(SampleDataFile,
+  count_data <- read.table(count_data_file,
                            sep = "\t",
                            stringsAsFactors = FALSE,
                            header = TRUE,
@@ -172,7 +172,7 @@ if (params$collapse_replicates == T) {
 
 
 # B. Tab delimited sample information file with at least 2 columns:
-#    1. sample names identical to the column names of sampleData
+#    1. sample names identical to the column names of count_data
 #    2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
 exp_metadata_file <- file.path(paths$metadata, "metadata.txt")
 # Check if the metadata was previously backed up.
@@ -195,8 +195,8 @@ exp_metadata$original_names <- as.character(exp_metadata[,1])
 # Arrange tables by sample names
 ############################################################################
 
-sampleData <- sampleData %>% dplyr::relocate(colnames(sampleData) %>% sort())
-ncol(sampleData)
+count_data <- count_data %>% dplyr::relocate(colnames(count_data) %>% sort())
+ncol(count_data)
 
 #design
 d <- exp_metadata
@@ -206,13 +206,13 @@ nrow(d)
 ############################################################################
 #Checking row and column orderings
 ############################################################################
-all(names(sampleData) %in% d$original_names)
-all(names(sampleData) == d$original_names)
-d <- d[d$original_names %in% names(sampleData),]
+all(names(count_data) %in% d$original_names)
+all(names(count_data) == d$original_names)
+d <- d[d$original_names %in% names(count_data),]
 exp_metadata <- d
-all(names(sampleData) == d$original_names)
+all(names(count_data) == d$original_names)
 # Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
-sampleData <- sampleData[,d$original_names]
+count_data <- count_data[,d$original_names]
 mu <- mu[d$original_names,]
 
 ############################################################################
@@ -315,14 +315,14 @@ message(paste0("The treatment variable is: ", treatment_var))
 ############################################################################
 flag_order <- order(d[treatment_var])
 d <- d[flag_order,]
-sampleData <- sampleData[,d$original_names]
+count_data <- count_data[,d$original_names]
 ############################################################################
 # CPM (used in dendrogram/cluster analysis)
 ############################################################################
-libsize <- apply(sampleData, 2, sum)
-cpm <- sampleData
+libsize <- apply(count_data, 2, sum)
+cpm <- count_data
 for (k in 1:length(libsize)) {
-  cpm[,k] <- log2((10^6)*(sampleData[,k] + 0.5)/(libsize[k] + 1))
+  cpm[,k] <- log2((10^6)*(count_data[,k] + 0.5)/(libsize[k] + 1))
 }
 
 ############################################################################
@@ -565,7 +565,7 @@ Samples with less than `r nmr_threshold` aligned reads removed.
 # Reject < 300000 or Threshold = 10% of target depth
 # Removes various types of failed samples
 
-QAQC <- data.frame(Sample = names(sampleData), NMR = apply(sampleData, 2, sum))
+QAQC <- data.frame(Sample = names(count_data), NMR = apply(count_data, 2, sum))
 failed_read_threshold <- QAQC[QAQC$NMR < nmr_threshold,]
 
 # Samples failing
@@ -604,8 +604,8 @@ The number of probes having >5 uniquely mapped reads are calculated. Outliers on
 # Ncov5 The number of probes with at least 5 uniquely mapped reads.
 ######################################################################################
 # Tukey's Outer Fence cutoff - 3*IQR
-n_genes <- nrow(sampleData)
-QAQC$Ncov5 <- apply(sampleData, 2, function(x) length(x[x > 4]))/n_genes
+n_genes <- nrow(count_data)
+QAQC$Ncov5 <- apply(count_data, 2, function(x) length(x[x > 4]))/n_genes
 percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
 failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
 
@@ -655,7 +655,7 @@ countStats <- function(
 	return(st)
 }
 
-QAQC$Nsig80 <- apply(sampleData, 2, countStats)
+QAQC$Nsig80 <- apply(count_data, 2, countStats)
 
 probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
 failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
@@ -680,7 +680,7 @@ The Gini coefficient is computed for each sample based on the distribution of ra
 # raw counts for all probes including those with 0 aligned reads
 ######################################################################################
 # Reject > 0.95
-QAQC$Gini <- apply(sampleData, 2, function(x) gini(x))
+QAQC$Gini <- apply(count_data, 2, function(x) gini(x))
 failed_gini <- QAQC[QAQC$Gini > gini_cutoff,]
 
 # Samples failing
@@ -1230,11 +1230,11 @@ write.table(metadata_outliers_removed,
             file.path(paths$metadata, "metadata.QC_applied.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
-sampleData_filtered <- sampleData %>% dplyr::select(-all_of(outliers))
+count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
 
 ```
 
-There are `ncol(sampleData_filtered)` samples remaining in the study after sample removal.
+There are `ncol(count_data_filtered)` samples remaining in the study after sample removal.
 
 ## Dendrogram (after filtering)
 

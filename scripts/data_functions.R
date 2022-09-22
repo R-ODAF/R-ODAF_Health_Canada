@@ -59,26 +59,26 @@ sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
     return(ordered_contrasts)
 }
 
-process_data_and_metadata <- function(sampleData, exp_metadata, contrasts, intgroup, design, params){
-    sampleData <- filter_data(sampleData, exp_metadata, params$nmr_threshold)
+process_data_and_metadata <- function(count_data, exp_metadata, contrasts, intgroup, design, params){
+    count_data <- filter_data(count_data, exp_metadata, params$nmr_threshold)
     exp_metadata <- filter_metadata(exp_metadata, params, design)
     exp_metadata <- format_and_sort_metadata(exp_metadata, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
         contrasts <- sort_contrasts(exp_metadata, contrasts, design, params$sortcol)
     }
-    check_data(sampleData, exp_metadata, contrasts)
-    return(list(sampleData=sampleData, exp_metadata=exp_metadata, contrasts=contrasts))
+    check_data(count_data, exp_metadata, contrasts)
+    return(list(count_data=count_data, exp_metadata=exp_metadata, contrasts=contrasts))
 }
 
 # filter count data based on minimum counts. Does not do facet filtering
-filter_data <- function(sampleData, exp_metadata, threshold){
+filter_data <- function(count_data, exp_metadata, threshold){
     # First data clean-up: replace NA & remove samples with total readcount < threshold 
-    sampleData[ is.na(sampleData) ] <- 0 
-    sampleData <- sampleData[,(colSums(sampleData) > threshold)] # reads required per sample
-    #sampleData <- sampleData[(rowSums(sampleData) > 1),] # reads required per gene
-    exp_metadata <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
-    sampleData <- sampleData[,exp_metadata$original_names]
-    return(sampleData)
+    count_data[ is.na(count_data) ] <- 0 
+    count_data <- count_data[,(colSums(count_data) > threshold)] # reads required per sample
+    #count_data <- count_data[(rowSums(count_data) > 1),] # reads required per gene
+    exp_metadata <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
+    count_data <- count_data[,exp_metadata$original_names]
+    return(count_data)
 }
 
 # sanity checks
@@ -98,15 +98,15 @@ check_data <- function(sd, des, con){
 }
 
 
-load_count_data <- function(SampleDataFile, sampledata_sep){
-  sampleData <- read.delim(SampleDataFile,
+load_count_data <- function(count_data_file, sampledata_sep){
+  count_data <- read.delim(count_data_file,
                          sep = sampledata_sep,
                          stringsAsFactors = FALSE,
                          header = TRUE, 
                          quote = "\"",
                          row.names = 1,
                          check.names = FALSE)
-  return(sampleData)
+  return(count_data)
 }
 
 # subset metadata based on facet + filter
@@ -125,16 +125,16 @@ subset_metadata <- function(exp_metadata, design, contrasts, current_facet, curr
 }
 
 # subset count data to samples in metadata
-subset_data <- function(sampleData, exp_metadata){
+subset_data <- function(count_data, exp_metadata){
     # Reorder the metadata table to correspond to the order of columns in the count data
-    exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
-    sampleData_subset <- sampleData[,exp_metadata_sorted$original_names]
-    return(sampleData_subset)
+    exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
+    count_data_subset <- count_data[,exp_metadata_sorted$original_names]
+    return(count_data_subset)
 }
 
 subset_results <- function(res, exp_metadata){
   # Reorder the metadata table to correspond to the order of columns in the count data
-  exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(sampleData),]
+  exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
   res_subset <- res[,exp_metadata_sorted$original_names]
   return(res_subset)
   

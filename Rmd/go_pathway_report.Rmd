@@ -50,7 +50,7 @@ params:
   output_digits: 5
   parallel: FALSE
   species_data: null
-  SampleDataFile: null
+  count_data_file: null
   sampledata_sep: null
   MinCount: null
   alpha: null

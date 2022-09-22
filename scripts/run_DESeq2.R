@@ -101,11 +101,11 @@ if (length(intgroup) > 1){
 original_design <- params$design
 
 # load count data
-sampleData <- load_count_data(params$SampleDataFile, params$sampledata_sep)
+count_data <- load_count_data(params$count_data_file, params$sampledata_sep)
 
 
-processed <- process_data_and_metadata(sampleData, exp_metadata, contrasts, intgroup, design_to_use, params)
-sampleData <- processed$sampleData
+processed <- process_data_and_metadata(count_data, exp_metadata, contrasts, intgroup, design_to_use, params)
+count_data <- processed$count_data
 exp_metadata <- processed$exp_metadata
 contrasts <- processed$contrasts 
 
@@ -145,9 +145,9 @@ filtered_table <- data.frame()
 if(is.na(params$group_facet)){
     message("### Learning a single model for the whole experiment. ###")
     if(params$write_additional_output){
-      write_additional_output(sampleData, exp_metadata, design_to_use, params)
+      write_additional_output(count_data, exp_metadata, design_to_use, params)
     }
-    dds <- learn_deseq_model(sampleData, exp_metadata, design_to_use, params)
+    dds <- learn_deseq_model(count_data, exp_metadata, design_to_use, params)
     rld <- regularize_data(dds, original_design, covariates, params$batch_var)
     DESeq_results <- get_DESeq_results(dds, exp_metadata, contrasts, design_to_use, params, NA, paths$DEG_output)
     ddsList[['all']] <- dds
@@ -165,14 +165,14 @@ if(is.na(params$group_facet)){
         metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$group_facet, current_filter)
         exp_metadata_subset <- metadata_subset$exp_metadata
         contrasts_subset <- metadata_subset$contrasts
-        sampleData_subset <- subset_data(sampleData, exp_metadata_subset)
+        count_data_subset <- subset_data(count_data, exp_metadata_subset)
         
-        check_data(sampleData_subset, exp_metadata_subset, contrasts_subset)
+        check_data(count_data_subset, exp_metadata_subset, contrasts_subset)
         
         if(params$write_additional_output){
-          write_additional_output(sampleData_subset, exp_metadata_subset, design_to_use, params)
+          write_additional_output(count_data_subset, exp_metadata_subset, design_to_use, params)
         }
-        ddsList[[current_filter]] <- learn_deseq_model(sampleData_subset, exp_metadata_subset, design_to_use, params)
+        ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, design_to_use, params)
         designList[[current_filter]] <- exp_metadata_subset
         contrastsList[[current_filter]] <- contrasts_subset
         rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
