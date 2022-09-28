@@ -109,7 +109,6 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
         message("Obtaining the DESeq2 results")
         currentContrast <- c(design, condition2, condition1)
         bpparam <- MulticoreParam(params$cpus)
-        
         res <- DESeq2::results(dds[rownames(compte),],
                                parallel = TRUE,
                                BPPARAM = bpparam,
@@ -244,7 +243,12 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
                                       params$biospyder, 
                                       by = c(Feature_ID = params$feature_id))
       } else{
-        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+        # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
+        result = tryCatch({
+          descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+        }, error = function(e) {
+          descriptions <- data.frame()
+        })
         colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
         descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
         deg_table <- dplyr::left_join(deg_table, descriptions)
