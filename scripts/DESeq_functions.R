@@ -246,18 +246,22 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
         # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
         result = tryCatch({
           descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+          colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
+          descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
+          deg_table <- dplyr::left_join(deg_table, descriptions, by="Feature_ID")
         }, error = function(e) {
-          descriptions <- data.frame()
+          message("omg")
         })
-        colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
-        descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
-        deg_table <- dplyr::left_join(deg_table, descriptions)
       }
-      deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
-                                                                      2 ^ log2FoldChange,
-                                                                      -1 / (2 ^ log2FoldChange)))
+      if(!("Gene_Symbol" %in% deg_table)){
+        deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
+        deg_table$Gene_Symbol <- NA
+      }
       deg_table <- deg_table %>%
-        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+        mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2 ^ log2FoldChange, -1 / (2 ^ log2FoldChange))) %>%
+        mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Ensembl_Gene_ID)) %>%
+        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol = Gene_Symbol_2, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+      
       ## FILTERS ##
       if (biosets_filter == T) {
         # for biosets, filter on unadjusted p-value

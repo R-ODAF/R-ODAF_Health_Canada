@@ -191,7 +191,11 @@ summary_counts <- data.frame()
 comparisons <- names(resultsListDEGs)
 for(comp in comparisons){ # by comparison
     res <- resultsListDEGs[[comp]]
-    c <- nrow(res)
+    if(is.null(res)){
+      c <- 0
+    } else{
+      c <- nrow(res)
+    }
     row <- data.frame(comparison=comp, DEG=c)
     summary_counts <- rbind(summary_counts, row)
 }
@@ -319,24 +323,27 @@ flextable(pval_table) %>%
 
 This section contains three groups of MA plots (see [Wikipedia](https://en.wikipedia.org/wiki/MA_plot)) that compare the mean of the normalized counts against the log fold change. Each of the groups has a tab for each contrast. The plots show one point per feature. The points are shown in red if the feature has an adjusted p-value less than the cutoff listed in each section, that is, the statistically significant features are shown in red.
 
-This group of plots shows `alpha` = `r metadata(resultsListAll[[1]])$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
+This group of plots shows `alpha` = `r params$alpha`, which is the `alpha` value used to determine which resulting features were significant when running the function `DESeq2::results()`.  
 
 ```{r MA_plots, results='asis', eval=TRUE}
 foldchangestats <- boxplot(abs(allResults$log2FoldChange), plot = F)
 ylims_for_ma_plots <- c(-foldchangestats$stats[4, 1], foldchangestats$stats[4, 1])
 
 for (i in seq_along(resultsListAll)) {
-  contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
-                  replacement =  "",
-                  x = resultsListAll[[i]]@elementMetadata[[2]][2])
-  cat("###", contrast, "  \n\n")
-  MA_title <- paste0('MA plot, alpha = ', metadata(resultsListAll[[i]])$alpha,', ', contrast)
-  DESeq2::plotMA(resultsListAll[[i]],
-                 alpha = metadata(resultsListAll[[i]])$alpha,
-                 main = str_wrap(MA_title, width = 40),
-                 ylim = ylims_for_ma_plots)
-  cat('  \n\n')
+  if(!is.null(resultsListAll[[i]])){
+    contrast = gsub(pattern = paste0("log2.*", params$design, "\ "),
+                    replacement =  "",
+                    x = resultsListAll[[i]]@elementMetadata[[2]][2])
+    cat("###", contrast, "  \n\n")
+    MA_title <- paste0('MA plot, alpha = ', metadata(resultsListAll[[i]])$alpha,', ', contrast)
+    DESeq2::plotMA(resultsListAll[[i]],
+                   alpha = metadata(resultsListAll[[i]])$alpha,
+                   main = str_wrap(MA_title, width = 40),
+                   ylim = ylims_for_ma_plots)
+    cat('  \n\n')
+  }
 }
+
 
 ```
 
