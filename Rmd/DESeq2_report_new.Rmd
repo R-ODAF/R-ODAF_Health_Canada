@@ -128,9 +128,10 @@ if(params$platform == "TempO-Seq"){
 } else {
   id_table <- AnnotationDbi::select(db,
                                     columns = c("ENSEMBL", "SYMBOL"),
-                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
-  colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol")
-  id_table$Feature_ID <- id_table$Ensembl_Gene_ID
+                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>%
+    distinct() %>%
+    mutate(Gene_Symbol = coalesce(SYMBOL, ENSEMBL)) %>%
+    dplyr::select(Feature_ID = ENSEMBL, Ensembl_Gene_ID = ENSEMBL, Gene_Symbol)
 }
 
 
@@ -347,8 +348,9 @@ plot_DEG_heatmap <- function(rld_data){
   mat <- assay(rld_data) %>%
   as_tibble(rownames="Feature_ID") %>%
   left_join(id_table, by="Feature_ID") %>%
-  mutate(label = paste0(Gene_Symbol," : ",Feature_ID)) %>%
-  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
+  mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Feature_ID)) %>%
+  mutate(label = paste0(Gene_Symbol_2," : ",Feature_ID)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Gene_Symbol_2, -Feature_ID) %>%
   column_to_rownames("label")
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
@@ -445,7 +447,6 @@ plotCounts_gg <- function(i, d, intgroup) {
 }
 
 genesToPlot <- significantResults %>% arrange(-abs(log2FoldChange))
-
 for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
   cat("\n###", id_table[["Gene_Symbol"]][grep(i,id_table[["Feature_ID"]])], "  \n\n")
   print(plotCounts_gg(i, d = dds, intgroup = params$design))

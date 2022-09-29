@@ -216,7 +216,6 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
     resListDEGs <- resListDEGs[!sapply(resListDEGs, is.null)]
     
     mergedDEGs <- unique(mergedDEGs)
-    
     return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
 }
 
@@ -253,7 +252,7 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
           message("omg")
         })
       }
-      if(!("Gene_Symbol" %in% deg_table)){
+      if(!("Gene_Symbol" %in% colnames(deg_table))){
         deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
         deg_table$Gene_Symbol <- NA
       }
