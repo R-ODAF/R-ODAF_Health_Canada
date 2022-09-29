@@ -41,7 +41,6 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListAll_all <- overallResListAll[['all']]
   resultsListDEGs_all <- overallResListDEGs[['all']]
   rld_all <- rldList[['all']]
-  mergedDEGs_all <- mergedDEGsList[['all']]
 
   metadata_subset <- subset_metadata(designList[['all']], design_to_use, contrasts, params$display_group_facet, display_group_filter)
   exp_metadata_subset <- metadata_subset$exp_metadata
@@ -59,8 +58,9 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   resultsListAll <- resultsListAll_subset
   resultsListDEGs <- resultsListDEGs_subset
   rld <- rld_subset
-  # note, in this case the merged DEGs will be for the whole experiment, not the display facet
-  mergedDEGs <- mergedDEGs_all
+  # note, in this case the calculated merged DEGs will be for the whole experiment, not the display facet
+  # so let's recalculate them
+  mergedDEGs <- unique(unlist(sapply(resultsListDEGs,rownames),use.names=FALSE))
   # TODO: add some tests here to make sure everything worked properly
   
   # case 3: yes facet, yes display facet
