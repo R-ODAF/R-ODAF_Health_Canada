@@ -196,6 +196,7 @@ Note that for ease of use, only the top 1000 genes (by absolute fold change) are
 # Make a table of counts
 counts_by_group <- as.data.frame(counts(dds, normalized = TRUE))
 counts_by_group <- as.data.frame(counts_by_group)
+
 # counts_by_group <- log2(counts_by_group + 1) # Optional
 # Add gene name
 counts_by_group$gene <- row.names(counts_by_group)
@@ -221,16 +222,19 @@ genesAlphabetized <- genesToSelect %>%
   dplyr::arrange(-abs(log2FoldChange)) %>%
   dplyr::arrange(Gene_Symbol)
 
+
 # Get the data 
 counts_by_group <- counts_by_group %>%
-  dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]])
+  dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]]) %>%
+  left_join(genesAlphabetized, by=c(gene="Feature_ID")) %>%
+  dplyr::select(gene,Sample,'Normalized Counts',group,Gene_Symbol)
 
 # Create "shared" data object - this is for enabling live filtering
 counts_by_group_shared <- SharedData$new(counts_by_group)
 
 # Make an initial filter using the top gene
 top_gene = genesToSelect[["Feature_ID"]][1]
-i = as.character(which(counts_by_group$gene == top_gene))
+i = as.character(which(counts_by_group$Gene_Symbol == top_gene))
 
 # Make a "transceiver" to set initial state of filter
 tx = crosstool(counts_by_group_shared,
@@ -244,7 +248,7 @@ bscols(widths = c(2,NA),
     filter_select("gene_to_filter",
                   "Gene",
                   counts_by_group_shared,
-                  ~gene,
+                  ~Gene_Symbol,
                   unique(genesAlphabetized[["Feature_ID"]]),
                   multiple = F)
   ),
