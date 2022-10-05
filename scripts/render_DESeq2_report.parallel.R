@@ -251,7 +251,7 @@ if (params$parallel){
 }
 
 # Add back after troubleshooting above code...
-#source(here::here(file.path("scripts","summarize_across_facets.R")))
+source(here::here(file.path("scripts","summarize_across_facets.R")))
 
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!
