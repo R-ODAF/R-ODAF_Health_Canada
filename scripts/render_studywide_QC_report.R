@@ -31,7 +31,7 @@ filename <- paste0("Study-wide_Sample_QC_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'),
                    ".html")
 out_dir <- file.path(projectdir, "analysis", "QC")
-if (!dir.exists(out_dir) {
+if (!dir.exists(out_dir)) {
   dir.create(out_dir, recursive = TRUE)
 }
 
