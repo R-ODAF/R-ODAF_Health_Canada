@@ -21,7 +21,7 @@ if (is.na(projectdir)) {
 }
 
 # Input file - Rmd
-inputFile <- file.path(projectdir, "Rmd", "Sample_QC.Rmd")
+input_file <- file.path(projectdir, "Rmd", "Sample_QC.Rmd")
 
 message("Writing QC report for all samples in the experiment.")
 # Output file - HTML
@@ -30,13 +30,15 @@ filename <- paste0("Study-wide_Sample_QC_",
                    params$project_title, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'),
                    ".html")
+out_dir <- file.path(projectdir, "analysis", "QC")
+if (!dir.exists(out_dir) {
+  dir.create(out_dir, recursive = TRUE)
+}
 
-outFile <- file.path(projectdir,
-                     "analysis", "QC",
-                     filename)
+out_file <- file.path(out_dir, filename)
 
-rmarkdown::render(input = inputFile,
+rmarkdown::render(input = input_file,
                   encoding = "UTF-8",
-                  output_file = outFile,
+                  output_file = out_file,
                   params = params,
                   envir = new.env())
