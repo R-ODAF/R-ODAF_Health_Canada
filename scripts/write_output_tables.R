@@ -9,11 +9,11 @@ if(is.na(params$group_facet)){
 }
 
 write_tables <- function(facet) {
-  db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+  db <- AnnotationDbi::loadDb(AnnotationDbi::dbfile(get(species_data$orgdb)))
   current_filter <- facet
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
-  resultsListDEGs <- overallResListDEGs[[current_filter]] # REVIEW: is this right?
+  resultsListDEGs <- overallResListDEGs[[current_filter]]
   if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
@@ -58,12 +58,12 @@ write_tables <- function(facet) {
   prefix <- fs::path_sanitize(prefix)
   
   
-  for (i in 1:length(resultsListDEGs)) {
-    message(resultsListDEGs[[i]]@elementMetadata[[2]][2])
+  for (i in 1:length(resultsListAll)) {
+    message(resultsListAll[[i]]@elementMetadata[[2]][2])
     q <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", design_to_use, "\ "),
               replacement =  "",
-              x = resultsListDEGs[[i]]@elementMetadata[[2]][2])
-    toJoin <- as.data.frame(resultsListDEGs[[i]])
+              x = resultsListAll[[i]]@elementMetadata[[2]][2])
+    toJoin <- as.data.frame(resultsListAll[[i]])
     setDT(toJoin, keep.rownames = T)[]
     setnames(toJoin, 1, "Feature_ID")
     toJoin <- mutate(toJoin, linearFoldChange = ifelse(log2FoldChange > 0,
@@ -104,7 +104,7 @@ write_tables <- function(facet) {
     dplyr::distinct() %>%
     mutate(maxFoldChange = abs(maxFoldChange)) # This eliminates the direction of change: this way it's easy to sort.
   
-  numColsToPrepend <- ncol(summaryTable) - 3*length(resultsListDEGs) - 2 # Number of columns per contrast = 3. Subtract two for the baseMean and genes columns.
+  numColsToPrepend <- ncol(summaryTable) - 3*length(resultsListAll) - 2 # Number of columns per contrast = 3. Subtract two for the baseMean and genes columns.
   colPositionsToPrependSTART <- ncol(summaryTable) - numColsToPrepend + 1
   colPositionsOfData <- ncol(summaryTable) - numColsToPrepend
   summaryTable <- as.data.frame(summaryTable)
