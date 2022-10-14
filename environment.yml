@@ -52,6 +52,7 @@ dependencies:
   - r-rvcheck=0.1.8
   - r-flextable
   - r-ggnewscale # required by enrichplot, but not in dependency list
+  - r-ggupset # required by enrichplot, but not in dependency list
   # Install these via different mechanism.
   #- r-crosstalk
   #- r-crosstool
