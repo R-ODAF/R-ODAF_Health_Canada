@@ -143,10 +143,10 @@ background <- as.character(background)
 KeyType <- "ENTREZID"
 ```
 
-```{r enrich_go, warning = FALSE, message = FALSE, collapse = TRUE, eval=F}
+```{r enrich_go, warning = FALSE, message = FALSE, collapse = TRUE}
 enrich_go_bp <- enrichGO(gene = entrezDEGs,
                          universe = background,
-                         OrgDb = species_data$orgdb,
+                         OrgDb = db,
                          keyType = KeyType,
                          readable = T,
                          ont = "BP",
@@ -157,7 +157,7 @@ enrich_go_bp <- enrichGO(gene = entrezDEGs,
 
 enrich_go_mf <- enrichGO(gene = entrezDEGs,
                          universe = background,
-                         OrgDb = species_data$orgdb,
+                         OrgDb = db,
                          keyType = KeyType,
                          readable = T,
                          ont = "MF",
@@ -167,7 +167,7 @@ enrich_go_mf <- enrichGO(gene = entrezDEGs,
 
 enrich_go_cc <- enrichGO(gene = entrezDEGs,
                          universe = background,
-                         OrgDb = species_data$orgdb,
+                         OrgDb = db,
                          keyType = KeyType,
                          ont = "CC",
                          pAdjustMethod = "BH",
@@ -201,7 +201,7 @@ foldChanges <- foldChanges[!is.na(names(foldChanges))]
 ## Biological processes
 
 
-```{r plot_GO_analysis_bp, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_bp, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_bp)) {
   if (nrow(enrich_go_bp@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_bp, font.size = 9, showCategory = 20)  +
@@ -247,7 +247,7 @@ if (!is.null(enrich_go_bp)) {
 
 ## Molecular Functions
 
-```{r plot_GO_analysis_mf, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_mf, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_mf)) {
   
   if (nrow(enrich_go_mf@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
@@ -297,7 +297,7 @@ if (!is.null(enrich_go_mf)) {
 
 ## Cellular Component
 
-```{r plot_GO_analysis_cc, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE, eval=F}
+```{r plot_GO_analysis_cc, warning = FALSE, message = FALSE, fig.width = 12, collapse = TRUE}
 if (!is.null(enrich_go_cc)) {
   if (nrow(enrich_go_cc@result %>% filter(p.adjust < 0.01 & qvalue < 0.05)) > 3) {
     plot1 <- clusterProfiler::dotplot(enrich_go_cc, font.size = 9)  +
