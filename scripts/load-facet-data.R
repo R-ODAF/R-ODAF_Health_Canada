@@ -17,6 +17,7 @@ contrasts<-contrasts
 filtered_table<-filtered_table
 exp_metadata<-exp_metadata # original unfaceted design
 exp_metadata_original <- exp_metadata
+sample_count_metadata <- sample_count_metadata
 detach()
 
 # reformat data based on group_facet and display_group_facet
