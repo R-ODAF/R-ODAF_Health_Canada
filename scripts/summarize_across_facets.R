@@ -50,12 +50,11 @@ for (f in facets){
   design <- designList[[f]]
 
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
+  allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
   if (length(resultsListDEGs) > 0) {
     significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
+    significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
   }
-  
-  allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
-  significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
 }
 
 prefix <- paste0(params$platform, "_",
@@ -74,7 +73,14 @@ if (length(facets) < 10) {
   plot_size = round(sqrt(length(facets)))*1.5
 }
 
-if (length(facets) < 10) {
+if(length(facets) == 1){
+  p1 = ggplot(p1_data, aes(x=contrast)) +
+    geom_bar(aes(y=..count..)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Number of DEGs") +
+    xlab("Contrast")
+} else if (length(facets) < 10) {
     p1 = ggplot(p1_data, aes(x=facet_contrast)) +
         geom_bar(aes(y=..count.., fill=facet)) +
         theme_bw() +
@@ -106,7 +112,16 @@ p2_data <- filtered_table %>%
   mutate(name = factor(name, levels=c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters"))) %>%
   mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
 
-if (length(facets) < 10) {
+if(length(facets) == 1){
+  p2 = ggplot(p2_data, aes(x=contrast,y=value)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free") +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Percent of all reads") +
+    xlab("Contrast")
+  
+} else if (length(facets) < 10) {
   p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +

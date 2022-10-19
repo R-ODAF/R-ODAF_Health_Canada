@@ -109,7 +109,6 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
         message("Obtaining the DESeq2 results")
         currentContrast <- c(design, condition2, condition1)
         bpparam <- MulticoreParam(params$cpus)
-        
         res <- DESeq2::results(dds[rownames(compte),],
                                parallel = TRUE,
                                BPPARAM = bpparam,
@@ -217,7 +216,6 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
     resListDEGs <- resListDEGs[!sapply(resListDEGs, is.null)]
     
     mergedDEGs <- unique(mergedDEGs)
-    
     return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
 }
 
@@ -244,16 +242,25 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
                                       params$biospyder, 
                                       by = c(Feature_ID = params$feature_id))
       } else{
-        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
-        colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
-        descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
-        deg_table <- dplyr::left_join(deg_table, descriptions)
+        # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
+        result = tryCatch({
+          descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+          colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
+          descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
+          deg_table <- dplyr::left_join(deg_table, descriptions, by="Feature_ID")
+        }, error = function(e) {
+          message("omg")
+        })
       }
-      deg_table <- dplyr::mutate(deg_table, linearFoldChange = ifelse(log2FoldChange > 0,
-                                                                      2 ^ log2FoldChange,
-                                                                      -1 / (2 ^ log2FoldChange)))
+      if(!("Gene_Symbol" %in% colnames(deg_table))){
+        deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
+        deg_table$Gene_Symbol <- NA
+      }
       deg_table <- deg_table %>%
-        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+        mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2 ^ log2FoldChange, -1 / (2 ^ log2FoldChange))) %>%
+        mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Ensembl_Gene_ID)) %>%
+        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol = Gene_Symbol_2, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+      
       ## FILTERS ##
       if (biosets_filter == T) {
         # for biosets, filter on unadjusted p-value

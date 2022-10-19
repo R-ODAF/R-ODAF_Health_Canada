@@ -58,6 +58,8 @@ check_required_params(params)
 MetadataFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
 ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
 
+sample_count_metadata <- list()
+
 # Read in metadata
 exp_metadata <- read.delim(MetadataFile,
                           stringsAsFactors = FALSE,
@@ -68,6 +70,8 @@ exp_metadata <- read.delim(MetadataFile,
                           row.names = 1) # Column must have unique IDs!!
 exp_metadata$original_names <- rownames(exp_metadata)
 exp_metadataAsRead <- exp_metadata
+
+sample_count_metadata$samples_postQC <- nrow(exp_metadata)
 
 # read in contrasts
 contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"", 
@@ -109,6 +113,7 @@ count_data <- processed$count_data
 exp_metadata <- processed$exp_metadata
 contrasts <- processed$contrasts 
 
+sample_count_metadata$samples_filtered <- nrow(exp_metadata)
 
 # set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
@@ -216,5 +221,7 @@ message(paste(capture.output(summary_counts), collapse="\n"))
 
 source(here::here("scripts","write_output_tables.R"))
 
+
+
 # save DESeq results to a file
-save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, contrasts, intgroup, design_to_use, paths, filtered_table, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
+save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, contrasts, intgroup, design_to_use, paths, filtered_table, sample_count_metadata, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
