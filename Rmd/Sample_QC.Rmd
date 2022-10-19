@@ -325,11 +325,13 @@ count_data_gc_modified_samples <- count_data_gc_modified %>%
   dplyr::select(exp_metadata$original_names) %>%
   tidyr::pivot_longer(everything(), names_to = "sample", values_to = "GC_corrected_count")
 
-ggplot(count_data_gc_modified_samples %>%
-         dplyr::filter(sample %in% head(exp_metadata$original_names)),
-       aes(x = GC_corrected_count)) +
+gc_plot <- ggplot(count_data_gc_modified_samples,
+                  aes(x = log(GC_corrected_count))) +
   geom_histogram() +
   facet_wrap(~sample)
+
+ggsave("gc_plot.pdf", plot = gc_plot, height = 11, width = 8.5)
+
 # For RNA-Seq
 
 
