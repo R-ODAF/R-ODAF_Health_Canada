@@ -296,6 +296,45 @@ cytotoxic %>%
 
 ```
 
+## Check GC Content
+
+```{r}
+
+# GC calculation function
+calculate_gc <- function(seq) {
+  n_gc <- stringr::str_count(seq, "G")
+  n_c <- stringr::str_count(seq, "C")
+  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
+  return(pct_gc)
+}
+
+# For TempO-Seq
+manifest <- read.csv("~/shared/dbs/biospyder/Human_S1500_Surrogate_2.0_standardized.csv")
+manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
+
+hist(manifest$gc_content, breaks = 50)
+
+count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
+                                  manifest,
+                                  by = c("rowname" = "Probe_Name"))
+
+count_data_gc_modified <- count_data_gc %>%
+  dplyr::mutate(across(.cols = exp_metadata$original_names, ~ .x*gc_content))
+
+count_data_gc_modified_samples <- count_data_gc_modified %>%
+  dplyr::select(exp_metadata$original_names) %>%
+  tidyr::pivot_longer(everything(), names_to = "sample", values_to = "GC_corrected_count")
+
+ggplot(count_data_gc_modified_samples %>%
+         dplyr::filter(sample %in% head(exp_metadata$original_names)),
+       aes(x = GC_corrected_count)) +
+  geom_histogram() +
+  facet_wrap(~sample)
+# For RNA-Seq
+
+
+```
+
 ## Dendrogram and distance based filtering
 
 A tree height cutoff of `r tree_height_cutoff` is used to cut the tree and separate outliers.
