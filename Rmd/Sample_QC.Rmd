@@ -55,7 +55,7 @@ This script will automatically output a new sample metadata table that includes 
 ```{r setup, include=FALSE}
 startTime <- Sys.time()
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-theme_set(theme_bw())
+
 ```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
@@ -64,10 +64,12 @@ theme_set(theme_bw())
 ############################################################################
 library(edgeR)
 library(ggplot2)
+theme_set(theme_bw())
 library(plotly)
 library(data.table)
 library(cluster)
 library(Cairo)
+library(ggforce)
 library(sfsmisc)
 library(fields)
 library(heatmap3)
