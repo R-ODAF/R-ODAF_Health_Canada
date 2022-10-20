@@ -92,8 +92,7 @@ write_additional_output <- function(count_data, exp_metadata, design_to_use, par
   CPMdds <- cpm(Counts)
   
   if (!is.na(params$dose)) {
-    lognorm.read.counts <- log2(CPMdds + 1)
-    bmdexpress <- as.data.frame(lognorm.read.counts)
+    bmdexpress <- as.data.frame(log2(CPMdds + 1))
     bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
                         bmdexpress,
                         stringsAsFactors = F)
