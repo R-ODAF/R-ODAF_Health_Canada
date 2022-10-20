@@ -298,46 +298,7 @@ cytotoxic %>%
 
 ```
 
-## Check GC Content
 
-```{r}
-
-# GC calculation function
-calculate_gc <- function(seq) {
-  n_gc <- stringr::str_count(seq, "G")
-  n_c <- stringr::str_count(seq, "C")
-  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
-  return(pct_gc)
-}
-
-# For TempO-Seq
-manifest <- read.csv("~/shared/dbs/biospyder/Human_S1500_Surrogate_2.0_standardized.csv")
-manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
-
-hist(manifest$gc_content, breaks = 50)
-
-count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
-                                  manifest,
-                                  by = c("rowname" = "Probe_Name"))
-
-count_data_gc_modified <- count_data_gc %>%
-  dplyr::mutate(across(.cols = exp_metadata$original_names, ~ .x*gc_content))
-
-count_data_gc_modified_samples <- count_data_gc_modified %>%
-  dplyr::select(exp_metadata$original_names) %>%
-  tidyr::pivot_longer(everything(), names_to = "sample", values_to = "GC_corrected_count")
-
-gc_plot <- ggplot(count_data_gc_modified_samples,
-                  aes(x = log(GC_corrected_count))) +
-  geom_histogram() +
-  facet_wrap(~sample)
-
-ggsave("gc_plot.pdf", plot = gc_plot, height = 11, width = 8.5)
-
-# For RNA-Seq
-
-
-```
 
 ## Dendrogram and distance based filtering
 
@@ -1021,6 +982,248 @@ outliers <- QAQC_failed$Sample
 outlier_metadata <- exp_metadata[exp_metadata$original_names %in% outliers,]
 metadata_outliers_removed <- exp_metadata[!exp_metadata$original_names %in% outliers,] %>%
   filter(!!ensym(technical_control) == F)
+
+```
+
+
+
+```{r, eval = F}
+## Check GC Content: Work in progress, so eval set to false.
+
+# GC calculation function
+calculate_gc <- function(seq) {
+  n_gc <- stringr::str_count(seq, "G")
+  n_c <- stringr::str_count(seq, "C")
+  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
+  return(pct_gc)
+}
+
+# For TempO-Seq
+# Load the manifest
+manifest <- read.csv("~/shared/dbs/biospyder/Human_S1500_Surrogate_2.0_standardized.csv")
+# Calculate the GC content for each probe, add this value as a column
+manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
+
+# Plot a histogram of probe GC content
+hist(manifest$gc_content, breaks = 50)
+
+# Join the count matrix to include probe-level information from the manifest
+count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
+                                  manifest,
+                                  by = c("rowname" = "Probe_Name"))
+
+#count_data_gc_modified <- count_data_gc %>%
+#  dplyr::mutate(across(.cols = exp_metadata$original_names, ~ .x*gc_content))
+
+# TEMPORARY WAY: Replace this with actual table object in QC analysis
+# Load QAQC results
+# QAQC_annotated <- read.table("../analysis.2022.10.11/QC/details/QC_per_sample.txt", sep='\t',header = T)
+
+
+# Convenience function for getting density
+densMode <- function(x){
+    td <- density(x)
+    maxDens <- which.max(td$y)
+    list(x=td$x[maxDens], y=td$y[maxDens])
+}
+
+# Convert to long table format, including counts
+# For each probe and each sample,
+# multiply the calculated probe GC by the observed count of that probe
+# Join Pass/Fail QC information to color plots
+# Calculate median "GC corrected" counts
+count_data_gc_modified_samples <- count_data_gc %>%
+  dplyr::select(-remove) %>%
+  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
+                      names_to = "sample", values_to = "count") %>%
+  dplyr::left_join(QAQC_annotated, by = c("sample" = "sample_id")) %>%
+  dplyr::mutate(GC_corrected_count = count/gc_content) %>% 
+  dplyr::group_by(sample) %>%
+  mutate(median_counts = median(count)) %>%
+  mutate(median_counts_gc_corrected = median(GC_corrected_count)) %>%
+  mutate(peak_density = densMode(count)$x) %>%
+  mutate(peak_density_gc_corrected = densMode(GC_corrected_count)$x) %>%
+  ungroup()
+
+# Plot distribution of counts for passed vs failed samples
+ggplot(count_data_gc_modified_samples %>% dplyr::filter(!count == 0),
+                   aes(x = log(count), color = Any)) +
+    geom_histogram(aes(y = ..density..)) +
+    geom_density()
+
+# Plot distribution of GC corrected counts for passed vs failed samples
+ggplot(count_data_gc_modified_samples %>% dplyr::filter(!GC_corrected_count == 0),
+                   aes(x = log(GC_corrected_count), color = Any)) +
+    geom_histogram(aes(y = ..density..)) +
+    geom_density()
+
+
+# Print a PDF for each sample
+test_data <-  count_data_gc_modified_samples %>% dplyr::filter(sample %in% (exp_metadata$original_names %>% head(96)))
+
+ggplot(test_data %>% dplyr::filter(!count == 0),
+                   aes(x = log(count), color = Any, fill = Any)) +
+    geom_histogram() +
+    facet_wrap_paginate(~sample, ncol = 12, nrow = 8)
+
+### Get max y height of histogram bars to be used...
+gc_plot <- ggplot(test_data %>% dplyr::filter(!GC_corrected_count == 0),
+                   aes(x = log(GC_corrected_count), color = Any, fill = Any)) +
+    geom_histogram() +
+    facet_wrap_paginate(~sample, ncol = 12, nrow = 8)
+a <- ggplot_build(gc_plot)
+y_height_max <- max(a$data[[1]]$count)*0.9
+# Determine how many pages are needed to plot all samples
+required_n_pages <- n_pages(gc_plot)
+
+ggplot(test_data %>% dplyr::filter(!GC_corrected_count == 0),
+                   aes(x = log(GC_corrected_count), color = Any, fill = Any)) +
+    geom_histogram() +
+    geom_vline(data = test_data, aes(xintercept = log(peak_density_gc_corrected))) +
+   geom_vline(data = test_data, aes(xintercept = log(peak_density))) +
+    geom_text(data = test_data,
+              aes(x=log(peak_density_gc_corrected),y=y_height_max,label=round(log(peak_density),2))) +
+    facet_wrap(~sample, ncol = 12, nrow = 8)
+
+ggplot(test_data %>% dplyr::filter(!count == 0),
+                   aes(x = log(count), color = Any)) +
+    geom_histogram() +
+    geom_vline(data = test_data, aes(xintercept = log(peak_density_gc_corrected))) +
+   geom_vline(data = test_data, aes(xintercept = log(peak_density))) +
+    geom_text(data = test_data,
+              aes(x=log(peak_density_gc_corrected),y=y_height_max,label=round(log(peak_density),2))) +
+    facet_wrap(~sample, ncol = 12, nrow = 8)
+
+# pdf("/home/mmeier/shared2/projects/2022_Atlas_LiverTox/gc_plot.pdf", height = 8, width = 11.5)
+# for (i in 1:required_n_pages) {
+#   print(ggplot(test_data %>% dplyr::filter(!GC_corrected_count == 0),
+#                    aes(x = log(GC_corrected_count), color = Any)) +
+#     geom_histogram() +
+#     geom_vline(data = test_data, aes(xintercept = log(peak_density))) +
+#     geom_text(data = test_data,
+#               aes(x=log(peak_density),y=y_height_max,label=round(log(peak_density),2))) +
+#     ggforce::facet_wrap_paginate(~sample, ncol = 12, nrow = 8, page = i))
+# }
+# dev.off()
+
+test_data_sub <- count_data_gc_modified_samples %>%
+  dplyr::select(-GC_corrected_count, -median_counts_gc_corrected, -median_counts, -count, -gc_content,
+                -Transcripts_Targeted, -rowname, -Probe_ID, -Gene_Symbol, -Ensembl_Gene_ID, -Entrez_ID,
+                -Probe_Sequence) %>%
+  dplyr::distinct()
+
+test_data_sub <- test_data_sub %>%
+  mutate(gc_shift = peak_density-peak_density_gc_corrected) %>%
+  mutate(gc_shift_pct = (gc_shift/peak_density)*100)
+  
+ggplot(test_data_sub, aes(x=gc_shift, y=peak_density, color=Any)) +
+  geom_point() +
+  facet_grid(~batch)
+
+ggplot(test_data_sub %>% dplyr::filter(gc_shift_pct > -100 & gc_shift_pct < 100), aes(x=gc_shift_pct, y=peak_density, color=Any)) +
+  geom_jitter() +
+  facet_grid(~batch)
+
+ggplot(test_data_sub %>% dplyr::filter(gc_shift_pct > -100 & gc_shift_pct < 100), aes(x=gc_shift_pct, y=peak_density, color = batch)) +
+    geom_jitter()
+
+ggplot(test_data_sub %>% dplyr::filter(gc_shift_pct > -100 & gc_shift_pct < 100), aes(x=gc_shift_pct, y=peak_density, color = Any)) +
+    geom_jitter()
+
+
+ggplot(test_data_sub %>% dplyr::filter(gc_shift_pct > -100 & gc_shift_pct < 100), aes(x=gc_shift_pct, color=Any)) +
+  geom_histogram() +
+  facet_grid(~batch)
+
+ggplot(test_data_sub, aes(x=Any, y=peak_density, color=dendrogram)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(~batch)
+
+ggplot(test_data_sub, aes(x=Any, y=peak_density_gc_corrected, color=dendrogram)) +
+  geom_boxplot() +
+  geom_jitter() +
+  facet_grid(~batch)
+
+p <- ggpairs(count_data_gc_modified_samples, columns=c("dendrogram_data","median_counts","median_counts_gc_corrected","index_plate","gc_content"), ggplot2::aes(color="index_plate"))
+
+# Make dds object
+colDataDMSO <- QAQC_annotated %>% dplyr::filter(chemical == "DMSO")
+dds <- DESeqDataSetFromMatrix(countData = count_data %>%
+                                dplyr::select(-remove) %>%
+                                dplyr::select(colDataDMSO$original_names),
+                              colData = colDataDMSO,
+                              design = ~ dendrogram_data)
+
+bpparam <- BiocParallel::MulticoreParam(41)
+dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
+
+res <- results(dds, contrast = c("dendrogram_data","FAIL","PASS"))
+res <- lfcShrink(dds, contrast = c("dendrogram_data","FAIL","PASS"), type="ashr")
+summary(res)
+top_genes_down <- as.data.frame(res) %>% dplyr::arrange(log2FoldChange) %>% head() %>% row.names()
+top_genes_up <- as.data.frame(res) %>% dplyr::arrange(-log2FoldChange) %>% head() %>% row.names()
+
+for (i in top_genes_down) {
+  print(plotCounts(dds, gene=i, intgroup = "dendrogram_data"))
+}
+
+for (i in top_genes_up) {
+  print(plotCounts(dds, gene=i, intgroup = "dendrogram_data"))
+}
+
+# Make dds object - only those passing
+colDataDMSO <- QAQC_annotated %>% dplyr::filter(chemical == "DMSO" & dendrogram_data == "PASS")
+dds <- DESeqDataSetFromMatrix(countData = count_data %>%
+                                dplyr::select(-remove) %>%
+                                dplyr::select(colDataDMSO$original_names),
+                              colData = colDataDMSO,
+                              design = ~ index_plate)
+
+bpparam <- BiocParallel::MulticoreParam(41)
+dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
+
+res <- results(dds, contrast = c("index_plate","indexE","indexF"))
+res <- lfcShrink(dds, contrast = c("index_plate","indexE","indexF"), type="ashr")
+summary(res)
+top_genes_down <- as.data.frame(res) %>% dplyr::arrange(log2FoldChange) %>% head() %>% row.names()
+top_genes_up <- as.data.frame(res) %>% dplyr::arrange(-log2FoldChange) %>% head() %>% row.names()
+
+for (i in top_genes_down) {
+  print(plotCounts(dds, gene=i, intgroup = "index_plate"))
+}
+
+for (i in top_genes_up) {
+  print(plotCounts(dds, gene=i, intgroup = "index_plate"))
+}
+
+# Make dds object - only those failing
+colDataDMSO <- QAQC_annotated %>% dplyr::filter(chemical == "DMSO" & dendrogram_data == "FAIL")
+dds <- DESeqDataSetFromMatrix(countData = count_data %>%
+                                dplyr::select(-remove) %>%
+                                dplyr::select(colDataDMSO$original_names),
+                              colData = colDataDMSO,
+                              design = ~ index_plate)
+
+bpparam <- BiocParallel::MulticoreParam(41)
+dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
+
+res <- results(dds, contrast = c("index_plate","indexE","indexF"))
+res <- lfcShrink(dds, contrast = c("index_plate","indexE","indexF"), type="ashr")
+summary(res)
+top_genes_down <- as.data.frame(res) %>% dplyr::arrange(log2FoldChange) %>% head() %>% row.names()
+top_genes_up <- as.data.frame(res) %>% dplyr::arrange(-log2FoldChange) %>% head() %>% row.names()
+
+for (i in top_genes_down) {
+  print(plotCounts(dds, gene=i, intgroup = "index_plate"))
+}
+
+for (i in top_genes_up) {
+  print(plotCounts(dds, gene=i, intgroup = "index_plate"))
+}
+
+# For RNA-Seq
+
 
 ```
 
