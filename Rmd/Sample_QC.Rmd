@@ -343,6 +343,8 @@ gc_summary %>%
 
 ## Zero count heatmap
 
+Heatmap showing presence of zeroes (black) in the data.
+
 ```{r zero-heatmap, fig.width = 11, fig.height = 10}
 
 
@@ -363,9 +365,9 @@ pheatmap(count_data_is0,
          color = c("white", "black"),
          annotation_col = annotation_col,
          treeheight_col = 30,
-         cluster_rows=F,
+         treeheight_row = 0,
          show_rownames=F,
-         legend=T)
+         legend=F)
 
 ```
 
