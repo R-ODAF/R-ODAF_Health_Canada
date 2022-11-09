@@ -32,7 +32,7 @@ species_data <- load_species(params$species, params$wikipathways_filename, param
 params$species_data <- species_data
 params <- set_up_platform_params(params)
 
-skip_extra <- c("DMSO") # Remove DMSO controls as a facet
+skip_extra <- c("DMSO","water") # Remove DMSO controls as a facet
 
 # input data file
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
@@ -48,9 +48,10 @@ for (f in facets){
   resultsListAll <- overallResListAll[[f]]
   resultsListDEGs <- overallResListDEGs[[f]]
   design <- designList[[f]]
-
-  allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
-  allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
+  if (length(resultsListAll) > 0) {
+    allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
+    allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
+  }
   if (length(resultsListDEGs) > 0) {
     significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
     significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
