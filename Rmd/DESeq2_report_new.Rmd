@@ -83,7 +83,6 @@ library('plotly')
 library('tidytext')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 ```
 
 
@@ -128,12 +127,13 @@ source(here::here("scripts","load-facet-data.R"), local = TRUE)
 if(params$platform == "TempO-Seq"){
   id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
 } else {
-  id_table <- AnnotationDbi::select(db,
-                                    columns = c("ENSEMBL", "SYMBOL"),
-                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>%
-    distinct() %>%
-    mutate(Gene_Symbol = coalesce(SYMBOL, ENSEMBL)) %>%
-    dplyr::select(Feature_ID = ENSEMBL, Ensembl_Gene_ID = ENSEMBL, Gene_Symbol)
+  library("biomaRt")
+
+  mart <- useMart(biomart = "ensembl", dataset = species_data$ensembl_species)
+  
+  id_table <- getBM(attributes = c("ensembl_gene_id","external_gene_name"), mart = mart) %>%
+    dplyr::select(Feature_ID = ensembl_gene_id, Ensembl_Gene_ID = ensembl_gene_id, Gene_Symbol = external_gene_name)
+
 }
 
 
@@ -479,10 +479,6 @@ nocite: '@*'
 
 <div id="refs"></div>
 
-
-```{r disconnect, include = F}
-DBI::dbDisconnect(dbconn(db))
-```
 
 ```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```
