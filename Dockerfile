@@ -12,26 +12,28 @@ RUN useradd -ms /bin/bash R-ODAF
 
 # Install dependencies for running pipeline
 RUN apt-get update && apt-get -y install \
-        build-essential \
-        wget \
-        curl \
-        git \
-        libcairo2-dev \
-        libxt-dev
+	build-essential \
+	wget \
+	curl \
+	git \
+	libcairo2-dev \
+	libxt-dev
+
+# Switch to analysis user
+USER R-ODAF
 
 # Install conda package manager to install tools (i.e., other dependencies)
+ENV CONDA_DIR /home/R-ODAF/miniconda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-        /bin/bash ~/miniconda.sh -b -p /opt/conda
+	/bin/bash ~/miniconda.sh -b -p ${CONDA_DIR}
 # Required for conda to be available on $PATH
-ENV PATH=/opt/conda/bin:$PATH
+ENV PATH=$CONDA_DIR/bin:$PATH
 # Also install mamba for faster builds
 RUN conda install -c conda-forge mamba
 
 # Clone the R-ODAF repository
 # Doing this at the build stage will mean that a given container is frozen for the version used here
 # It should probably be recorded? Maybe use git hash?
-# First, specify branch to use
-USER R-ODAF
 WORKDIR "/home/R-ODAF/"
 COPY ./environment.yml ./environment.yml
 COPY ./Rmd ./Rmd
@@ -57,3 +59,29 @@ RUN R -e "chooseCRANmirror(1, graphics=FALSE); \
         install.packages('cellWise')"
 
 ENTRYPOINT ["/bin/bash"]
+# Set working directory to home
+WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
+# Load the conda environment
+RUN eval "$(conda shell.bash hook)"
+# Run this if you don't already have an environment to use...
+RUN echo ${HOME}/miniconda/etc/profile.d/conda.sh >> ~/.bashrc
+RUN mamba env create -f environment.yml
+
+RUN echo "conda activate R-ODAF" >> ~/.bashrc
+SHELL ["conda", "run", "-n", "R-ODAF", "/bin/bash", "-c"]
+RUN echo "Checking if python is installed..."
+RUN python -c "print('hello')" && conda info && conda list
+RUN ls -alht
+RUN echo "Checking if STAR is installed..."
+RUN STAR --version
+RUN R -e "chooseCRANmirror(1, graphics=FALSE); remotes::install_github('bwlewis/crosstool'); install.packages('cellWise')"
+
+RUN snakemake --cores 8
+RUN echo "bash ${HOME}/miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
+RUN conda init bash
+CMD conda activate R-ODAF
+
+RUN Rscript scripts/render_studywide_QC_report.R
+RUN Rscript scripts/run_DESeq2.R
+#RUN Rscript scripts/render_DESeq2_report.parallel.R
+
