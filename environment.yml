@@ -59,6 +59,7 @@ dependencies:
   #- r-cellWise
   # R Bioconductor
   - bioconductor-go.db #=3.13
+  - bioconductor-do.db # added because clusterProfiler suddenly stopped working
   - bioconductor-genomeinfodb #=1.28
   - bioconductor-genomeinfodbdata #=1.2.6
   - bioconductor-QuasR
