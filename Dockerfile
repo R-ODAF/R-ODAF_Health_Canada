@@ -34,6 +34,7 @@ RUN conda install -c conda-forge mamba
 # Clone the R-ODAF repository
 # Doing this at the build stage will mean that a given container is frozen for the version used here
 # It should probably be recorded? Maybe use git hash?
+
 WORKDIR "/home/R-ODAF/"
 COPY ./environment.yml ./environment.yml
 COPY ./Rmd ./Rmd
@@ -60,6 +61,21 @@ RUN R -e "chooseCRANmirror(1, graphics=FALSE); \
 
 ENTRYPOINT ["/bin/bash"]
 # Set working directory to home
+# First, specify branch to use
+ARG BRANCH="main"
+# Set working directory to home
+RUN ls -alht
+WORKDIR "/home/R-ODAF/"
+RUN ls -alht
+RUN git clone https://github.com/R-ODAF/R-ODAF_Health_Canada.git \
+	&& cd R-ODAF_Health_Canada \
+	&& git checkout ${BRANCH} \
+	&& git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
+	&& rm -r data \ 
+	&& rm -r config \
+	&& mv test-data/temposeq/* ./ \
+	&& wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+RUN ls -alht
 WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 # Load the conda environment
 RUN eval "$(conda shell.bash hook)"
