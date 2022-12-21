@@ -22,7 +22,7 @@ dependencies:
   - r-plotly
   - r-data.table
   - r-cluster
-  - r-cairo=1.5
+  - r-cairo >= 1.5
   - r-sfsmisc
   - r-fields
   - r-heatmap3
@@ -49,7 +49,7 @@ dependencies:
   - r-ggridges
   - r-remotes
   - r-ashr
-  - r-rvcheck=0.1.8
+  - r-rvcheck >= 0.1.8
   - r-flextable
   - r-ggnewscale # required by enrichplot, but not in dependency list
   - r-ggupset # required by enrichplot, but not in dependency list
@@ -58,7 +58,7 @@ dependencies:
   #- r-crosstool
   #- r-cellWise
   # R Bioconductor
-  - bioconductor-go.db #=3.13
+  - bioconductor-go.db >=3.13
   - bioconductor-do.db # added because clusterProfiler suddenly stopped working
   - bioconductor-genomeinfodb #=1.28
   - bioconductor-genomeinfodbdata #=1.2.6
@@ -66,7 +66,7 @@ dependencies:
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
-  - bioconductor-clusterProfiler >= 4.2.0
+  - bioconductor-clusterProfiler >= 4.6.0
   - bioconductor-edgeR
   - bioconductor-DESeq2
   - bioconductor-vsn #>=3.62.0
