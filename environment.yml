@@ -62,6 +62,7 @@ dependencies:
   - bioconductor-do.db # added because clusterProfiler suddenly stopped working
   - bioconductor-genomeinfodb #=1.28
   - bioconductor-genomeinfodbdata #=1.2.6
+  - bioconductor-annotationdbi >=1.60.0
   - bioconductor-QuasR
   - bioconductor-rtracklayer
   - bioconductor-GenomicFeatures
