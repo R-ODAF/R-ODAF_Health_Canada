@@ -34,12 +34,27 @@ RUN conda install -c conda-forge mamba
 # Clone the R-ODAF repository
 # Doing this at the build stage will mean that a given container is frozen for the version used here
 # It should probably be recorded? Maybe use git hash?
-# First, specify branch to use
-ARG BRANCH="main"
-# Set working directory to home
-RUN ls -alht
-WORKDIR "/home/R-ODAF/"
-RUN ls -alht
+RUN mkdir -p /home/R-ODAF/R-ODAF_Health_Canada
+WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
+COPY . .
+RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
+&& mv test-data/temposeq/* ./ \
+&& wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+#WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
+# Load the conda environment
+RUN eval "$(conda shell.bash hook)"
+# Run this if you don't already have an environment to use...
+RUN mamba env create -f environment.yml
+RUN conda init
+SHELL ["conda", "run", "-n", "R-ODAF", "/bin/bash", "-c"]
+
+#RUN conda activate R-ODAF
+
+# Install extra dependencies
+RUN R -e "chooseCRANmirror(1, graphics=FALSE); \
+        remotes::install_github('bwlewis/crosstool'); \
+        install.packages('cellWise')"
+
 RUN git clone https://github.com/R-ODAF/R-ODAF_Health_Canada.git \
 	&& cd R-ODAF_Health_Canada \
 	&& git checkout ${BRANCH} \
@@ -48,8 +63,7 @@ RUN git clone https://github.com/R-ODAF/R-ODAF_Health_Canada.git \
 	&& rm -r config \
 	&& mv test-data/temposeq/* ./ \
 	&& wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
-RUN ls -alht
-WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
+
 # Load the conda environment
 RUN eval "$(conda shell.bash hook)"
 # Run this if you don't already have an environment to use...
@@ -66,7 +80,6 @@ RUN STAR --version
 RUN R -e "chooseCRANmirror(1, graphics=FALSE); remotes::install_github('bwlewis/crosstool'); install.packages('cellWise')"
 
 RUN snakemake --cores 8
-RUN echo "bash ${HOME}/miniconda/etc/profile.d/conda.sh" >> ~/.bashrc
 RUN conda init bash
 CMD conda activate R-ODAF
 
@@ -74,3 +87,4 @@ RUN Rscript scripts/render_studywide_QC_report.R
 RUN Rscript scripts/run_DESeq2.R
 #RUN Rscript scripts/render_DESeq2_report.parallel.R
 
+ENTRYPOINT ["/bin/bash"]
