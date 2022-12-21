@@ -40,12 +40,12 @@ dependencies:
   - r-magrittr=2.0.3
   - r-dt=0.26
   - r-lattice=0.20_45
-  - r-tidytext=0.4.0
+  - r-tidytext # =0.4.0
   - r-openxlsx=4.2.5.1
   - r-rcolorbrewer=1.1_3
   - r-viridis=0.6.2
   - r-sessioninfo=1.2.2
-  - r-gtools=3.9.4
+  - r-gtools #=3.9.4
   - r-ggridges=0.5.4
   - r-remotes=2.4.2
   - r-ashr=2.2_54
