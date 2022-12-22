@@ -25,7 +25,7 @@ RUN apt-get update && apt-get -y install \
 
 # Switch to analysis user
 USER R-ODAF
-
+SHELL ["/bin/bash", "-c"]
 # Install conda package manager to install tools (i.e., other dependencies)
 #?ENV CONDA_DIR /home/R-ODAF/miniconda
 #?RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
@@ -33,7 +33,7 @@ USER R-ODAF
 # Required for conda to be available on $PATH
 #?ENV PATH=$CONDA_DIR/bin:$PATH
 # Also install mamba for faster builds
-RUN conda install -c conda-forge mamba
+# RUN conda install -c conda-forge mamba
 
 # Clone the R-ODAF repository
 # Doing this at the build stage will mean that a given container is frozen for the version used here
@@ -45,9 +45,8 @@ USER root
 RUN chown -R R-ODAF:R-ODAF ./*
 USER R-ODAF
 RUN rm -r data \
-&& rm -r config 
-
-RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
+&& rm -r config \
+&& git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/temposeq/* ./ \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 # Load the conda environment
