@@ -264,7 +264,9 @@ calculate_gc <- function(seq) {
 }
 
 # load manifest
-manifest <- read.csv(paste(params$biospyder_dbs, params$biospyder_manifest_file, sep="/"))
+manifest <- read.csv(
+  file.path(params$biospyder_dbs, params$biospyder_manifest_file)
+)
 # Calculate the GC content for each probe, add this value as a column
 manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
 
