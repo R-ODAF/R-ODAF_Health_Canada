@@ -1,0 +1,71 @@
+name: R-ODAF_reports
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pandoc=2.19.2
+  # R CRAN
+  - r-devtools=2.4.5
+  - r-here = 1.0.1
+  - r-curl=4.3.3
+  - r-sessioninfo=1.2.2
+  - r-biocmanager=1.30.19
+  - r-tidyverse=1.3.2
+  - r-yaml=2.3.6
+  - r-plotly=4.10.1
+  - r-data.table=1.14.6
+  - r-cluster=2.1.4
+  - r-cairo=1.6_0
+  - r-sfsmisc=1.1_14 # Can't solve
+  - r-fields=14.1
+  - r-heatmap3=1.1.9
+  - r-foreach=1.5.2
+  - r-doparallel=1.0.17
+  - r-upsetr=1.4.0
+  - r-ggally=2.1.2
+  - r-pheatmap=1.0.12
+  - r-kableextra=1.3.4
+  - r-dendextend=1.16.0
+  - r-dendsort=0.3.4
+  - r-rrcov=1.7_2
+  - r-vtree=5.6.5 # Can't solve
+  - r-knitr=1.41
+  - r-magrittr=2.0.3
+  - r-dt=0.26
+  - r-lattice=0.20_45
+  - r-tidytext #=0.4.0
+  - r-openxlsx=4.2.5.1
+  - r-rcolorbrewer=1.1_3
+  - r-viridis=0.6.2
+  - r-sessioninfo=1.2.2
+  - r-gtools #=3.9.4
+  - r-ggridges=0.5.4
+  - r-remotes=2.4.2
+  - r-ashr=2.2_54
+  - r-rvcheck >= 0.1.8
+  - r-flextable=0.8.3
+  - r-ggnewscale=0.4.8 # required by enrichplot, but not in dependency list
+  - r-ggupset=0.3.0 # required by enrichplot, but not in dependency list
+  - r-crosstalk=1.2.0
+  # Install these via different mechanism.
+  #- r-crosstool
+  #- r-cellWise
+  # R Bioconductor
+  - bioconductor-go.db >=3.13
+  - bioconductor-do.db=2.9 # added because clusterProfiler suddenly stopped working
+  - bioconductor-genomeinfodb=1.34.1 #=1.28
+  - bioconductor-genomeinfodbdata=1.2.9 #=1.2.6
+  - bioconductor-annotationdbi=1.60.0
+  - bioconductor-quasr=1.38.0
+  - bioconductor-rtracklayer=1.58.0
+  - bioconductor-genomicfeatures=1.50.2
+  - bioconductor-clusterProfiler >= 4.6.0
+  - bioconductor-edger=3.40.0
+  - bioconductor-deseq2=1.38.0
+  - bioconductor-vsn=3.66.0 #>=3.62.0
+  - bioconductor-complexheatmap=2.14.0
+  - bioconductor-limma=3.54.0
+  - bioconductor-enrichplot=1.18.0
+  - bioconductor-org.hs.eg.db=3.16.0
+  - bioconductor-org.mm.eg.db=3.16.0
