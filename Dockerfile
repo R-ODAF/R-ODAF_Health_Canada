@@ -51,38 +51,18 @@ RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/temposeq/* ./ \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 # Load the conda environment
-RUN eval "$(conda shell.bash hook)"
-#RUN mamba env create -f environment.yml
-
-RUN mamba env create -f environment_reports.yml
-RUN mamba env create -f environment_preprocessing.yml
+#RUN eval "$(conda shell.bash hook)"
 RUN conda init
 # Ensure that the reports environment has required R packages
-SHELL ["conda", "run", "-n", "R-ODAF_reports", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "base", "/bin/bash", "-c"]
 
-RUN conda activate R-ODAF_reports
+RUN conda activate base \
+&& mamba create -c conda-forge -c bioconda -n snakemake snakemake \
+&& conda activate snakemake \
+&& snakemake --cores 8 --use-conda
 
-# Install extra dependencies
-RUN R -e "chooseCRANmirror(1, graphics=FALSE); \
-        remotes::install_github('bwlewis/crosstool'); \
-        install.packages('cellWise')"
-
-#RUN echo ${HOME}/miniconda/etc/profile.d/conda.sh >> ~/.bashrc
-
-#RUN echo "conda activate R-ODAF" >> ~/.bashrc
-SHELL ["conda", "run", "-n", "R-ODAF_preprocessing", "/bin/bash", "-c"]
-RUN conda info && conda list
-RUN ls -alht
-RUN echo "Checking if STAR is installed..."
-RUN STAR --version
-RUN R -e "chooseCRANmirror(1, graphics=FALSE); remotes::install_github('bwlewis/crosstool'); install.packages('cellWise')"
-
-RUN snakemake --cores 8
-#RUN conda init bash
-#CMD conda activate R-ODAF
-
-#RUN Rscript scripts/render_studywide_QC_report.R
-#RUN Rscript scripts/run_DESeq2.R
-#RUN Rscript scripts/render_DESeq2_report.parallel.R
+# Install extra dependency
+RUN conda activate R-ODAF_reports \
+&& R -e "chooseCRANmirror(1, graphics=FALSE); remotes::install_github('bwlewis/crosstool')"
 
 ENTRYPOINT ["/bin/bash", "-l", "-c"]
