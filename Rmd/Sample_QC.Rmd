@@ -12,14 +12,14 @@ params:
   gini_cutoff: 0.95
   exp_groups:
     value:
-      one: ["chemical", "dose", "timepoint"]
+      one: ["chemical", "dose"]
       #two: ["I7_Index_ID", "I5_Index_ID"]
       three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
   batch_var: "temposeq_plate"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "chemical_plate"
+  treatment_var: "chemical"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
@@ -57,7 +57,7 @@ This script will automatically output a new sample metadata table that includes 
 ```{r setup, include=FALSE}
 startTime <- Sys.time()
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-theme_set(theme_bw())
+
 ```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
@@ -66,6 +66,7 @@ theme_set(theme_bw())
 ############################################################################
 library(edgeR)
 library(ggplot2)
+theme_set(theme_bw())
 library(plotly)
 library(data.table)
 library(cluster)
@@ -85,7 +86,7 @@ library(kableExtra)
 library(dendextend)
 library(dendsort)
 library(rrcov)
-library(cellWise)
+#library(cellWise)
 library(vtree) # Richard Webster and Nick Barrowman
 ```
 
@@ -882,7 +883,8 @@ for (i in seq_along(facets)) {
                             cutree_cols = 2,
                             cutree_rows = 2)
   
-  cellWise::outlierMap(pca_subset)
+  #cellWise::outlierMap(pca_subset)
+  plot(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
   correlations$original_names <- row.names(correlations)
