@@ -3,8 +3,8 @@ services:
   r-odaf:
     container_name: R-ODAF
     volumes:
-      - '/path/to/raw-data:/home/R-ODAF/R-ODAF_Health_Canada/data/raw'
-      - '/path/to/output-folder/:home/R-ODAF/R-ODAF_Health_Canada/analysis/'
+      - './data:/home/R-ODAF/R-ODAF_Health_Canada/data/raw'
+      - './output:/home/R-ODAF/R-ODAF_Health_Canada/analysis/'
     image: mattjmeier/r-odaf-hc
     networks:
       - default
