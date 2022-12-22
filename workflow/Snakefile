@@ -66,9 +66,7 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        qc_dir / "MultiQC_Report.html",
-        processed_dir / "count_table.tsv",
-        "genome.removed",
+        "DESeq2_complete"
     benchmark: log_dir / "benchmark.all.txt"
     shell:
       '''
@@ -556,6 +554,45 @@ rule studywideqc:
         Rscript scripts/render_studywide_QC_report.R
         '''
 
+##############
+### DESeq2 ###
+##############
+
+rule deseq2:
+    message: "running DESeq2..."
+    input:
+        qc_dir / "details/samples_removed.txt"
+    output:
+        touch("DESeq2_complete")
+    conda:
+        "envs/reports.yml"
+    benchmark: log_dir / "benchmark.deseq2.txt"
+    shell:
+        '''
+        Rscript scripts/run_DESeq2.R 
+        '''
+        
+#####################
+### Study-wide QC ###
+#####################
+
+# rule studywideqc:
+#     message: "generating study-wide QC report in R..."
+#     input:
+#         qc_dir / "MultiQC_Report.html",
+#         processed_dir / "count_table.tsv",
+#         "genome.removed",
+#     output:
+#         qc_dir / "details/samples_removed.txt"
+#     conda:
+#         "envs/reports.yml"
+#     benchmark: log_dir / "benchmark.studywide_qc.txt"
+#     shell:
+#         '''
+#         Rscript scripts/render_studywide_QC_report.R
+#         '''
+
+
 
 ###############
 ### Cleanup ###
@@ -563,3 +600,4 @@ rule studywideqc:
 onerror:
     print("An error occurred. Attempting to unload genome")
     shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
+
