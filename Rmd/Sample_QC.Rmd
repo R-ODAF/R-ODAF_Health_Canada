@@ -57,7 +57,6 @@ This script will automatically output a new sample metadata table that includes 
 ```{r setup, include=FALSE}
 startTime <- Sys.time()
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-
 ```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
@@ -86,7 +85,6 @@ library(kableExtra)
 library(dendextend)
 library(dendsort)
 library(rrcov)
-#library(cellWise)
 library(vtree) # Richard Webster and Nick Barrowman
 ```
 
@@ -265,9 +263,13 @@ calculate_gc <- function(seq) {
 }
 
 # load manifest
-manifest <- read.csv(
-  file.path(params$biospyder_dbs, params$biospyder_manifest_file)
-)
+manifest <- read.delim(
+  file.path(params$biospyder_dbs, params$biospyder_manifest_file), # Assay manifest...
+  stringsAsFactors = FALSE,
+  sep = ",",
+  header = TRUE,
+  quote = "\"")
+  
 # Calculate the GC content for each probe, add this value as a column
 manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
 
@@ -884,8 +886,7 @@ for (i in seq_along(facets)) {
                             display_numbers = T,
                             cutree_cols = 2,
                             cutree_rows = 2)
-  
-  #cellWise::outlierMap(pca_subset)
+ 
   plot(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
