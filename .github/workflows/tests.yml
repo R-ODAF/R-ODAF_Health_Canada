@@ -61,16 +61,14 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('./workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
-        run: mamba env update -n R-ODAF -f environment.yml
+        run: mamba env update -n base -f ./workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Install extra dependencies
         run: |
-          R -e "chooseCRANmirror(1, graphics=FALSE); \
-          remotes::install_github('bwlewis/crosstool'); \
-          install.packages('cellWise')"
+         conda run -n R-ODAF_reports /usr/bin/R install.R
       - name: Check conda install
         run: |
           conda info
@@ -84,9 +82,12 @@ jobs:
           rm -r config # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+      - name: Build snakemake environment
+        run: |
+          snakemake --cores 8 --use-conda --conda-create-envs-only
       - name: Run workflow
         run: |
-          snakemake --cores 8
+          snakemake --cores 8 --use-conda
       - name: Render studywide QC
         run: |
           Rscript scripts/render_studywide_QC_report.R
