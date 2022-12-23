@@ -32,6 +32,7 @@ RUN rm -r data \
 && rm -r config
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
+SHELL ["/bin/bash", "-l", "-c"]
 RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/temposeq/* ./ \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
