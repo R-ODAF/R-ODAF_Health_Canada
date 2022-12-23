@@ -53,7 +53,7 @@ jobs:
             use-mamba: true
             python-version: ${{ matrix.python-version }}
             mamba-version: "*"
-            auto-activate-base: true
+            auto-activate-base: false
             auto-update-conda: true
             use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
       - name: Set cache date
@@ -61,10 +61,10 @@ jobs:
       - uses: actions/cache@v3
         with:
           path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('./workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Update environment
-        run: mamba env update -n base -f ./workflow/envs/base.yml
+        run: mamba env update -n base -f workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Install extra dependencies
         run: |
