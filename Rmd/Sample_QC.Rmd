@@ -85,7 +85,6 @@ library(kableExtra)
 library(dendextend)
 library(dendsort)
 library(rrcov)
-library(cellWise)
 library(vtree) # Richard Webster and Nick Barrowman
 ```
 
@@ -888,7 +887,7 @@ for (i in seq_along(facets)) {
                             cutree_cols = 2,
                             cutree_rows = 2)
   
-  cellWise::outlierMap(pca_subset)
+  plot(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
   correlations$original_names <- row.names(correlations)
