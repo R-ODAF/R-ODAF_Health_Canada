@@ -67,9 +67,6 @@ jobs:
       - name: Update environment
         run: mamba env update -n base -f workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
-      - name: Install extra dependencies
-        run: |
-         conda run -n R-ODAF_reports /usr/bin/R install.R
       - name: Check conda install
         run: |
           conda info
@@ -86,6 +83,10 @@ jobs:
       - name: Build snakemake environment
         run: |
           snakemake --cores 8 --use-conda --conda-create-envs-only
+      - name: Install extra dependencies
+        run: |
+         conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | \
+         sed s/\.yaml//) Rscript install.R
       - name: Run workflow
         run: |
           snakemake --cores 8 --use-conda
