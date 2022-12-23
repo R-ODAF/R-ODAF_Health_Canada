@@ -53,7 +53,7 @@ jobs:
             use-mamba: true
             python-version: ${{ matrix.python-version }}
             mamba-version: "*"
-            auto-activate-base: false
+            auto-activate-base: true
             auto-update-conda: true
             use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
       - name: Set cache date
