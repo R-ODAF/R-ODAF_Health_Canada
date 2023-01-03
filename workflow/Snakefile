@@ -586,10 +586,10 @@ rule deseq2:
 #         qc_dir / "details/samples_removed.txt"
 #     conda:
 #         "envs/reports.yml"
-#     benchmark: log_dir / "benchmark.studywide_qc.txt"
+#     benchmark: log_dir / "benchmark.deseq_report.txt"
 #     shell:
 #         '''
-#         Rscript scripts/render_studywide_QC_report.R
+#         Rscript scripts/render_DESeq2_report.parallel.R
 #         '''
 
 
@@ -599,5 +599,5 @@ rule deseq2:
 ###############
 onerror:
     print("An error occurred. Attempting to unload genome")
-    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
+    shell("rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
 
