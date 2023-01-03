@@ -1,9 +1,6 @@
 name: R-ODAF_reports
-channel_priority: strict
 channels:
-  - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - pandoc=2.19.2
   # R CRAN

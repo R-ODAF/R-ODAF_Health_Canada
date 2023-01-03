@@ -1,9 +1,6 @@
 name: R-ODAF_temposeqr
-channel_priority: strict
 channels:
-  - conda-forge
   - bioconda
-  - defaults
 dependencies:
   - bioconductor-quasr #=1.38.0
   - bioconductor-rtracklayer #=1.58.0
