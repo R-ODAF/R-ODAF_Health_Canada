@@ -1,5 +1,6 @@
 name: R-ODAF_reports
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - bioconda::pandoc=2.19.2
@@ -39,7 +40,7 @@ dependencies:
   - bioconda::r-sessioninfo=1.2.2
   - bioconda::r-gtools #=3.9.4
   - bioconda::r-ggridges=0.5.4
-  - bioconda::r-remotes=2.4.2
+ # - bioconda::r-remotes=2.4.2
   - bioconda::r-ashr=2.2_54
   - bioconda::r-rvcheck >= 0.1.8
   - bioconda::r-flextable=0.8.3

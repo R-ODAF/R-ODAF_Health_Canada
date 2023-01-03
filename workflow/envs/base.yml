@@ -3,6 +3,7 @@
 # if you must use a different environment name.
 name: base
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - bioconda::snakemake
