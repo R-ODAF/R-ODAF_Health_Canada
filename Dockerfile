@@ -37,7 +37,7 @@ RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 
 # Build environments with Snakemake
-RUN snakemake --cores 32 --use-conda --conda-create-envs-only #--conda-prefix /home/R-ODAF/.conda/envs/
+RUN snakemake --cores 32 --use-conda --conda-create-envs-only
 # ARG ENV_HASH=$(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//)
 #ENV ENV_HASH=${FIND_HASH}
 # Install extra dependency for reports
