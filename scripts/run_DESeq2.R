@@ -225,3 +225,6 @@ source(here::here("scripts","write_output_tables.R"))
 
 # save DESeq results to a file
 save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, contrasts, intgroup, design_to_use, paths, filtered_table, sample_count_metadata, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
+# save config and contrasts file too
+file.copy(file.path(paths$root, "config", "config.yaml"), paths$RData)
+file.copy(file.path(paths$metadata,"contrasts.txt"), paths$RData)
