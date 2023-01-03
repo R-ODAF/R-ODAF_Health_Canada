@@ -15,7 +15,6 @@ library('data.table')
 library('yaml')
 library('BiocParallel')
 library('rmarkdown')
-library('tools')
 clean_tmpfiles_mod <- function() {
   message("Calling clean_tmpfiles_mod()")
 }
