@@ -1,5 +1,4 @@
 name: R-ODAF_preprocessing
-channel_priority: strict
 channels:
   - bioconda
 dependencies:
