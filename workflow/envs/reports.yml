@@ -1,4 +1,5 @@
 name: R-ODAF_reports
+channel_priority: strict
 channels:
   - conda-forge
   - bioconda
