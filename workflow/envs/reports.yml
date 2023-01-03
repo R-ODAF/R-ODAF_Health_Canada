@@ -16,7 +16,7 @@ dependencies:
   - conda-forge::r-data.table=1.14.6
   - conda-forge::r-cluster=2.1.4
   - conda-forge::r-cairo=1.6_0
-  - conda-forge::r-sfsmisc=1.1_14 # Can't solve
+  - conda-forge::r-sfsmisc # =1.1_14 # Can't solve
   - conda-forge::r-fields=14.1
   - conda-forge::r-heatmap3=1.1.9
   - conda-forge::r-foreach=1.5.2
