@@ -66,7 +66,7 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        "DESeq2_complete"
+        "reports_complete"
     benchmark: log_dir / "benchmark.all.txt"
     shell:
       '''
@@ -576,21 +576,19 @@ rule deseq2:
 ### Study-wide QC ###
 #####################
 
-# rule studywideqc:
-#     message: "generating study-wide QC report in R..."
-#     input:
-#         qc_dir / "MultiQC_Report.html",
-#         processed_dir / "count_table.tsv",
-#         "genome.removed",
-#     output:
-#         qc_dir / "details/samples_removed.txt"
-#     conda:
-#         "envs/reports.yml"
-#     benchmark: log_dir / "benchmark.deseq_report.txt"
-#     shell:
-#         '''
-#         Rscript scripts/render_DESeq2_report.parallel.R
-#         '''
+rule deseq_reports:
+    message: "generating DESeq2 reports in R..."
+    input:
+        "DESeq2_complete"
+    output:
+        touch("reports_complete")
+    conda:
+        "envs/reports.yml"
+    benchmark: log_dir / "benchmark.deseq_report.txt"
+    shell:
+        '''
+        Rscript scripts/render_DESeq2_report.parallel.R
+        '''
 
 
 
