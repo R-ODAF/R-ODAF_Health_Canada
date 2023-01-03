@@ -41,6 +41,7 @@ RUN snakemake --cores 32 --use-conda --conda-create-envs-only
 # ARG ENV_HASH=$(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//)
 #ENV ENV_HASH=${FIND_HASH}
 # Install extra dependency for reports
+RUN conda config --set channel_priority strict
 RUN conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R
 #RUN R -e "chooseCRANmirror(1, graphics=FALSE); remotes::install_github('bwlewis/crosstool')"
 
