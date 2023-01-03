@@ -256,3 +256,7 @@ source(here::here(file.path("scripts","summarize_across_facets.R")))
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!
 system("rm -rf /tmp/intermediates_*")
+
+# save config and contrasts file too
+file.copy(file.path(paths$root, "config", "config.yaml"), paths$RData)
+file.copy(file.path(paths$metadata,"contrasts.txt"), paths$RData)
