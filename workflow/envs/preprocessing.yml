@@ -6,4 +6,3 @@ dependencies:
   - bioconda::fastp=0.23.2
   - bioconda::star=2.7.10b
   - bioconda::multiqc=1.12
-  - bioconda::snakemake=7.19.1
