@@ -1,17 +1,28 @@
 version: '3.3'
+
 services:
   r-odaf:
+    restart: "unless-stopped"
     container_name: R-ODAF
     volumes:
-      - './data:/home/R-ODAF/R-ODAF_Health_Canada/data/raw'
-      - './output:/home/R-ODAF/R-ODAF_Health_Canada/analysis/'
-    image: mattjmeier/r-odaf-hc
-    networks:
-      - default
+      - project_data:/home/R-ODAF/R-ODAF_Health_Canada/
+    image: mattjmeier/r-odaf-hc:latest
+    entrypoint: /bin/bash -l
+    tty: true
 
-networks:
-  default:
+  rstudio:
+    image: rocker/tidyverse
+    restart: "unless-stopped"
+    container_name: rstudio-server
+    ports:
+      - 8789:8788
+    volumes:
+      - project_data:/home/rstudio/project
+    environment:
+      - R_LIBS=${R_LIBS-'/usr/local/lib/R/site-library:/usr/local/lib/R/library'}
+      - PASSWORD=changeme
 
 volumes:
-  raw-data:
-  output:
+  project_data:
+    external: true
+    name: project_data
