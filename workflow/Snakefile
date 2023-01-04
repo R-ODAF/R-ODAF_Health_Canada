@@ -572,9 +572,9 @@ rule deseq2:
         Rscript scripts/run_DESeq2.R 
         '''
         
-#####################
-### Study-wide QC ###
-#####################
+######################
+### DESeq2 Reports ###
+######################
 
 rule deseq_reports:
     message: "generating DESeq2 reports in R..."
