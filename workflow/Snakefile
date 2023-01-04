@@ -70,7 +70,7 @@ rule all:
     benchmark: log_dir / "benchmark.all.txt"
     shell:
       '''
-      rm genome.removed
+      rm reports_complete
       '''
 
 ##################################
@@ -569,6 +569,7 @@ rule deseq2:
     benchmark: log_dir / "benchmark.deseq2.txt"
     shell:
         '''
+        rm genome.removed
         Rscript scripts/run_DESeq2.R 
         '''
         
@@ -587,6 +588,7 @@ rule deseq_reports:
     benchmark: log_dir / "benchmark.deseq_report.txt"
     shell:
         '''
+        rm DESeq2_complete
         Rscript scripts/render_DESeq2_report.parallel.R
         '''
 
