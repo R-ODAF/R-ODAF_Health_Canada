@@ -159,7 +159,7 @@ ggplot(allResults, aes(x = log2FoldChange, y = -log10(padj))) +
 
 ## By contrast
 
-Select a contrast from the dropdown list to filter by contrast.
+Select a contrast from the dropdown list to filter by contrast. Note that this plot is turned off by default for RNA-seq analysis.
 ```{r volcano_by_contrast, fig.width = 10, fig.height = 6, warning = TRUE, collapse = TRUE, eval = !(params$platform == "RNA-Seq")}
 volcano_df <-  as.data.frame(allResults) %>%
     dplyr::select(c("Feature_ID",
