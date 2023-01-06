@@ -2,27 +2,41 @@ version: '3.3'
 
 services:
   r-odaf:
-    restart: "unless-stopped"
+          #restart: "unless-stopped"
     container_name: R-ODAF
     volumes:
-      - project_data:/home/R-ODAF/R-ODAF_Health_Canada/
-    image: mattjmeier/r-odaf-hc:latest
-    entrypoint: /bin/bash -l
+      - ./analysis:/home/R-ODAF/R-ODAF_Health_Canada/analysis
+      - ./metadata:/home/R-ODAF/R-ODAF_Health_Canada/data/metadata
+      - ./config:/home/R-ODAF/R-ODAF_Health_Canada/config
+      - ./raw-data:/home/R-ODAF/R-ODAF_Health_Canada/data/raw
+      - ./reference:/home/R-ODAF/R-ODAF_Health_Canada/reference
+      - ./wikipathways-20210810-gmt-Homo_sapiens.gmt:/home/R-ODAF/R-ODAF_Health_Canada/wikipathways-20210810-gmt-Homo_sapiens.gmt
+      - ./Human_S1500_1.2_standardized.csv:/home/R-ODAF/R-ODAF_Health_Canada/Human_S1500_1.2_standardized.csv 
+    image: mattjmeier/r-odaf-hc-prod:latest
+    # command: /bin/bash -l
+    environment:
+      - HOST_UID=10007
+      - HOST_GID=10008
     tty: true
 
   rstudio:
     image: rocker/tidyverse
     restart: "unless-stopped"
     container_name: rstudio-server
+    volumes_from:
+      - r-odaf
     ports:
-      - 8789:8788
-    volumes:
-      - project_data:/home/rstudio/project
+      - 8789:8787
     environment:
       - R_LIBS=${R_LIBS-'/usr/local/lib/R/site-library:/usr/local/lib/R/library'}
       - PASSWORD=changeme
 
-volumes:
-  project_data:
-    external: true
-    name: project_data
+  jupyter:
+    image: jupyter/datascience-notebook
+    container_name: jupyter
+    volumes_from:
+      - r-odaf
+        #command: /opt/conda/bin/jupyter notebook --ip=0.0.0.0 --port=8888 --notebook-dir=/home/R-ODAF/ --allow-root --no-browser
+    ports:
+      - 11111:8888
+
