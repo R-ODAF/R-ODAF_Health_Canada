@@ -1,23 +1,23 @@
 ########################################################
 ## Build R-ODAF container for transcriptomic analysis ##
 ########################################################
-# Conda base image
-FROM mattjmeier/r-odaf-hc-base
+# From tested container with updated code
+FROM mattjmeier/r-odaf-hc-tests
 
-RUN /bin/bash -c "snakemake --cores 32 --use-conda"
+USER root
 
-# Clean up directories
-RUN mkdir tests \
-&& mv analysis/ \
-test-data/ \
-truth_checksums/ \
-wikipathways-20210810-gmt-Homo_sapiens.gmt  \
-Human_S1500_1.2_standardized.csv \
-logs/ \
-data/ \
-config \
-tests \
-&& mv data.bak data && mv config.bak config
+# Move files
+RUN mv tests /opt/tests
 
+# Install gosu
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y gosu; \
+	rm -rf /var/lib/apt/lists/*; \
+# verify that the binary works
+	gosu nobody true
+
+COPY entrypoint.sh .
 RUN ["chmod", "+x", "entrypoint.sh"]
 ENTRYPOINT ["./entrypoint.sh"]
+#CMD ["/bin/bash" "-l"]

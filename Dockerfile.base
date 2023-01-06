@@ -21,13 +21,11 @@ RUN apt-get update && apt-get -y install \
 	tree \
 	vim
 
-#SHELL ["/bin/bash", "-c"]
 RUN mkdir -p /home/R-ODAF/R-ODAF_Health_Canada
 WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
 RUN conda install -n base -c conda-forge mamba
 RUN mamba install -y -c conda-forge -c bioconda -n base snakemake
-#USER root
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
 RUN mv data data.bak && mv config config.bak

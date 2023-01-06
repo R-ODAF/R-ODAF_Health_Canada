@@ -14,11 +14,18 @@ fi
 groupmod --gid "$HOST_GID" R-ODAF
 usermod --uid "$HOST_UID" R-ODAF
 # Necessary to ensure all files are updated to the new UID and GID
-chown -R /home/R-ODAF/ R-ODAF:R-ODAF
+chown -R R-ODAF:R-ODAF /home/R-ODAF/R-ODAF_Health_Canada
 
 # Drop privileges and execute next container command, or 'bash' if not specified.
 if [[ $# -gt 0 ]]; then
-    exec sudo -u -H R-ODAF -- "$@"
+    exec gosu R-ODAF "$@"
+    #exec sudo -u -H R-ODAF -- "$@"
 else
-    exec sudo -u -H R-ODAF -- bash
+    exec gosu R-ODAF "bash"
+    #exec sudo -u -H R-ODAF -- bash
 fi
+
+#exec $@
+#instead of sleeping, an HPC environment would be better suited to having
+#an entrypoint that runs the pipeline; eaiser to do interactively, currently.
+sleep infinity
