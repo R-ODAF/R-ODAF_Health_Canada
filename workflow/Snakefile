@@ -66,12 +66,12 @@ shell("cp -rf config {log_dir}")
 
 rule all:
     input:
-        qc_dir / "MultiQC_Report.html",
-        processed_dir / "count_table.tsv",
-        "genome.removed",
+        "reports_complete"
     benchmark: log_dir / "benchmark.all.txt"
-    run:
-      shell("rm genome.removed")
+    shell:
+      '''
+      rm reports_complete
+      '''
 
 ##################################
 ### Trimming raw reads : Fastp ###
@@ -91,6 +91,8 @@ rule fastp_se:
         R1 = pipe(trim_dir / "{sample}.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
+    conda:
+        "envs/preprocessing.yml"
     params:
         front_size = 1,
         front_quality = 3,
@@ -134,6 +136,8 @@ rule fastp_pe:
         R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
+    conda:
+        "envs/preprocessing.yml"
     params:
         front_size = 1,
         front_quality = 3,
@@ -195,6 +199,8 @@ rule STAR_make_index:
         genomeChrBinNbits = 18, # might need to mess with this for different genomes - default is 18
         genomeSAindexNbases = STAR_genomeSAindexNbases,
         sjdbGTFfeatureExon = "exon" # STAR default
+    conda:
+        "envs/preprocessing.yml"
     output:
         directory(genome_dir / "STAR_index"),
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
@@ -225,13 +231,16 @@ rule STAR_load:
         genome_dir / "STAR_index",
     output:
         touch("genome.loaded")
+    conda:
+        "envs/preprocessing.yml"
     params:
         index = STAR_index,
     benchmark: log_dir / "benchmark.STAR_load.txt"
-    run:
-        shell("STAR --genomeLoad LoadAndExit --genomeDir {params.index}")
-        shell("rm -f genome.removed")
-
+    shell:
+        '''
+        STAR --genomeLoad LoadAndExit --genomeDir {params.index}
+        rm -f genome.removed
+        '''
 
 rule STAR_all:
     input:
@@ -246,6 +255,8 @@ if pipeline_config["mode"] == "se":
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+        conda:
+            "envs/preprocessing.yml"
         params:
             index = STAR_index,
             penalty = STAR_insertion_deletion_penalty,
@@ -286,6 +297,8 @@ if pipeline_config["mode"] == "pe":
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+        conda:
+            "envs/preprocessing.yml"
         params:
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
@@ -316,13 +329,16 @@ rule STAR_unload:
         bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
     output:
         touch("genome.removed")
+    conda:
+        "envs/preprocessing.yml"
     params:
         genome_dir = STAR_index
-    run:
-        shell("STAR --genomeLoad Remove --genomeDir {params.genome_dir}")
-        shell("rm genome.loaded")
-        shell("rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
-
+    shell:
+        '''
+        STAR --genomeLoad Remove --genomeDir {params.genome_dir}
+        rm genome.loaded
+        rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam
+        '''
 
 
 
@@ -336,18 +352,18 @@ if common_config["platform"] =="TempO-Seq":
         input:
             expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
 
-
     rule samtools_index:
         input:
             aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
         output:
             index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai",
+        conda:
+            "envs/temposeqr.yml"
         benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
         shell:
             '''
             samtools index {input.aligned}
             '''
-
 
     rule quantification_input:
         input:
@@ -373,6 +389,8 @@ if common_config["platform"] =="TempO-Seq":
         threads: workflow.cores,
         output:
             count_table = processed_dir / "count_table.tsv",
+        conda:
+            "envs/temposeqr.yml"
         benchmark: log_dir / "benchmark.quantification.txt"
         shell:
             '''
@@ -401,6 +419,8 @@ if common_config["platform"] =="RNA-Seq":
             genome_name = pipeline_config["genome_name"],
         output:
             directory(genome_dir / "RSEM_index"),
+        conda:
+            "envs/preprocessing.yml"
         benchmark: log_dir / "benchmark.RSEM_make_index.txt"
         shell:
             '''
@@ -416,6 +436,8 @@ if common_config["platform"] =="RNA-Seq":
             output:
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
+            conda:
+                "envs/preprocessing.yml"
             params:
                 threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
@@ -441,6 +463,8 @@ if common_config["platform"] =="RNA-Seq":
             output:
                 isoforms = quant_dir / "{sample}.isoforms.results",
                 genes = quant_dir / "{sample}.genes.results",
+            conda:
+                "envs/preprocessing.yml"
             params:
                 threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
@@ -464,6 +488,8 @@ if common_config["platform"] =="RNA-Seq":
         output:
             genes = processed_dir / "count_table.tsv",
             isoforms = processed_dir / "isoforms_table.tsv"
+        conda:
+            "envs/preprocessing.yml"
         benchmark: log_dir / "benchmark.counts_matrix.txt"
         shell:
             '''
@@ -492,6 +518,8 @@ rule multiqc:
         expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
     output:
         qc_dir / "MultiQC_Report.html"
+    conda:
+        "envs/preprocessing.yml"
     benchmark: log_dir / "benchmark.multiqc.txt"
     shell:
         '''
@@ -505,6 +533,65 @@ rule multiqc:
         -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
         mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
         '''
+        
+#####################
+### Study-wide QC ###
+#####################
+
+rule studywideqc:
+    message: "generating study-wide QC report in R..."
+    input:
+        qc_dir / "MultiQC_Report.html",
+        processed_dir / "count_table.tsv",
+        "genome.removed",
+    output:
+        qc_dir / "details/samples_removed.txt"
+    conda:
+        "envs/reports.yml"
+    benchmark: log_dir / "benchmark.studywide_qc.txt"
+    shell:
+        '''
+        Rscript scripts/render_studywide_QC_report.R
+        '''
+
+##############
+### DESeq2 ###
+##############
+
+rule deseq2:
+    message: "running DESeq2..."
+    input:
+        qc_dir / "details/samples_removed.txt"
+    output:
+        touch("DESeq2_complete")
+    conda:
+        "envs/reports.yml"
+    benchmark: log_dir / "benchmark.deseq2.txt"
+    shell:
+        '''
+        rm genome.removed
+        Rscript scripts/run_DESeq2.R 
+        '''
+        
+######################
+### DESeq2 Reports ###
+######################
+
+rule deseq_reports:
+    message: "generating DESeq2 reports in R..."
+    input:
+        "DESeq2_complete"
+    output:
+        touch("reports_complete")
+    conda:
+        "envs/reports.yml"
+    benchmark: log_dir / "benchmark.deseq_report.txt"
+    shell:
+        '''
+        rm DESeq2_complete
+        Rscript scripts/render_DESeq2_report.parallel.R
+        '''
+
 
 
 ###############
@@ -512,4 +599,5 @@ rule multiqc:
 ###############
 onerror:
     print("An error occurred. Attempting to unload genome")
-    shell("STAR --genomeLoad Remove --genomeDir {STAR_index}; rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
+    shell("rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
+

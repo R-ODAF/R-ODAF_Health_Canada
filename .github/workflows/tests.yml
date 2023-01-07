@@ -24,7 +24,7 @@ jobs:
         include: 
           - os: ubuntu-20.04
             label: linux-64
-            prefix: /usr/share/miniconda3/envs/R-ODAF
+            prefix: /usr/share/miniconda3/envs/base
         r-version: ['4.1.1']
         python-version: ['3.7']
         seq_type: ['temposeq'] # add later... , 'rnaseq']
@@ -49,27 +49,24 @@ jobs:
         with:
             miniforge-variant: Mambaforge
             miniforge-version: latest
-            activate-environment: R-ODAF
+            environment-file: workflow/envs/base.yml
+            activate-environment: base
             use-mamba: true
             python-version: ${{ matrix.python-version }}
             mamba-version: "*"
-            auto-activate-base: false
+            auto-activate-base: true
             auto-update-conda: true
             use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
-      - name: Set cache date
-        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-      - uses: actions/cache@v3
-        with:
-          path: ${{ matrix.prefix }}
-          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-        id: cache
+      # - name: Set cache date
+      #   run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: ${{ matrix.prefix }}
+      #     key: ${{ matrix.label }}-conda-${{ hashFiles('workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+      #   id: cache
       - name: Update environment
-        run: mamba env update -n R-ODAF -f environment.yml
+        run: mamba env update -n base -f workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
-      - name: Install extra dependencies
-        run: |
-          R -e "chooseCRANmirror(1, graphics=FALSE); \
-          remotes::install_github('bwlewis/crosstool')"
       - name: Check conda install
         run: |
           conda info
@@ -83,18 +80,16 @@ jobs:
           rm -r config # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+      - name: Build snakemake environment
+        run: |
+          snakemake --cores 8 --use-conda --conda-create-envs-only
+      - name: Install extra dependencies
+        run: |
+         conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | \
+         sed s/\.yaml//) Rscript install.R
       - name: Run workflow
         run: |
-          snakemake --cores 8
-      - name: Render studywide QC
-        run: |
-          Rscript scripts/render_studywide_QC_report.R
-      - name: Run DESeq2
-        run: |
-          Rscript scripts/run_DESeq2.R
-      - name: Render Reports
-        run: |
-          Rscript scripts/render_DESeq2_report.parallel.R
+          snakemake --cores 8 --use-conda
       - name: Generate md5sums
         run: |
           md5sum data/processed/count_table.tsv > checksum.count_table

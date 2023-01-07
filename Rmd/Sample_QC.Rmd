@@ -12,14 +12,14 @@ params:
   gini_cutoff: 0.95
   exp_groups:
     value:
-      one: ["chemical", "dose", "timepoint"]
+      one: ["chemical", "dose"]
       #two: ["I7_Index_ID", "I5_Index_ID"]
       three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
   batch_var: "temposeq_plate"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  treatment_var: "chemical_plate"
+  treatment_var: "chemical"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
@@ -269,7 +269,7 @@ manifest <- read.delim(
   sep = ",",
   header = TRUE,
   quote = "\"")
-
+  
 # Calculate the GC content for each probe, add this value as a column
 manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
 
@@ -886,7 +886,7 @@ for (i in seq_along(facets)) {
                             display_numbers = T,
                             cutree_cols = 2,
                             cutree_rows = 2)
-  
+ 
   plot(pca_subset)
   print(group_heatmap)
   correlations <- as.data.frame(correlations)
