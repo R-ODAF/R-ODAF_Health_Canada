@@ -9,6 +9,7 @@ output:
     code_download: true
 ---
 
+Summary report of DEG analysis over all facets
 
 
 ```{r docSetup, warning = FALSE, message = FALSE, include = F}
@@ -22,6 +23,7 @@ library('data.table')
 library('yaml')
 library('stringr')
 library(pheatmap)
+library(RColorBrewer)
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
@@ -85,6 +87,9 @@ for (f in facets){
 
 ```
 
+
+Number of DEGs for each contrast tested
+
 ```{r p1}
 
 p1_data <- significantResultsUnfaceted %>%
@@ -124,6 +129,10 @@ if(length(facets) == 1){
 
 p1
 ```
+
+
+Number of genes filtered by each R-ODAF filtering criterium
+
 
 ```{r p2}
 
@@ -170,6 +179,9 @@ if(length(facets) == 1){
 p2
 ```
 
+
+Number of DEGs by group (grey indicates that group not tested)
+
 ```{r}
 
 
@@ -182,10 +194,15 @@ n_DEGs_mat <- significantResultsUnfaceted %>%
   unique() %>%
   pivot_wider(names_from="dose",values_from = "n_DEGs") %>%
   column_to_rownames(var="chemical") %>%
-  replace(is.na(.), 0) %>%
+  replace(is.na(.), -1) %>%
   as.matrix()
 
-pheatmap(n_DEGs_mat, cluster_rows = FALSE, cluster_cols = FALSE)
+pheatmap(n_DEGs_mat,
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         color = c("#666666",colorRampPalette(rev(brewer.pal(n = 7, name =
+                                    "RdYlBu")))(99))
+         )
 
 ```
 
