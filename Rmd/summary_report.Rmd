@@ -197,11 +197,13 @@ n_DEGs_mat <- significantResultsUnfaceted %>%
   replace(is.na(.), -1) %>%
   as.matrix()
 
+# TODO: assign breaks in a reasonable way
+
 pheatmap(n_DEGs_mat,
          cluster_rows = FALSE,
          cluster_cols = FALSE,
          color = c("#666666",colorRampPalette(rev(brewer.pal(n = 7, name =
-                                    "RdYlBu")))(99))
+                                    "YlGnBu")))(99))
          )
 
 ```
@@ -223,5 +225,47 @@ data_mat <- data %>%
 
 pheatmap(data_mat)
 
+
+```
+
+
+```{r}
+
+bestGenes <- significantResultsUnfaceted %>%
+  sample_n(10) %>%
+  pull(Feature_ID)
+
+allBestData <- allResultsUnfaceted %>%
+    filter(Feature_ID %in% bestGenes) %>%
+    pull(log2FoldChange)
+
+
+for(g in bestGenes){
+  FC_mat <- allResultsUnfaceted %>%
+    filter(Feature_ID == g) %>%
+    separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
+    left_join(exp_metadata, by=c("group_1"="group")) %>%
+    dplyr::select(log2FoldChange,chemical,dose) %>%
+    unique() %>%
+    pivot_wider(names_from="dose",values_from = "log2FoldChange") %>%
+    column_to_rownames(var="chemical") %>%
+    replace(is.na(.), 0) %>%
+    as.matrix()
+
+  
+  paletteLength <- 9
+  colours <- colorRampPalette(c("yellow", "white", "blue"))(paletteLength)
+  breaks <- c(seq(min(allBestData), 0, length.out=ceiling(paletteLength/2) + 1), 
+                seq(max(allBestData)/paletteLength, max(allBestData), length.out=floor(paletteLength/2)))
+
+  
+  cat(g)
+  pheatmap(FC_mat,
+           cluster_rows = FALSE,
+           cluster_cols = FALSE,
+           color = colours,
+           breaks = breaks
+           )
+}
 
 ```
