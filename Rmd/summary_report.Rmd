@@ -255,20 +255,18 @@ data <- significantResultsUnfaceted %>%
   column_to_rownames(var="Feature_ID") %>%
   mutate(nonzero_count=rowSums(.!=0)) %>%
   arrange(desc(nonzero_count)) %>% 
-  head(n_heatmap_genes) %>%
-  dplyr::select(-nonzero_count)
-
+  head(n_heatmap_genes)
 heatmap_genes <- rownames(data)
 
 data_all <- allResultsUnfaceted %>%
   filter(Feature_ID %in% heatmap_genes) %>%
   dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
   pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
-  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
-  column_to_rownames(var="Feature_ID")
+  mutate(gene_label = paste(Feature_ID, Gene_Symbol)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
+  column_to_rownames(var="gene_label")
 
 
-data_mat <- as.matrix(data)
 data_all_mat <- as.matrix(data_all)
 
 highlight_significant <- function(j, i, x, y, width, height, fill) {

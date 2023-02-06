@@ -248,13 +248,12 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
                                                 columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
                                                 keys = deg_table$Feature_ID,
                                                 keytype="ENSEMBL") %>%
-            distinct(ENSEMBL)
-          
+            distinct(ENSEMBL, .keep_all=TRUE)
           colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
           descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
           deg_table <- dplyr::left_join(deg_table, descriptions, by="Feature_ID")
         }, error = function(e) {
-          message("omg")
+          message("error")
         })
       }
       if(!("Gene_Symbol" %in% colnames(deg_table))){
