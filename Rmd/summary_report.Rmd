@@ -24,6 +24,8 @@ library('yaml')
 library('stringr')
 library(pheatmap)
 library(RColorBrewer)
+library(ComplexHeatmap)
+library(circlize)
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
@@ -57,6 +59,8 @@ db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
 load(dataFile) # metadata, contrasts, counts, resultsList
 
+exp_metadata <- exp_metadata %>%
+  mutate(uv_dosage_2 = factor(uv_dosage_2, levels = c( "Sham", "5_mJ_cm2", "10_mJ_cm2", "20_mJ_cm2", "40_mJ_cm2", "5pct_Oxalazone")))
 
 ```
 
@@ -184,26 +188,43 @@ Number of DEGs by group (grey indicates that group not tested)
 
 ```{r}
 
-
-n_DEGs_mat <- significantResultsUnfaceted %>%
+n_DEGs_data <- significantResultsUnfaceted %>%
   group_by(contrast) %>%
   summarise(n_DEGs = n()) %>%
   separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
-  left_join(exp_metadata, by=c("group_1"="group")) %>%
-  dplyr::select(n_DEGs,chemical,dose) %>%
-  unique() %>%
-  pivot_wider(names_from="dose",values_from = "n_DEGs") %>%
-  column_to_rownames(var="chemical") %>%
-  replace(is.na(.), -1) %>%
+  left_join(exp_metadata, by=c("group_1"="condition")) %>%
+  dplyr::select(n_DEGs,Timepoint_2 ,uv_dosage_2 ) %>%
+  unique()
+
+ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~uv_dosage_2) +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~Timepoint_2) +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+n_DEGs_mat <- n_DEGs_data %>%
+  spread(uv_dosage_2, n_DEGs, fill=NA) %>%
+#  pivot_wider(names_from="uv_dosage_2",values_from = "n_DEGs") %>%
+  column_to_rownames(var="Timepoint_2") %>%
   as.matrix()
 
 # TODO: assign breaks in a reasonable way
 
-pheatmap(n_DEGs_mat,
+deg_breaks <- c(0,200,400,600,800,1000,1200,1400,1600,1800)
+deg_colors <- colorRampPalette(rev(brewer.pal(n = 7, name = "YlGnBu")))(10)
+#deg_breaks <- c(0,500,1000,1500)
+#colors <- c("#666666", "#0C2C84","#41B6C4" , "#FFFFCC")
+
+color_ramp <- colorRamp2(deg_breaks,deg_colors)
+
+Heatmap(n_DEGs_mat,
          cluster_rows = FALSE,
-         cluster_cols = FALSE,
-         color = c("#666666",colorRampPalette(rev(brewer.pal(n = 7, name =
-                                    "YlGnBu")))(99))
+         cluster_columns = FALSE,
+         col = color_ramp
          )
 
 ```
@@ -211,20 +232,43 @@ pheatmap(n_DEGs_mat,
 
 ```{r}
 
-
+n_heatmap_genes <- 50 # number of genes to plot in the heatmap
 
 data <- significantResultsUnfaceted %>%
   dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
   pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
-  replace_na(list('BaP_15 vs BaP_0'=0, 'CISP_50 vs CISP_0'=0))
-
-data_mat <- data %>%
-  dplyr::select('Feature_ID','BaP_15 vs BaP_0', 'CISP_50 vs CISP_0') %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
   column_to_rownames(var="Feature_ID") %>%
-  as.matrix()
+  mutate(nonzero_count=rowSums(.!=0)) %>%
+  arrange(desc(nonzero_count)) %>% 
+  head(n_heatmap_genes) %>%
+  dplyr::select(-nonzero_count)
 
-pheatmap(data_mat)
+heatmap_genes <- rownames(data)
 
+data_all <- allResultsUnfaceted %>%
+  filter(Feature_ID %in% heatmap_genes) %>%
+  dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
+  pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  column_to_rownames(var="Feature_ID")
+
+
+data_mat <- as.matrix(data)
+data_all_mat <- as.matrix(data_all)
+
+highlight_significant <- function(j, i, x, y, width, height, fill) {
+          cont <- colnames(data_all_mat)[j]
+          feat <- rownames(data_all_mat)[i]
+          sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
+          if(nrow(sig_results) > 0){
+            grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
+          }
+        }
+
+Heatmap(data_all_mat,
+        cluster_columns=F,
+        cell_fun = highlight_significant)
 
 ```
 
@@ -240,17 +284,27 @@ allBestData <- allResultsUnfaceted %>%
     pull(log2FoldChange)
 
 
+
 for(g in bestGenes){
   FC_mat <- allResultsUnfaceted %>%
     filter(Feature_ID == g) %>%
     separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
-    left_join(exp_metadata, by=c("group_1"="group")) %>%
-    dplyr::select(log2FoldChange,chemical,dose) %>%
+    left_join(exp_metadata, by=c("group_1"="condition")) %>%
+    dplyr::select(log2FoldChange,uv_dosage_2,Timepoint_2) %>%
     unique() %>%
-    pivot_wider(names_from="dose",values_from = "log2FoldChange") %>%
-    column_to_rownames(var="chemical") %>%
-    replace(is.na(.), 0) %>%
+    spread(uv_dosage_2,log2FoldChange) %>%
+#    pivot_wider(names_from="uv_dosage_2",values_from = "log2FoldChange") %>%
+    column_to_rownames(var="Timepoint_2") %>%
     as.matrix()
+  
+  highlight_significant <- function(j, i, x, y, width, height, fill) {
+            cont <- paste0(colnames(FC_mat)[j],"_",rownames(FC_mat)[i]," vs Sham_",rownames(FC_mat)[i])
+            feat <- g
+            sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
+            if(nrow(sig_results) > 0){
+              grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
+            }
+          }
 
   
   paletteLength <- 9
@@ -258,14 +312,18 @@ for(g in bestGenes){
   breaks <- c(seq(min(allBestData), 0, length.out=ceiling(paletteLength/2) + 1), 
                 seq(max(allBestData)/paletteLength, max(allBestData), length.out=floor(paletteLength/2)))
 
+  col_fun = colorRamp2(c(-2, 0, 2), c("yellow", "white", "blue"))
+
+  
   
   cat(g)
-  pheatmap(FC_mat,
-           cluster_rows = FALSE,
-           cluster_cols = FALSE,
-           color = colours,
-           breaks = breaks
+  print(
+  Heatmap(FC_mat,
+          cluster_rows = FALSE,
+          cluster_columns = FALSE,
+          col = col_fun
            )
+  )
 }
 
 ```
