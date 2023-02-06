@@ -244,7 +244,12 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
       } else{
         # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
         result = tryCatch({
-          descriptions <- AnnotationDbi::select(get(params$species_data$orgdb), columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = deg_table$Feature_ID, keytype="ENSEMBL") %>% distinct()
+          descriptions <- AnnotationDbi::select(get(params$species_data$orgdb),
+                                                columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
+                                                keys = deg_table$Feature_ID,
+                                                keytype="ENSEMBL") %>%
+            distinct(ENSEMBL)
+          
           colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
           descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
           deg_table <- dplyr::left_join(deg_table, descriptions, by="Feature_ID")
