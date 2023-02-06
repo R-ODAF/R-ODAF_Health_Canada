@@ -138,7 +138,7 @@ p1
 Number of genes filtered by each R-ODAF filtering criterium
 
 
-```{r p2}
+```{r p2, fig.height=11}
 
 
 # plot filter stats
@@ -182,11 +182,7 @@ if(length(facets) == 1){
   
 p2
 ```
-
-
-Number of DEGs by group (grey indicates that group not tested)
-
-```{r}
+```{r get n_DEGs_data}
 
 n_DEGs_data <- significantResultsUnfaceted %>%
   group_by(contrast) %>%
@@ -196,16 +192,33 @@ n_DEGs_data <- significantResultsUnfaceted %>%
   dplyr::select(n_DEGs,Timepoint_2 ,uv_dosage_2 ) %>%
   unique()
 
+
+```
+
+Number of DEGs by timepoint
+
+
+```{r n_DEGs_plot_by_time}
 ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
   geom_bar(stat="identity") +
   facet_wrap(~uv_dosage_2) +
   theme(axis.text.x = element_text(angle=90, hjust=1))
+```
 
+Number of DEGs by UV dose
+
+```{r n_DEGs_plot_by_UV}
 ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
   geom_bar(stat="identity") +
   facet_wrap(~Timepoint_2) +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 
+
+```
+
+Number of DEGs by group (grey indicates that group not tested)
+
+```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
   spread(uv_dosage_2, n_DEGs, fill=NA) %>%
 #  pivot_wider(names_from="uv_dosage_2",values_from = "n_DEGs") %>%
@@ -228,6 +241,7 @@ Heatmap(n_DEGs_mat,
          )
 
 ```
+
 
 
 ```{r}
