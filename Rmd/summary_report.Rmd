@@ -195,7 +195,7 @@ n_DEGs_data <- significantResultsUnfaceted %>%
 
 ```
 
-Number of DEGs by timepoint
+Number of DEGs by UV dose
 
 
 ```{r n_DEGs_plot_by_time}
@@ -205,7 +205,7 @@ ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
-Number of DEGs by UV dose
+Number of DEGs by timepoint
 
 ```{r n_DEGs_plot_by_UV}
 ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
@@ -216,7 +216,7 @@ ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
 
 ```
 
-Number of DEGs by group (grey indicates that group not tested)
+Number of DEGs by group
 
 ```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
@@ -244,7 +244,7 @@ Heatmap(n_DEGs_mat,
 
 
 
-```{r}
+```{r genes_heatmap, fig.height=11}
 
 n_heatmap_genes <- 50 # number of genes to plot in the heatmap
 
@@ -269,10 +269,11 @@ data_all <- allResultsUnfaceted %>%
 
 data_all_mat <- as.matrix(data_all)
 
-highlight_significant <- function(j, i, x, y, width, height, fill) {
+highlight_significant <- function(j,i, x, y, width, height, fill) {
           cont <- colnames(data_all_mat)[j]
-          feat <- rownames(data_all_mat)[i]
+          feat_label <- str_split(rownames(data_all_mat)[i]," ", simplify=TRUE)[1]
           sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
+          message(feat)
           if(nrow(sig_results) > 0){
             grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
           }
@@ -285,11 +286,13 @@ Heatmap(data_all_mat,
 ```
 
 
-```{r}
+```{r bestgenesplots}
 
-bestGenes <- significantResultsUnfaceted %>%
-  sample_n(10) %>%
-  pull(Feature_ID)
+# bestGenes <- significantResultsUnfaceted %>%
+#   sample_n(10) %>%
+#   pull(Feature_ID)
+
+bestGenes <- heatmap_genes
 
 allBestData <- allResultsUnfaceted %>%
     filter(Feature_ID %in% bestGenes) %>%
