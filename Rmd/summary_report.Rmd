@@ -221,7 +221,6 @@ Number of DEGs by group
 ```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
   spread(uv_dosage_2, n_DEGs, fill=NA) %>%
-#  pivot_wider(names_from="uv_dosage_2",values_from = "n_DEGs") %>%
   column_to_rownames(var="Timepoint_2") %>%
   as.matrix()
 
@@ -247,21 +246,30 @@ Heatmap(n_DEGs_mat,
 ```{r genes_heatmap, fig.height=11}
 
 n_heatmap_genes <- 50 # number of genes to plot in the heatmap
+n_mini_heatmap_genes <- 10 # number of genes to plot individually
 
 data <- significantResultsUnfaceted %>%
   dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
-  pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
+  spread(key = contrast, value = log2FoldChange, fill=NA, drop=TRUE) %>%
+  #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
   column_to_rownames(var="Feature_ID") %>%
-  mutate(nonzero_count=rowSums(.!=0)) %>%
-  arrange(desc(nonzero_count)) %>% 
-  head(n_heatmap_genes)
-heatmap_genes <- rownames(data)
+  mutate(nonzero_count=rowSums(.!=0, na.rm = TRUE)) %>%
+  arrange(desc(nonzero_count))
+
+heatmap_genes <- data %>% 
+  head(n_heatmap_genes) %>%
+  rownames()
+
+mini_heatmap_genes <- data %>% 
+  head(n_mini_heatmap_genes) %>%
+  rownames()
 
 data_all <- allResultsUnfaceted %>%
   filter(Feature_ID %in% heatmap_genes) %>%
   dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
-  pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
+  spread(key = contrast, value = log2FoldChange, fill=NA, drop=TRUE) %>%
+  #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
   mutate(gene_label = paste(Feature_ID, Gene_Symbol)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
   column_to_rownames(var="gene_label")
@@ -271,9 +279,8 @@ data_all_mat <- as.matrix(data_all)
 
 highlight_significant <- function(j,i, x, y, width, height, fill) {
           cont <- colnames(data_all_mat)[j]
-          feat_label <- str_split(rownames(data_all_mat)[i]," ", simplify=TRUE)[1]
+          feat <- str_split(rownames(data_all_mat)[i]," ", simplify=TRUE)[1]
           sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
-          message(feat)
           if(nrow(sig_results) > 0){
             grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
           }
@@ -292,7 +299,7 @@ Heatmap(data_all_mat,
 #   sample_n(10) %>%
 #   pull(Feature_ID)
 
-bestGenes <- heatmap_genes
+bestGenes <- mini_heatmap_genes
 
 allBestData <- allResultsUnfaceted %>%
     filter(Feature_ID %in% bestGenes) %>%
@@ -307,7 +314,7 @@ for(g in bestGenes){
     left_join(exp_metadata, by=c("group_1"="condition")) %>%
     dplyr::select(log2FoldChange,uv_dosage_2,Timepoint_2) %>%
     unique() %>%
-    spread(uv_dosage_2,log2FoldChange) %>%
+    spread(key = uv_dosage_2, value = log2FoldChange, fill=NA) %>%
 #    pivot_wider(names_from="uv_dosage_2",values_from = "log2FoldChange") %>%
     column_to_rownames(var="Timepoint_2") %>%
     as.matrix()
@@ -327,11 +334,15 @@ for(g in bestGenes){
   breaks <- c(seq(min(allBestData), 0, length.out=ceiling(paletteLength/2) + 1), 
                 seq(max(allBestData)/paletteLength, max(allBestData), length.out=floor(paletteLength/2)))
 
-  col_fun = colorRamp2(c(-2, 0, 2), c("yellow", "white", "blue"))
+  col_fun = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
 
   
+  gene_name <- allResultsUnfaceted %>%
+    filter(Feature_ID == g) %>%
+    pull(Gene_Symbol)
   
   cat(g)
+  cat(gene_name)
   print(
   Heatmap(FC_mat,
           cluster_rows = FALSE,
