@@ -65,7 +65,7 @@ exp_metadata <- exp_metadata %>%
 ```
 
 
-```{r setup_dfs}
+```{r setup_dfs, message=FALSE}
 # set up unfaceted data objects
 
 
@@ -156,7 +156,7 @@ if(length(facets) == 1){
   p2 = ggplot(p2_data, aes(x=contrast,y=value)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +
-    facet_wrap(~name, scales="free") +
+    facet_wrap(~name, scales="free", ncol=2) +
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
     ylab("Percent of all reads") +
     xlab("Contrast")
@@ -165,7 +165,7 @@ if(length(facets) == 1){
   p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +
-    facet_wrap(~name, scales="free") +
+    facet_wrap(~name, scales="free", ncol=2) +
     theme(axis.text.x = element_text(angle=90, hjust=1)) +
     ylab("Percent of all reads") +
     xlab("Facet: contrast")
@@ -173,7 +173,7 @@ if(length(facets) == 1){
   p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
     theme_bw() +
     geom_bar(stat="identity",position="dodge") +
-    facet_wrap(~name, scales="free") +
+    facet_wrap(~name, scales="free", ncol=2) +
     theme(axis.text.x = element_blank(),
           legend.position = "none") +
     ylab("Percent of all reads") +
@@ -202,6 +202,7 @@ Number of DEGs by UV dose
 ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
   geom_bar(stat="identity") +
   facet_wrap(~uv_dosage_2) +
+  theme_bw() +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
@@ -211,17 +212,18 @@ Number of DEGs by timepoint
 ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
   geom_bar(stat="identity") +
   facet_wrap(~Timepoint_2) +
+  theme_bw() +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 
 
 ```
 
-Number of DEGs by group
+Number of DEGs by group (grey indicates 0 DEGs or condition not tested)
 
 ```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
-  spread(uv_dosage_2, n_DEGs, fill=NA) %>%
-  column_to_rownames(var="Timepoint_2") %>%
+  spread(Timepoint_2, n_DEGs, fill=NA) %>%
+  column_to_rownames(var="uv_dosage_2") %>%
   as.matrix()
 
 # TODO: assign breaks in a reasonable way
@@ -241,7 +243,11 @@ Heatmap(n_DEGs_mat,
 
 ```
 
+Log2fold change by contrast
 
+Plot is limited to the top 50 genes by number of significant contrasts
+
+Green borders indicate significant changes
 
 ```{r genes_heatmap, fig.height=11}
 
@@ -288,9 +294,15 @@ highlight_significant <- function(j,i, x, y, width, height, fill) {
 
 Heatmap(data_all_mat,
         cluster_columns=F,
-        cell_fun = highlight_significant)
+        cell_fun = highlight_significant,
+        row_names_gp = grid::gpar(fontsize = 8),
+        column_names_gp = grid::gpar(fontsize = 8))
 
 ```
+Heatmaps of the most variable genes (defined as the genes with the most significant contrasts)
+
+
+Green borders indicate significant changes
 
 
 ```{r bestgenesplots}
@@ -314,13 +326,12 @@ for(g in bestGenes){
     left_join(exp_metadata, by=c("group_1"="condition")) %>%
     dplyr::select(log2FoldChange,uv_dosage_2,Timepoint_2) %>%
     unique() %>%
-    spread(key = uv_dosage_2, value = log2FoldChange, fill=NA) %>%
-#    pivot_wider(names_from="uv_dosage_2",values_from = "log2FoldChange") %>%
-    column_to_rownames(var="Timepoint_2") %>%
+    spread(key = Timepoint_2, value = log2FoldChange, fill=NA) %>%
+    column_to_rownames(var="uv_dosage_2") %>%
     as.matrix()
   
   highlight_significant <- function(j, i, x, y, width, height, fill) {
-            cont <- paste0(colnames(FC_mat)[j],"_",rownames(FC_mat)[i]," vs Sham_",rownames(FC_mat)[i])
+            cont <- paste0(rownames(FC_mat)[i],"_",colnames(FC_mat)[j]," vs Sham_",colnames(FC_mat)[i])
             feat <- g
             sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
             if(nrow(sig_results) > 0){
@@ -334,19 +345,20 @@ for(g in bestGenes){
   breaks <- c(seq(min(allBestData), 0, length.out=ceiling(paletteLength/2) + 1), 
                 seq(max(allBestData)/paletteLength, max(allBestData), length.out=floor(paletteLength/2)))
 
-  col_fun = colorRamp2(c(-2, 0, 2), c("blue", "white", "red"))
+  col_fun = colorRamp2(c(-10, 0, 10), c("blue", "white", "red"))
 
   
   gene_name <- allResultsUnfaceted %>%
     filter(Feature_ID == g) %>%
-    pull(Gene_Symbol)
+    pull(Gene_Symbol) %>%
+    unique()
   
-  cat(g)
-  cat(gene_name)
+  cat(paste(g,gene_name))
   print(
   Heatmap(FC_mat,
           cluster_rows = FALSE,
           cluster_columns = FALSE,
+          cell_fun = highlight_significant,
           col = col_fun
            )
   )

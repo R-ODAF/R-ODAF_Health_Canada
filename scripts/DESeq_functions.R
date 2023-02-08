@@ -224,7 +224,6 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
   x <- deseq_results_list
   annotated_results <- list()
   for (i in 1:length(x)) {
-    print(i)
     deg_table <- x[[i]]
     # Add taxonomy
     if (is.null(deg_table)) {
