@@ -354,7 +354,7 @@ Heatmap showing presence of zeroes (black) in the data.
 
 
 if(nrow(count_data) > 3000){
-  count_data_random <- df[sample(nrow(count_data), 2500), ]
+  count_data_random <- count_data[as.vector(sample(nrow(count_data), 2500)), ]
   count_data_is0 <- ((count_data_random==0)*1)
 } else{
   count_data_is0 <- ((count_data==0)*1)
