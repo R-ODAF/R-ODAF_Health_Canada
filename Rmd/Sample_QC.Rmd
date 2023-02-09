@@ -360,11 +360,9 @@ if(nrow(count_data) > 3000){
   count_data_is0 <- ((count_data==0)*1)
 }
 
-
-
 annotation_col <- exp_metadata %>%
-  dplyr::select(c(as.vector(unlist(params$exp_groups)),"sample_ID")) %>%
-  column_to_rownames("sample_ID")
+  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
+  column_to_rownames("original_names")
 
 pheatmap(count_data_is0,
          color = c("white", "black"),
