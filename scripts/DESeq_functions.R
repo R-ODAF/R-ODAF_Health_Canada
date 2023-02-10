@@ -2,8 +2,7 @@ get_design <- function(design){
   #return(formula(paste0("~", paste0(c(design), collapse = " + "))))
   if(!is.null(params$formula_override)) {
     des <- formula(paste0("~", params$formula_override))
-  } else { 
-  des <- formula(paste0("~", design))
+  } else { des <- formula(paste0("~", design)) }
   return(des)
 }
 
