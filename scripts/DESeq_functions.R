@@ -1,22 +1,26 @@
 get_design <- function(design){
   #return(formula(paste0("~", paste0(c(design), collapse = " + "))))
-  return(formula(paste0("~",design)))
+  if(!is.null(params$formula_override)) {
+    des <- formula(paste0("~", params$formula_override))
+  } else { 
+  des <- formula(paste0("~", design))
+  return(des)
 }
 
 
 learn_deseq_model <- function(sd, des, design, params){
-    current_design <- get_design(design)
-    dds <- DESeqDataSetFromMatrix(countData = round(sd),
-                                    colData   = as.data.frame(des),
-                                    design    = current_design)
-
-    if(params$filter_gene_counts){ # filter gene counts to decrease runtime. Not recommended for biomarker input!
-        dds <- dds[rowSums(counts(dds)) > 1]
-    }
-    bpparam <- MulticoreParam(params$cpus)
+  current_design <- get_design(design)
+  dds <- DESeqDataSetFromMatrix(countData = round(sd),
+                                colData   = as.data.frame(des),
+                                design    = current_design)
+  
+  if(params$filter_gene_counts){ # filter gene counts to decrease runtime. Not recommended for biomarker input!
     dds <- dds[rowSums(counts(dds)) > 1]
-    dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
-    return(dds)
+  }
+  bpparam <- MulticoreParam(params$cpus)
+  dds <- dds[rowSums(counts(dds)) > 1]
+  dds <- DESeq(dds, parallel = TRUE, BPPARAM = bpparam)
+  return(dds)
 }
 
 # covariates are used to calculate within-group variability. Batch is considered a nuisance parameter and is removed (e.g. for visualization) See:
