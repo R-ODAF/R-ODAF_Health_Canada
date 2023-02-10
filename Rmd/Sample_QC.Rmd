@@ -1105,6 +1105,8 @@ potential_covariates <- QAQC_metadata_subset %>%
   purrr::map(levels) %>%
   purrr::map(length)
 
+QAQC_metadata_subset[,batch_var] <- factor(QAQC_metadata_subset[,batch_var])
+
 covariate_names <- names(potential_covariates[potential_covariates < 24])
 
 # Need a generic way to look for dose column...
