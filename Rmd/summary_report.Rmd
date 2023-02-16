@@ -9,7 +9,13 @@ output:
     code_download: true
 ---
 
-Summary report of DEG analysis over all facets
+---
+title: "Summary report of DEG analysis over all facets"
+---
+
+Insert descriptive text here
+
+Code sections are hidden by default but can be viewed by clicking the 'code' button.
 
 
 ```{r docSetup, warning = FALSE, message = FALSE, include = F}
@@ -92,7 +98,7 @@ for (f in facets){
 ```
 
 
-Number of DEGs for each contrast tested
+# Number of DEGs for each contrast tested
 
 ```{r p1}
 
@@ -135,7 +141,7 @@ p1
 ```
 
 
-Number of genes filtered by each R-ODAF filtering criterium
+# Number of genes filtered by each R-ODAF filtering criterium
 
 
 ```{r p2, fig.height=11}
@@ -195,7 +201,7 @@ n_DEGs_data <- significantResultsUnfaceted %>%
 
 ```
 
-Number of DEGs by UV dose
+# Number of DEGs by UV dose
 
 
 ```{r n_DEGs_plot_by_time}
@@ -206,7 +212,7 @@ ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
   theme(axis.text.x = element_text(angle=90, hjust=1))
 ```
 
-Number of DEGs by timepoint
+# Number of DEGs by timepoint
 
 ```{r n_DEGs_plot_by_UV}
 ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
@@ -218,7 +224,7 @@ ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
 
 ```
 
-Number of DEGs by group (grey indicates 0 DEGs or condition not tested)
+# Number of DEGs by group (grey indicates 0 DEGs or condition not tested)
 
 ```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
@@ -243,7 +249,7 @@ Heatmap(n_DEGs_mat,
 
 ```
 
-Log2fold change by contrast
+# Log2fold change by contrast
 
 Plot is limited to the top 50 genes by number of significant contrasts
 
@@ -299,7 +305,7 @@ Heatmap(data_all_mat,
         column_names_gp = grid::gpar(fontsize = 8))
 
 ```
-Heatmaps of the most variable genes (defined as the genes with the most significant contrasts)
+# Heatmaps of the most variable genes (defined as the genes with the most significant contrasts)
 
 
 Green borders indicate significant changes
