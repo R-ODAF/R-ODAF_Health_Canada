@@ -1334,7 +1334,8 @@ count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
 
 ```
 
-There are `ncol(count_data_filtered)` samples remaining in the study after sample removal.
+
+There are `r ncol(count_data_filtered)` samples remaining in the study after sample removal.
 
 ## Dendrogram (after filtering)
 
