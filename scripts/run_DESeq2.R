@@ -219,6 +219,6 @@ message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows i
 message(paste(capture.output(summary_counts), collapse="\n"))
 
 # save DESeq results to a file
-save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, contrasts, intgroup, design_to_use, paths, filtered_table, sample_count_metadata, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
+save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, count_data, contrasts, intgroup, design_to_use, paths, filtered_table, sample_count_metadata, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
 
 source(here::here("scripts","write_output_tables.R"))
