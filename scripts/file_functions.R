@@ -85,17 +85,23 @@ save_cached_data <- function(dds, RDataPath, current_filter=NULL){
 
 
 write_additional_output <- function(count_data, exp_metadata, design_to_use, params){
-  dds <- DESeqDataSetFromMatrix(countData = round(count_data),
-                                colData   = as.data.frame(exp_metadata),
-                                design    = get_design(design_to_use))
-  CPMdds <- cpm(count_data)
-  
   if (!is.na(params$dose)) {
-    bmdexpress <- as.data.frame(log2(CPMdds + 1))
+    cpm_data <- cpm(count_data)
+    bmdexpress <- as.data.frame(log2(cpm_data + 1))
     bmdexpress <- cbind(SampleID = c(row.names(bmdexpress)),
                         bmdexpress,
                         stringsAsFactors = F)
-    biomarkers <- bmdexpress # Still includes all genes
+    
+    if (params$platform == "TempO-Seq") {
+      biomarkers <- count_data
+      biomarkers$gene <- rownames(count_data)
+      biomarkers$gene <- gsub("_.*", "", biomarkers$gene)
+      biomarkers <- biomarkers %>%
+        dplyr::group_by(gene) %>%
+        dplyr::summarize(across(where(is.numeric), sum))
+      colnames(biomarkers)[[1]] <- "SampleID" # For reasons
+    } else { biomarkers <- bmdexpress } # Still includes all genes
+    
     bmdexpress <- bmdexpress[rowSums(count_data) > 5,]
     # add a dose header line to both files
     bmdexpress <- rbind(c("Dose", as.character(exp_metadata[colnames(bmdexpress)[-1],][[params$dose]])),
@@ -104,6 +110,7 @@ write_additional_output <- function(count_data, exp_metadata, design_to_use, par
     biomarkers <- rbind(c("Dose", as.character(exp_metadata[colnames(biomarkers)[-1],][[params$dose]])),
                         biomarkers,
                         stringsAsFactors = F)
+    
     # Determine names of dose groups in which n per group > 1
     groups_for_bmdexpress <- which(table(t(bmdexpress[1,])) > 1) %>% names()
     # Rewrite bmdexpress table
