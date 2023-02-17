@@ -79,7 +79,7 @@ rule all:
 
 if common_config["platform"] =="TempO-Seq":
     length_required_fastp = 50
-    trim_tail1_fastp = 0
+    trim_tail1_fastp = 1
 else:
     length_required_fastp = 36
     trim_tail1_fastp = 0
