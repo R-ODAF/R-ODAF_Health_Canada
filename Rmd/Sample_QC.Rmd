@@ -322,7 +322,8 @@ Summary of GC content of probes (TempO-Seq only)
 
 ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
   geom_density() +
-  scale_x_log10()
+  scale_x_log10() +
+  theme(legend.position = "none")
 
 gc_summary <- count_data_gc %>%
   group_by(sample) %>%
