@@ -88,8 +88,7 @@ write_additional_output <- function(count_data, exp_metadata, design_to_use, par
   dds <- DESeqDataSetFromMatrix(countData = round(count_data),
                                 colData   = as.data.frame(exp_metadata),
                                 design    = get_design(design_to_use))
-  Counts <- counts(dds, normalized = FALSE) # note: no DEseq normalization
-  CPMdds <- cpm(Counts)
+  CPMdds <- cpm(count_data)
   
   if (!is.na(params$dose)) {
     bmdexpress <- as.data.frame(log2(CPMdds + 1))
@@ -97,7 +96,7 @@ write_additional_output <- function(count_data, exp_metadata, design_to_use, par
                         bmdexpress,
                         stringsAsFactors = F)
     biomarkers <- bmdexpress # Still includes all genes
-    bmdexpress <- bmdexpress[rowSums(Counts) > 5,]
+    bmdexpress <- bmdexpress[rowSums(count_data) > 5,]
     # add a dose header line to both files
     bmdexpress <- rbind(c("Dose", as.character(exp_metadata[colnames(bmdexpress)[-1],][[params$dose]])),
                         bmdexpress,
