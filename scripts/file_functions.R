@@ -100,6 +100,8 @@ write_additional_output <- function(count_data, exp_metadata, design_to_use, par
         dplyr::group_by(gene) %>%
         dplyr::summarize(across(where(is.numeric), sum))
       colnames(biomarkers)[[1]] <- "SampleID" # For reasons
+      biomarkers[-1] <- cpm(biomarkers[-1])
+      biomarkers[-1] <- as.data.frame(log2(biomarkers[-1] + 1))
     } else { biomarkers <- bmdexpress } # Still includes all genes
     
     bmdexpress <- bmdexpress[rowSums(count_data) > 5,]
