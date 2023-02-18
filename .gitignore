@@ -102,7 +102,7 @@ genome.loaded
 genome.removed
 *.pdf
 *.html
-analysis/*
+analysis*
 *.bak
 *remove.txt
 data/raw/run_folders.txt
