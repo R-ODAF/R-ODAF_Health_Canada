@@ -322,7 +322,8 @@ Summary of GC content of probes (TempO-Seq only)
 
 ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
   geom_density() +
-  scale_x_log10()
+  scale_x_log10() +
+  theme(legend.position = "none")
 
 gc_summary <- count_data_gc %>%
   group_by(sample) %>%
@@ -1333,7 +1334,8 @@ count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
 
 ```
 
-There are `ncol(count_data_filtered)` samples remaining in the study after sample removal.
+
+There are `r ncol(count_data_filtered)` samples remaining in the study after sample removal.
 
 ## Dendrogram (after filtering)
 
