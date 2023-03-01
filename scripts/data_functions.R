@@ -2,35 +2,22 @@ library(gtools)
 
 # filter metadata
 # this only applies to specifically included/excluded data, not the facet filtering
-filter_metadata <- function(exp_metadata, params, design){
+filter_metadata <- function(exp_metadata, params){
     # exclude samples
     if (any(!is.na(params$exclude_samples))) {
         exp_metadata <- exp_metadata %>% 
             dplyr::filter(!original_names %in% params$exclude_samples)
     }
     # exclude groups
+    # If we haven't set exclude_groups_column, use the main params$design and assume they mean experimental groups from that
+    if (is.na(params$exclude_groups_column)) {params$exclude_groups_column = params$design}
     if (any(!is.na(params$exclude_groups))) {
         exp_metadata <- exp_metadata %>%
-            dplyr::filter(!(!!sym(design)) %in% params$exclude_groups)
-        contrasts_to_filter <- exp_metadata %>% 
-            dplyr::filter(!(!!sym(design)) %in% params$exclude_groups) %>%
-            pull(design) %>% 
-            unique()
-        contrasts <- contrasts %>%
-            dplyr::filter(V1 %in% contrasts_to_filter)
-        if (params$strict_contrasts == T) {
-            contrasts <- contrasts %>%
-                dplyr::filter(V2 %in% contrasts_to_filter)
-        }
+            dplyr::filter(!(!!sym(params$exclude_groups_column)) %in% params$exclude_groups)
     }
     if (!is.na(params$include_only_column) & !is.na(params$include_only_group)) {
         exp_metadata <- exp_metadata %>%
             dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
-        limit_contrasts <- exp_metadata %>%
-            pull(!!sym(design)) %>%
-            unique() %>%
-            as.character()
-        contrasts <- contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
     }
     return(exp_metadata)
 }
@@ -71,7 +58,7 @@ sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
 
 process_data_and_metadata <- function(count_data, exp_metadata, contrasts, intgroup, design, params){
     count_data <- filter_data(count_data, exp_metadata, params$nmr_threshold)
-    exp_metadata <- filter_metadata(exp_metadata, params, design)
+    exp_metadata <- filter_metadata(exp_metadata, params)
     exp_metadata <- format_and_sort_metadata(exp_metadata, intgroup, design, params$sortcol)
     if(!is.na(params$sortcol)){
         contrasts <- sort_contrasts(exp_metadata, contrasts, design, params$sortcol)
@@ -163,5 +150,4 @@ subset_results <- function(res, exp_metadata){
   exp_metadata_sorted <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
   res_subset <- res[,exp_metadata_sorted$original_names]
   return(res_subset)
-  
 }
