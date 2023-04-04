@@ -70,9 +70,9 @@ sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
 }
 
 process_data_and_metadata <- function(count_data, exp_metadata, contrasts, intgroup, design, params){
-    count_data <- filter_data(count_data, exp_metadata, params$nmr_threshold)
     exp_metadata <- filter_metadata(exp_metadata, params, design)
     exp_metadata <- format_and_sort_metadata(exp_metadata, intgroup, design, params$sortcol)
+    count_data <- filter_data(count_data, exp_metadata, params$nmr_threshold)
     if(!is.na(params$sortcol)){
         contrasts <- sort_contrasts(exp_metadata, contrasts, design, params$sortcol)
     }
