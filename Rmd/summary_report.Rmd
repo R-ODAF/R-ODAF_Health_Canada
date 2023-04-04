@@ -32,6 +32,8 @@ library(pheatmap)
 library(RColorBrewer)
 library(ComplexHeatmap)
 library(circlize)
+library(knitr)
+library(kableExtra)
 
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
@@ -201,6 +203,46 @@ n_DEGs_data <- significantResultsUnfaceted %>%
 
 ```
 
+# table of DEGs
+
+```{r DEGs table}
+
+
+
+n_DEGs_table_data_by_direction <-significantResultsUnfaceted %>% 
+  mutate(is_up = log2FoldChange > 0) %>%
+  group_by(contrast,is_up) %>%
+  summarise(n_DEGs = n()) %>%
+  ungroup() %>%
+  separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
+  left_join(exp_metadata, by=c("group_1"="condition")) %>%
+  dplyr::select(n_DEGs,is_up,Timepoint_2 ,uv_dosage_2 ) %>%
+  unique() %>%
+  arrange(Timepoint_2) %>%
+  pivot_wider(names_from = Timepoint_2 , values_from = n_DEGs) %>%
+  arrange(uv_dosage_2) %>%
+  mutate(is_up = ifelse(is_up, "up-regulated DEGs", "down-regaulated DEGs"))
+
+n_DEGs_table_data <- n_DEGs_data %>%
+  arrange(Timepoint_2) %>%
+  pivot_wider(names_from = Timepoint_2 , values_from = n_DEGs) %>%
+  mutate(is_up = "total DEGs") %>%
+  relocate(is_up) %>%
+  bind_rows(n_DEGs_table_data_by_direction) %>%
+  mutate(is_up = factor(is_up, levels=c("up-regulated DEGs", "down-regaulated DEGs", "total DEGs"))) %>%
+  arrange(uv_dosage_2, is_up) %>%
+  relocate(uv_dosage_2) %>%
+  replace(is.na(.), 0) %>%
+  mutate(uv_dosage_2 = as.character(uv_dosage_2)) %>%
+  mutate(uv_dosage_2 = ifelse(is_up == "up-regulated DEGs", uv_dosage_2, ""))
+
+
+kable(n_DEGs_table_data) %>%
+  kable_styling()
+
+
+```
+
 # Number of DEGs by UV dose
 
 
@@ -210,6 +252,9 @@ ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
   facet_wrap(~uv_dosage_2) +
   theme_bw() +
   theme(axis.text.x = element_text(angle=90, hjust=1))
+
+
+
 ```
 
 # Number of DEGs by timepoint
@@ -305,6 +350,9 @@ Heatmap(data_all_mat,
         column_names_gp = grid::gpar(fontsize = 8))
 
 ```
+
+
+
 # Heatmaps of the most variable genes (defined as the genes with the most significant contrasts)
 
 
