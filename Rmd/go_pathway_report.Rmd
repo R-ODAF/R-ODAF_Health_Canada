@@ -447,8 +447,7 @@ contrasts <- levels(allResults$contrast)
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
                                 id_table_entrez,
-                                by = "Feature_ID") %>%
-    distinct(Entrez_ID, .keep_all=TRUE)
+                                by = "Feature_ID")
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
   names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
   foldChanges <- foldChanges %>% sort() %>% rev()
@@ -458,8 +457,7 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
     next
   }
-  
-  kk <- gseKEGG(foldChanges, keyType = "ncbi-geneid", organism = species_data$kegg_organism, eps = 1e-50)
+  kk <- gseKEGG(foldChanges, keyType = "ncbi-geneid", organism = species_data$kegg_organism)
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
   gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
