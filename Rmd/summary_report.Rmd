@@ -1,0 +1,421 @@
+---
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+---
+
+---
+title: "Summary report of DEG analysis over all facets"
+---
+
+Insert descriptive text here
+
+Code sections are hidden by default but can be viewed by clicking the 'code' button.
+
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+library('tidyverse')
+library('devtools')
+library('DESeq2')
+library('data.table')
+library('yaml')
+library('stringr')
+library(pheatmap)
+library(RColorBrewer)
+library(ComplexHeatmap)
+library(circlize)
+library(knitr)
+library(kableExtra)
+
+source(here::here("scripts","file_functions.R"))
+source(here::here("scripts","setup_functions.R"))
+source(here::here("scripts","DESeq_functions.R"), local = TRUE)
+
+config <- yaml::read_yaml(file.path(here::here(),
+                                    "config/config.yaml"),
+                          eval.expr = T)
+
+# Combine required params from config
+params <- c(config$common, config$DESeq2)
+# replace nulls in params with NA
+params <- replace_nulls_in_config(params)
+# If projectdir is not set, figure out current project root directory
+projectdir <- params$projectdir
+if (is.na(projectdir)) {
+  projectdir <- here::here()
+  params$projectdir <- projectdir
+}
+
+
+
+paths <- set_up_paths(params)
+species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
+params$species_data <- species_data
+params <- set_up_platform_params(params)
+
+db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+
+# input data file
+dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+load(dataFile) # metadata, contrasts, counts, resultsList
+
+exp_metadata <- exp_metadata %>%
+  mutate(uv_dosage_2 = factor(uv_dosage_2, levels = c( "Sham", "5_mJ_cm2", "10_mJ_cm2", "20_mJ_cm2", "40_mJ_cm2", "5pct_Oxalazone")))
+
+```
+
+
+```{r setup_dfs, message=FALSE}
+# set up unfaceted data objects
+
+
+allResultsUnfaceted <- data.frame()
+significantResultsUnfaceted <- data.frame()
+
+ordered_contrasts <- paste0(contrasts$V1, " vs ", contrasts$V2)
+ordered_levels <- expand.grid(facets,ordered_contrasts) %>% arrange(Var1) %>% mutate(asdf = paste0(Var1, ": ", Var2)) %>% pull(asdf)
+
+for (f in facets){
+  resultsListAll <- overallResListAll[[f]]
+  resultsListDEGs <- overallResListDEGs[[f]]
+  design <- designList[[f]]
+  if (length(resultsListAll) > 0) {
+    allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
+    allResultsUnfaceted <- allResults %>% mutate(facet=f) %>% rbind(allResultsUnfaceted)
+  }
+  if (length(resultsListDEGs) > 0) {
+    significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
+    significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
+  }
+}
+
+```
+
+
+# Number of DEGs for each contrast tested
+
+```{r p1}
+
+p1_data <- significantResultsUnfaceted %>%
+    mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
+
+
+if (length(facets) < 10) {
+  plot_size = 5 
+} else {
+  plot_size = round(sqrt(length(facets)))*1.5
+}
+
+if(length(facets) == 1){
+  p1 = ggplot(p1_data, aes(x=contrast)) +
+    geom_bar(aes(y=..count..)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Number of DEGs") +
+    xlab("Contrast")
+} else if (length(facets) < 10) {
+    p1 = ggplot(p1_data, aes(x=facet_contrast)) +
+        geom_bar(aes(y=..count.., fill=facet)) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle=90, hjust=1)) +
+        ylab("Number of DEGs") +
+        xlab("Facet: contrast")
+} else {
+    p1 = ggplot(p1_data, aes(x=facet_contrast)) +
+        geom_bar(aes(y=..count.., fill=facet)) +
+        theme_bw() +
+        theme(axis.text.x = element_blank(),
+            legend.position = "none") +
+        facet_wrap(~facet, scales = "free_x") +
+        ylab("Number of DEGs") +
+        xlab("Facet: contrast")
+}
+
+p1
+```
+
+
+# Number of genes filtered by each R-ODAF filtering criterium
+
+
+```{r p2, fig.height=11}
+
+
+# plot filter stats
+p2_data <- filtered_table %>%
+  group_by(facet,contrast) %>%
+  mutate(not_significant = initial-(relevance_filtered+quantile_filtered+spike_filtered)) %>%
+  mutate(contrast = str_replace(contrast, "_vs_", " vs ")) %>%
+  ungroup() %>%
+  pivot_longer(cols=c(not_significant,relevance_filtered,quantile_filtered,spike_filtered,passed_all_filters)) %>%
+  mutate(perc = value/initial) %>%
+  mutate(name = factor(name, levels=c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters"))) %>%
+  mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
+
+if(length(facets) == 1){
+  p2 = ggplot(p2_data, aes(x=contrast,y=value)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free", ncol=2) +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Percent of all reads") +
+    xlab("Contrast")
+  
+} else if (length(facets) < 10) {
+  p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free", ncol=2) +
+    theme(axis.text.x = element_text(angle=90, hjust=1)) +
+    ylab("Percent of all reads") +
+    xlab("Facet: contrast")
+} else {
+  p2 = ggplot(p2_data, aes(x=facet_contrast,y=value,fill=facet)) +
+    theme_bw() +
+    geom_bar(stat="identity",position="dodge") +
+    facet_wrap(~name, scales="free", ncol=2) +
+    theme(axis.text.x = element_blank(),
+          legend.position = "none") +
+    ylab("Percent of all reads") +
+    xlab("Facet: contrast")
+}
+  
+p2
+```
+```{r get n_DEGs_data}
+
+n_DEGs_data <- significantResultsUnfaceted %>%
+  group_by(contrast) %>%
+  summarise(n_DEGs = n()) %>%
+  separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
+  left_join(exp_metadata, by=c("group_1"="condition")) %>%
+  dplyr::select(n_DEGs,Timepoint_2 ,uv_dosage_2 ) %>%
+  unique()
+
+
+```
+
+# table of DEGs
+
+```{r DEGs table}
+
+
+
+n_DEGs_table_data_by_direction <-significantResultsUnfaceted %>% 
+  mutate(is_up = log2FoldChange > 0) %>%
+  group_by(contrast,is_up) %>%
+  summarise(n_DEGs = n()) %>%
+  ungroup() %>%
+  separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
+  left_join(exp_metadata, by=c("group_1"="condition")) %>%
+  dplyr::select(n_DEGs,is_up,Timepoint_2 ,uv_dosage_2 ) %>%
+  unique() %>%
+  arrange(Timepoint_2) %>%
+  pivot_wider(names_from = Timepoint_2 , values_from = n_DEGs) %>%
+  arrange(uv_dosage_2) %>%
+  mutate(is_up = ifelse(is_up, "up-regulated DEGs", "down-regaulated DEGs"))
+
+n_DEGs_table_data <- n_DEGs_data %>%
+  arrange(Timepoint_2) %>%
+  pivot_wider(names_from = Timepoint_2 , values_from = n_DEGs) %>%
+  mutate(is_up = "total DEGs") %>%
+  relocate(is_up) %>%
+  bind_rows(n_DEGs_table_data_by_direction) %>%
+  mutate(is_up = factor(is_up, levels=c("up-regulated DEGs", "down-regaulated DEGs", "total DEGs"))) %>%
+  arrange(uv_dosage_2, is_up) %>%
+  relocate(uv_dosage_2) %>%
+  replace(is.na(.), 0) %>%
+  mutate(uv_dosage_2 = as.character(uv_dosage_2)) %>%
+  mutate(uv_dosage_2 = ifelse(is_up == "up-regulated DEGs", uv_dosage_2, ""))
+
+
+kable(n_DEGs_table_data) %>%
+  kable_styling()
+
+
+```
+
+# Number of DEGs by UV dose
+
+
+```{r n_DEGs_plot_by_time}
+ggplot(n_DEGs_data, aes(x=Timepoint_2,y=n_DEGs)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~uv_dosage_2) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+
+
+```
+
+# Number of DEGs by timepoint
+
+```{r n_DEGs_plot_by_UV}
+ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
+  geom_bar(stat="identity") +
+  facet_wrap(~Timepoint_2) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+
+```
+
+# Number of DEGs by group (grey indicates 0 DEGs or condition not tested)
+
+```{r n_DEGs_heatmap}
+n_DEGs_mat <- n_DEGs_data %>%
+  spread(Timepoint_2, n_DEGs, fill=NA) %>%
+  column_to_rownames(var="uv_dosage_2") %>%
+  as.matrix()
+
+# TODO: assign breaks in a reasonable way
+
+deg_breaks <- c(0,200,400,600,800,1000,1200,1400,1600,1800)
+deg_colors <- colorRampPalette(rev(brewer.pal(n = 7, name = "YlGnBu")))(10)
+#deg_breaks <- c(0,500,1000,1500)
+#colors <- c("#666666", "#0C2C84","#41B6C4" , "#FFFFCC")
+
+color_ramp <- colorRamp2(deg_breaks,deg_colors)
+
+Heatmap(n_DEGs_mat,
+         cluster_rows = FALSE,
+         cluster_columns = FALSE,
+         col = color_ramp
+         )
+
+```
+
+# Log2fold change by contrast
+
+Plot is limited to the top 50 genes by number of significant contrasts
+
+Green borders indicate significant changes
+
+```{r genes_heatmap, fig.height=11}
+
+n_heatmap_genes <- 50 # number of genes to plot in the heatmap
+n_mini_heatmap_genes <- 10 # number of genes to plot individually
+
+data <- significantResultsUnfaceted %>%
+  dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
+  spread(key = contrast, value = log2FoldChange, fill=NA, drop=TRUE) %>%
+  #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
+  column_to_rownames(var="Feature_ID") %>%
+  mutate(nonzero_count=rowSums(.!=0, na.rm = TRUE)) %>%
+  arrange(desc(nonzero_count))
+
+heatmap_genes <- data %>% 
+  head(n_heatmap_genes) %>%
+  rownames()
+
+mini_heatmap_genes <- data %>% 
+  head(n_mini_heatmap_genes) %>%
+  rownames()
+
+data_all <- allResultsUnfaceted %>%
+  filter(Feature_ID %in% heatmap_genes) %>%
+  dplyr::select(-c(baseMean, linearFoldChange, lfcSE, pvalue, padj, facet) ) %>%
+  spread(key = contrast, value = log2FoldChange, fill=NA, drop=TRUE) %>%
+  #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
+  mutate(gene_label = paste(Feature_ID, Gene_Symbol)) %>%
+  dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
+  column_to_rownames(var="gene_label")
+
+
+data_all_mat <- as.matrix(data_all)
+
+highlight_significant <- function(j,i, x, y, width, height, fill) {
+          cont <- colnames(data_all_mat)[j]
+          feat <- str_split(rownames(data_all_mat)[i]," ", simplify=TRUE)[1]
+          sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
+          if(nrow(sig_results) > 0){
+            grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
+          }
+        }
+
+Heatmap(data_all_mat,
+        cluster_columns=F,
+        cell_fun = highlight_significant,
+        row_names_gp = grid::gpar(fontsize = 8),
+        column_names_gp = grid::gpar(fontsize = 8))
+
+```
+
+
+
+# Heatmaps of the most variable genes (defined as the genes with the most significant contrasts)
+
+
+Green borders indicate significant changes
+
+
+```{r bestgenesplots}
+
+# bestGenes <- significantResultsUnfaceted %>%
+#   sample_n(10) %>%
+#   pull(Feature_ID)
+
+bestGenes <- mini_heatmap_genes
+
+allBestData <- allResultsUnfaceted %>%
+    filter(Feature_ID %in% bestGenes) %>%
+    pull(log2FoldChange)
+
+
+
+for(g in bestGenes){
+  FC_mat <- allResultsUnfaceted %>%
+    filter(Feature_ID == g) %>%
+    separate(contrast,c("group_1","group_2"),sep=" vs ", remove = FALSE) %>%
+    left_join(exp_metadata, by=c("group_1"="condition")) %>%
+    dplyr::select(log2FoldChange,uv_dosage_2,Timepoint_2) %>%
+    unique() %>%
+    spread(key = Timepoint_2, value = log2FoldChange, fill=NA) %>%
+    column_to_rownames(var="uv_dosage_2") %>%
+    as.matrix()
+  
+  highlight_significant <- function(j, i, x, y, width, height, fill) {
+            cont <- paste0(rownames(FC_mat)[i],"_",colnames(FC_mat)[j]," vs Sham_",colnames(FC_mat)[i])
+            feat <- g
+            sig_results <- significantResultsUnfaceted[significantResultsUnfaceted$contrast == cont & significantResultsUnfaceted$Feature_ID == feat,]
+            if(nrow(sig_results) > 0){
+              grid.rect(x,y,width,height,gp=gpar(col="green", fill=NA))
+            }
+          }
+
+  
+  paletteLength <- 9
+  colours <- colorRampPalette(c("yellow", "white", "blue"))(paletteLength)
+  breaks <- c(seq(min(allBestData), 0, length.out=ceiling(paletteLength/2) + 1), 
+                seq(max(allBestData)/paletteLength, max(allBestData), length.out=floor(paletteLength/2)))
+
+  col_fun = colorRamp2(c(-10, 0, 10), c("blue", "white", "red"))
+
+  
+  gene_name <- allResultsUnfaceted %>%
+    filter(Feature_ID == g) %>%
+    pull(Gene_Symbol) %>%
+    unique()
+  
+  cat(paste(g,gene_name))
+  print(
+  Heatmap(FC_mat,
+          cluster_rows = FALSE,
+          cluster_columns = FALSE,
+          cell_fun = highlight_significant,
+          col = col_fun
+           )
+  )
+}
+
+```
