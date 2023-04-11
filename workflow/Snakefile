@@ -220,38 +220,15 @@ rule STAR_make_index:
 		--sjdbGTFfeatureExon {params.sjdbGTFfeatureExon}
         '''
 
-
-# this rule loads the genome into shared memory, and uses
-# the 'service' keyword introduced in v7.0.
-# Note that the genome.fasta.index is a dummy file
-# https://snakemake.readthedocs.io/en/latest/snakefiles/rules.html#service-rules-jobs
-# https://github.com/snakemake/snakemake/pull/1413
-rule STAR_load:
-    input:
-        genome_dir / "STAR_index",
-    output:
-        touch("genome.loaded")
-    conda:
-        "envs/preprocessing.yml"
-    params:
-        index = STAR_index,
-    benchmark: log_dir / "benchmark.STAR_load.txt"
-    shell:
-        '''
-        STAR --genomeLoad LoadAndExit --genomeDir {params.index}
-        rm -f genome.removed
-        '''
-
 rule STAR_all:
     input:
         expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
-        "genome.removed",
 
 if pipeline_config["mode"] == "se":
     rule STAR:
         input:
-            loaded_index = "genome.loaded",
             R1 = trim_dir / "{sample}.fastq.gz",
+            genome_dir / "STAR_index",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
@@ -272,7 +249,7 @@ if pipeline_config["mode"] == "se":
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
                 --alignEndsType EndToEnd \
-                --genomeLoad LoadAndKeep \
+                --genomeLoad NoSharedMemory \
                 --runThreadN {threads} \
                 --genomeDir {params.index} \
                 --readFilesIn {input.R1} \
@@ -291,9 +268,9 @@ if pipeline_config["mode"] == "se":
 if pipeline_config["mode"] == "pe":
     rule STAR:
         input:
-            loaded_index = "genome.loaded",
             R1 = trim_dir / "{sample}.R1.fastq.gz",
             R2 = trim_dir / "{sample}.R2.fastq.gz",
+            genome_dir / "STAR_index",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
@@ -312,7 +289,7 @@ if pipeline_config["mode"] == "pe":
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
-            --genomeLoad LoadAndKeep \
+            --genomeLoad NoSharedMemory \
             --runThreadN {threads} \
             --genomeDir {params.index} \
             --readFilesIn {input.R1} {input.R2} \
@@ -322,25 +299,6 @@ if pipeline_config["mode"] == "pe":
             --outTmpDir /tmp/{params.folder} \
             --outSAMtype BAM SortedByCoordinate
             '''
-
-rule STAR_unload:
-    input:
-        idx = "genome.loaded",
-        bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
-    output:
-        touch("genome.removed")
-    conda:
-        "envs/preprocessing.yml"
-    params:
-        genome_dir = STAR_index
-    shell:
-        '''
-        STAR --genomeLoad Remove --genomeDir {params.genome_dir}
-        rm genome.loaded
-        rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam
-        '''
-
-
 
 ########################
 # Quantification QuasR #
@@ -402,8 +360,6 @@ if common_config["platform"] =="TempO-Seq":
             {output.count_table} \
             {params.threads}
             '''
-
-
 
 #######################
 # QUANTIFICATION RSEM #
@@ -543,7 +499,6 @@ rule studywideqc:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-        "genome.removed",
     output:
         qc_dir / "details/samples_removed.txt"
     conda:
@@ -569,7 +524,6 @@ rule deseq2:
     benchmark: log_dir / "benchmark.deseq2.txt"
     shell:
         '''
-        rm genome.removed
         Rscript scripts/run_DESeq2.R 
         '''
         
@@ -600,4 +554,4 @@ rule deseq_reports:
 onerror:
     print("An error occurred. Attempting to unload genome")
     shell("rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam")
-
+    
