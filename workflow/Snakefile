@@ -88,7 +88,7 @@ rule fastp_se:
     input:
         R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
     output:
-        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
+        R1 = trim_dir / "{sample}.fastq.gz",
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
     conda:
@@ -132,8 +132,8 @@ rule fastp_pe:
         R1=ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
         R2=ancient(str(raw_dir / "{sample}.R2.fastq.gz")),
     output:
-        R1 = pipe(trim_dir / "{sample}.R1.fastq.gz"),
-        R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
+        R1 = trim_dir / "{sample}.R1.fastq.gz",
+        R2 = trim_dir / "{sample}.R2.fastq.gz",
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html",
     conda:
@@ -227,8 +227,8 @@ rule STAR_all:
 if pipeline_config["mode"] == "se":
     rule STAR:
         input:
-            R1 = trim_dir / "{sample}.fastq.gz",
             genome_dir / "STAR_index",
+            R1 = trim_dir / "{sample}.fastq.gz",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
@@ -268,9 +268,9 @@ if pipeline_config["mode"] == "se":
 if pipeline_config["mode"] == "pe":
     rule STAR:
         input:
+            genome_dir / "STAR_index",
             R1 = trim_dir / "{sample}.R1.fastq.gz",
             R2 = trim_dir / "{sample}.R2.fastq.gz",
-            genome_dir / "STAR_index",
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
