@@ -165,8 +165,8 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
             for (group in 1:length(SampPerGroup)) {
                 sampleColsSpike <- grep(dimnames(SampPerGroup)[[1]][group], exp_metadata_subset[ ,design], fixed = T)
                 sampleNamesSpike <- exp_metadata_subset[sampleColsSpike, "original_names"]
-                if (max(DECounts[gene,sampleColsSpike]) == 0) {Check <- FALSE} else {
-                  Check <- (max(DECounts[gene, sampleColsSpike]) / sum(DECounts[gene, sampleColsSpike])) >=
+                if (max(DECounts[gene,sampleNamesSpike]) == 0) {Check <- FALSE} else {
+                  Check <- (max(DECounts[gene, sampleNamesSpike]) / sum(DECounts[gene, sampleNamesSpike])) >=
                     1.4 * (SampPerGroup[group])^(-0.66)
                   spikePass <- c(spikePass, Check)
                 }
