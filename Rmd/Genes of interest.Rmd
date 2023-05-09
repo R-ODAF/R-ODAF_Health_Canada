@@ -1,0 +1,65 @@
+---
+title: "Genes of interest"
+author: "Matthew J. Meier"
+date: "2023-05-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Genes of interest
+
+```{r}
+load("../analysis.cell_lines_comparison/RData/FDR Project_DEG_data.RData")
+
+
+```
+
+```{r}
+# Make a table of counts
+counts_by_group <- as.data.frame(counts(dds, normalized = TRUE))
+counts_by_group <- as.data.frame(counts_by_group)
+
+# counts_by_group <- log2(counts_by_group + 1) # Optional
+# Add gene name
+counts_by_group$gene <- row.names(counts_by_group)
+# Clean up table, make into long format for plotting
+counts_by_group <- counts_by_group %>%
+  pivot_longer(!gene,
+               names_to = "Sample",
+               values_to = "Normalized Counts")
+
+counts_by_group <- counts_by_group %>%
+  left_join(exp_metadata %>% dplyr::select(c(!!sym(params$design),original_names)),
+            by = c("Sample" = "original_names"))
+names(counts_by_group)[4] <- "group"
+
+counts_by_group$group <- factor(counts_by_group$group,
+                                levels = c("Liver spheroids", "HepaRG", "MCF-7", "TK6"))
+
+genesToPlot <- c("ALDH18A1_218", "ALDH1A1_221", "ALDH2_225",
+                 "ALDH4A1_226", "ALDH7A1_227", "ALDH9A1_231",
+                 "CYP11A1_1693", "CYP1A1_1698", "CYP1A2_1699",
+                 "CYP26B1_1706", "CYP27A1_1707", "CYP2B6_1710",
+                 "CYP2C19_1714", "CYP2C9_1720", "CYP2E1_1722",
+                 "CYP2U1_1726", "CYP46A1_1732", "CYP4F12_1736",
+                 "CYP4F3_1739")
+
+counts_by_group_plot <- counts_by_group[counts_by_group$gene %in% genesToPlot,]
+
+ggplot(counts_by_group_plot,
+       aes(x = group, y = `Normalized Counts`, color = group)) +
+  geom_point(position = position_jitterdodge()) +
+  ylab('Normalized count') +
+  xlab('Cell line') +
+  #coord_trans(y = "log10") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +    
+  facet_wrap(~gene, scales = "free_y")
+
+
+
+
+```
