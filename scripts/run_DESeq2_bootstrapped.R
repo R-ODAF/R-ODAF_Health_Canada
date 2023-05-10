@@ -6,21 +6,10 @@ library(edgeR)
 library(ashr)
 library(gtools)
 
-include_batch <- FALSE
-
 res.design <- "group"
-
-if(include_batch){
-  js_batch_variable <- "RNA_extraction_batch"
-  js_predictor_variable <- "group"
-  js_model_formula <- formula(paste0("~",js_batch_variable, "+", js_predictor_variable))
-  js_all_variables <- paste0(js_batch_variable, "+", js_predictor_variable)
-}else{
-  js_batch_variable <- NA
-  js_predictor_variable <- "group"
-  js_model_formula <- formula(paste0("~",js_predictor_variable))
-  js_all_variables <- paste0(js_predictor_variable)
-}
+js_predictor_variable <- "group"
+js_model_formula <- formula(paste0("~",js_predictor_variable))
+js_all_variables <- paste0(js_predictor_variable)
 
 nboot <- 1000
 cell_lines <- c("Liver spheroids", "TK6", "HepaRG", "MCF-7")
@@ -30,18 +19,12 @@ boot_vector <- 1:nboot
 covariates <- NA
 params <- list()
 params$cpus <- 40
-bpparam_wrapper <- BiocParallel::MulticoreParam(params$cpus)
 params$alpha <- 0.05
 params$MinCount <- 0.5
 params$linear_fc_filter <- 1.5
 
 # Set R-ODAF parameters ############
 params$nmr_threshold <- 100000
-params$sortcol <- NA
-params$nBestFeatures <- 20
-params$nBest <- 100
-params$nHeatmap <- 50
-params$nHeatmapDEGs <- 50
 params$cooks <- FALSE
 params$filter_gene_counts <- FALSE
 params$parallel <- FALSE
@@ -60,36 +43,38 @@ DESeq_outputs <- tibble(rownames(count_data)) %>%
   rename("rownames(count_data)"="probe_id") # Odd name, but there is a reason for it
 contrasts <- as_tibble(matrix(c("A", "B"), nrow=1, ncol=2), .name_repair="minimal")
 
+
 # Set up sampling #############
 # Create lists
 ls_run_name <- list()
-#ls_metadata <- list()
 ls_run_number <- list()
+#ls_metadata <- list()
+ls_metadata <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/ls_metadata.RDS")
 
 # Select a subset of samples for each iteration, and create the metadata file
 for(cell_line_num in seq_along(cell_lines)){
-  cell_line <- cell_lines[cell_line_num]
-  for(j in 1:length(n_vector)){
+  cell_line_name <- cell_lines[cell_line_num]
+  for (j in seq_along(n_vector)) {
     group1_n <- n_vector[j]
     group2_n <- group1_n
     i <- 1
-    while (i < nboot+1){
+    while (i < nboot+1) {
       # Create integer for this iteration of the loop
       run_number <- i+((j-1)*length(boot_vector))+((cell_line_num-1)*length(boot_vector)*length(n_vector))
       print(run_number)
       # Sample
-      fastq_id <- metadata %>% 
-        dplyr::filter(cell_line==cell_line) %>% 
-        dplyr::select(Sample_ID) %>% 
-        as.vector() %>% 
-        unlist()
-      sample_id <- unname(sample(fastq_id, size=(group1_n+group2_n), replace=FALSE))
-      group <- c(rep("A",group1_n), rep("B",(group2_n)))
-      metadata_suba <- data.frame(sample_id, group)
-      metadata_sub <- metadata_suba %>% 
-        left_join(metadata, by = c("sample_id" = "Sample_ID")) %>% 
-        dplyr::select(sample_id, group)
-      metadata_sub$group <- as.factor(metadata_sub$group)
+      # fastq_id <- metadata %>% 
+      #   dplyr::filter(cell_line == cell_line_name) %>% 
+      #   dplyr::select(Sample_ID) %>% 
+      #   as.vector() %>% 
+      #   unlist()
+      #sample_id <- unname(sample(fastq_id, size=(group1_n+group2_n), replace=FALSE))
+      #group <- c(rep("A",group1_n), rep("B",(group2_n)))
+      #metadata_suba <- data.frame(sample_id, group)
+      #metadata_sub <- metadata_suba %>% 
+      #  left_join(metadata, by = c("sample_id" = "Sample_ID")) %>% 
+      #  dplyr::select(sample_id, group)
+      #metadata_sub$group <- as.factor(metadata_sub$group)
       ls_run_number[[run_number]] <- run_number
       ls_run_name[[run_number]] <- paste0(cell_lines[cell_line_num], "_", group1_n, "_", group2_n, "_", boot_vector[i])
       print(ls_run_name[[run_number]])
@@ -97,38 +82,24 @@ for(cell_line_num in seq_along(cell_lines)){
       #names(ls_metadata) <- ls_run_name
       i <- i+1}
     }
-  }
+}
 
 js_fun_everything <- function(i,
-                              ls_metadata,
-                              count_data,
-                              params,
-                              js_predictor_variable,
-                              contrasts,
-                              include_batch = F,
-                              js_model_formula,
-                              ls_run_name) {
+                              ls_metadata = ls_metadata_use, 
+                              count_data = countdata_use, 
+                              params = params_use,  
+                              intgroup = js_predictor_variable_use,
+                              contrasts = contrasts_use,
+                              js_model_formula = js_model_formula_use, 
+                              ls_run_name = ls_run_name_use) {
   exp_metadata <- ls_metadata[[i]]
   exp_metadata$original_names <- exp_metadata$sample_id
-  sample_count_metadata <- list()
-  ddsList <- list()
-  designList <- list()
-  contrastsList <- list()
-  overallResListAll <- list()
-  overallResListFiltered <- list()
-  overallResListDEGs <- list()
-  rldList <- list()
-  mergedDEGsList <- list()
+
   filtered_table <- data.frame()
   
-  #count_data[ is.na(count_data) ] <- 0 
   count_data <- count_data[,(colSums(count_data) > params$nmr_threshold)] # reads required per sample
-  #count_data <- count_data[(rowSums(count_data) > 1),] # reads required per gene
   exp_metadata <- exp_metadata[exp_metadata$original_names %in% colnames(count_data),]
   count_data <- count_data[,exp_metadata$original_names]
-  
-  intgroup <- js_predictor_variable
-  # design <- js_predictor_variable
   
   # Intgroups need to be factors for DESeq2
   # make sure the levels are sorted for plotting later
@@ -142,7 +113,7 @@ js_fun_everything <- function(i,
     stopifnot(exprs = {
       ncol(sd) > 0
       nrow(des) > 0
-      #nrow(con) > 0
+      nrow(con) > 0
     })
     # Sanity check: each sample (row) in the metadata should have a corresponding column in the count data
     stopifnot(all(des$original_names %in% colnames(sd)))
@@ -158,7 +129,7 @@ js_fun_everything <- function(i,
   exp_metadata <- processed$exp_metadata
   contrasts <- processed$contrasts 
   
-  sample_count_metadata$samples_filtered <- nrow(exp_metadata)
+  num_rows_metadata <- nrow(exp_metadata)
   
   dds <- DESeqDataSetFromMatrix(countData = round(count_data),
                                 colData   = as.data.frame(exp_metadata),
@@ -168,24 +139,21 @@ js_fun_everything <- function(i,
     dds <- dds[rowSums(counts(dds)) > 1]
   }
   dds <- dds[rowSums(counts(dds)) > 1]
-  #bpparam <- MulticoreParam(params$cpus)
+  
   dds <- DESeq(dds,
-               parallel = FALSE)
+               parallel = params$parallel)
                #BPPARAM = bpparam)
-  rld <- vst(dds, blind=FALSE)
-  mat <- assay(rld)
-  condition <- js_model_formula ###### Look out for this one! I had to change the formula following EDASeq
-  mm <- model.matrix(condition, colData(rld))
 
-  resListAll <- list()
-  js_filtered_out <- list()
-  resListFiltered <- list()
-  resListDEGs <- list()
   filtered_table <- data.frame()
   Counts  <- counts(dds, normalized = TRUE)
   CPMdds  <- edgeR::cpm(counts(dds, normalized = TRUE))
-  mergedDEGs <- c()
   current_group_filter <- NA
+  
+  mergedDEGs <- c()
+  allCounts_all_filters <- data.frame()
+  DECounts_real <- data.frame()
+  js_filtered_out <- list()
+  
   
   for (x in 1:nrow(contrasts)) {  # For all comparisons to be done  
     condition1 <- unname(unlist(contrasts[1, 2])) # Control
@@ -235,7 +203,7 @@ js_fun_everything <- function(i,
     
     
     res <- DESeq2::results(dds[rownames(compte),],
-                           parallel = FALSE,
+                           parallel = params$parallel,
                            #BPPARAM = bpparam,
                            contrast = currentContrast,
                            alpha = params$alpha,
@@ -244,12 +212,10 @@ js_fun_everything <- function(i,
     
     res <- lfcShrink(dds,
                      contrast = currentContrast,
-                     parallel = FALSE,
+                     parallel = params$parallel,
                      #BPPARAM = bpparam,
                      res = res,
                      type = "ashr")
-    resListAll[[contrast_string]] <- res
-    
     dds <- NULL
     gc()
     
@@ -260,9 +226,9 @@ js_fun_everything <- function(i,
     }
     DECounts <- compte[rownames(compte) %in% rownames(DEsamples), , drop = F]
     Filter <- Filter[rownames(Filter) %in% rownames(DECounts), , drop = F]
-    message("Check median against third quantile" )
-    message("AND")
-    message("Check the presence of a spike" )
+    # message("Check median against third quantile" )
+    # message("AND")
+    # message("Check the presence of a spike" )
     
     for (gene in 1:nrow(DECounts)) {
       # Check the median against third quantile
@@ -304,11 +270,11 @@ js_fun_everything <- function(i,
       }
     }
     
-    message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
+    #message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
     
     allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
     DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
-    
+  
     DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
     DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
     
@@ -316,12 +282,12 @@ js_fun_everything <- function(i,
     
     #TODO: output quantile rule failing and spike failing genes
     
-    message(paste0("A total of ", nrow(DECounts_real),
-                   " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
-                   " genes(s) removed by the quantile rule, ", nrow(DECounts_spike),
-                   " gene(s) with a spike, and linear fold-change filtering was applied"))
-    message("DESeq2 Done")
-    
+    # message(paste0("A total of ", nrow(DECounts_real),
+    #                " DEGs were selected (out of ", nrow(DECounts) ,"), after ", nrow(DECounts_no_quant),
+    #                " genes(s) removed by the quantile rule, ", nrow(DECounts_spike),
+    #                " gene(s) with a spike, and linear fold-change filtering was applied"))
+    # message("DESeq2 Done")
+  
     mergedDEGs <- c(mergedDEGs, rownames(DECounts_real))
     
     filtered_table <- rbind(filtered_table, data.frame(facet = current_group_filter,
@@ -332,44 +298,22 @@ js_fun_everything <- function(i,
                                                        spike_filtered = nrow(DECounts_spike),
                                                        passed_all_filters = nrow(DECounts_real)))
     
-    # TODO: the sapply at the end should be handling this, why doesn't it work?
-    if (nrow(DECounts_real) > 0){
-      resListDEGs[[contrast_string]] <- DECounts_real
-    }
-    if (nrow(DECounts_real) > 0){
-      resListFiltered[[contrast_string]] <- allCounts_all_filters
-    }
-    
   }
   
   mergedDEGs <- unique(mergedDEGs)
-  DESeq_results <- list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table, js_filtered_out=js_filtered_out)
-  
-  #ddsList[['all']] <- dds
-  overallResListAll[['all']] <- DESeq_results$resListAll
-  overallResListFiltered[['all']] <- DESeq_results$resListFiltered
-  overallResListDEGs[['all']] <- DESeq_results$resListDEGs
-  designList[['all']] <- exp_metadata
-  contrastsList[['all']] <- contrasts
-  rldList[['all']] <- rld
-  mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
-  
-  output <- list(#ddsList=ddsList, 
-                 designList=designList, 
-                 contrastsList=contrastsList, 
-                 overallResListAll=overallResListAll, 
-                 overallResListFiltered=overallResListFiltered, 
-                 overallResListDEGs=overallResListDEGs, 
-                 rldList=rldList, 
-                 mergedDEGsList=mergedDEGsList, 
-                 exp_metadata=exp_metadata, 
-                 contrasts=contrasts, 
-                 intgroup=intgroup, 
-                 filtered_table=filtered_table, 
-                 sample_count_metadata=sample_count_metadata,
-                 js_filtered_out=js_filtered_out,
+
+  output <- list(#dds = dds,
+                 DESeqRes = res,
+                 DESeqResFiltered = allCounts_all_filters,
+                 DESeqResDEGs = DECounts_real,
+                 DESeqmergedDEGs = mergedDEGs,
+                 DESeqfiltered_table = filtered_table,
+                 DESeqjs_filtered_out = js_filtered_out,
+                 exp_metadata = exp_metadata,
+                 contrasts = contrasts,
+                 intgroup = intgroup,
+                 num_rows_metadata = num_rows_metadata,
                  ls_run_name[[i]])
-  print(ls_run_name[[i]])
   return(output)
   gc()
 }
@@ -383,92 +327,31 @@ js_model_formula_use <- js_model_formula
 res.design_use <- res.design
 ls_run_name_use <- ls_run_name
 
-# ls_output_spheroids <- BiocParallel::bplapply(X = ls_run_number[1:8000],
-#                                     FUN = js_fun_everything,
-#                                     ls_metadata = ls_metadata_use, 
-#                                     count_data = countdata_use, 
-#                                     params = params_use,  
-#                                     js_predictor_variable = js_predictor_variable_use,
-#                                     contrasts = contrasts_use,
-#                                     js_model_formula = js_model_formula_use, 
-#                                     ls_run_name = ls_run_name_use,
-#                                     BPPARAM = bpparam_wrapper)
+path <- paste0("bootstrap_DEGs/output/",nboot,"_iterations/nobatch_",Sys.Date())
+dir.create(path=path,recursive = T)
+
+saveRDS(ls_metadata, file=paste0(path, "/ls_metadata.RDS"))
 
 spheroids <- parallel::mclapply(X = ls_run_number[1:8000],
-                                              FUN = js_fun_everything,
-                                              ls_metadata = ls_metadata_use, 
-                                              count_data = countdata_use, 
-                                              params = params_use,  
-                                              js_predictor_variable = js_predictor_variable_use,
-                                              contrasts = contrasts_use,
-                                              js_model_formula = js_model_formula_use, 
-                                              ls_run_name = ls_run_name_use,
-                                              mc.cores = 40)
-
-
-# future::plan("multisession") ## Run in parallel on local computer
-# ls_output_spheroids <- future.apply::future_lapply(X = ls_run_number[1:8000],
-#                                               FUN = js_fun_everything,
-#                                               ls_metadata = ls_metadata_use, 
-#                                               count_data = countdata_use, 
-#                                               params = params_use,  
-#                                               js_predictor_variable = js_predictor_variable_use,
-#                                               contrasts = contrasts_use,
-#                                               js_model_formula = js_model_formula_use, 
-#                                               ls_run_name = ls_run_name_use)
-                    
-names(ls_output) <- ls_run_name
-
-
-  if(include_batch==TRUE){
-    path <- paste0("analysis.05-05-2023.bootstrap_DEGs/output/",nboot,"_iterations/batch_",Sys.Date())
-  }else{
-      if(include_batch==FALSE){
-        path <- paste0("analysis.05-05-2023.bootstrap_DEGs/output/",nboot,"_iterations/nobatch_",Sys.Date())
-      }
-    }
-
-dir.create(path=path,recursive = T)
-#saveRDS(spheroids, file=paste0(path, "/spheroids.RDS"))
+                                FUN = js_fun_everything,
+                                mc.cores = 40)
+names(spheroids) <- ls_run_name[1:8000]
+saveRDS(spheroids, file=paste0(path, "/spheroids.RDS"))
 
 tk6 <- parallel::mclapply(X = ls_run_number[8001:16000],
                           FUN = js_fun_everything,
-                          ls_metadata = ls_metadata_use, 
-                          count_data = countdata_use, 
-                          params = params_use,  
-                          js_predictor_variable = js_predictor_variable_use,
-                          contrasts = contrasts_use,
-                          js_model_formula = js_model_formula_use, 
-                          ls_run_name = ls_run_name_use,
                           mc.cores = 40)
 names(tk6) <- ls_run_name[8001:16000]
 saveRDS(tk6, file=paste0(path, "/tk6.RDS"))
-#saveRDS(ls_metadata, file=paste0(path, "/ls_metadata.RDS"))
-
-
 
 heparg <- parallel::mclapply(X = ls_run_number[16001:24000],
                           FUN = js_fun_everything,
-                          ls_metadata = ls_metadata_use, 
-                          count_data = countdata_use, 
-                          params = params_use,  
-                          js_predictor_variable = js_predictor_variable_use,
-                          contrasts = contrasts_use,
-                          js_model_formula = js_model_formula_use, 
-                          ls_run_name = ls_run_name_use,
                           mc.cores = 40)
 names(heparg) <- ls_run_name[16001:24000]
 saveRDS(heparg, file=paste0(path, "/heparg.RDS"))
 
 mcf7 <- parallel::mclapply(X = ls_run_number[24001:32000],
                              FUN = js_fun_everything,
-                             ls_metadata = ls_metadata_use, 
-                             count_data = countdata_use, 
-                             params = params_use,  
-                             js_predictor_variable = js_predictor_variable_use,
-                             contrasts = contrasts_use,
-                             js_model_formula = js_model_formula_use, 
-                             ls_run_name = ls_run_name_use,
                              mc.cores = 40)
 names(mcf7) <- ls_run_name[24001:32000]
 saveRDS(heparg, file=paste0(path, "/mcf7.RDS"))

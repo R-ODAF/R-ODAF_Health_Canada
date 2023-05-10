@@ -1,0 +1,873 @@
+---
+title: "031: Visualizing bootstrapped results by probe"
+author: "John Stead"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    theme: yeti
+    code_folding: hide
+    highlight: espresso
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+    number_sections: yes
+    keep_md: no
+  pdf_document:
+    fig_caption: true
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = TRUE,
+  include = TRUE,
+  echo = TRUE,
+  collapse = TRUE,
+  error = TRUE,
+  fig.align = 'left',
+  fig.retina = 2,
+  fig.width=8, 
+  fig.height=8,
+  #out.width = "90%",
+  warning = TRUE,
+  messages = FALSE,
+  size = "large",
+  tidy = FALSE,
+  cache = TRUE
+  )
+```
+
+Load libraries
+```{r}
+library(patchwork)
+library(readxl)
+library(tidyverse)
+library(viridis)
+```
+
+# Preamble 
+
+DESeq2 analysis was performed on randomly-selected samples generated from pools of 1, 5, 10 or 20 zebrafish embryos, and the number of DEGs determined. This was repeated x1000 in a bootstrap analysis, for sample sizes ranging from n=3 to n=10.
+
+__This document explores the number of DEGs that were significant for each probe, to determine whether any probe characteristics make them predictable candidates for exclusion (e.g. identifying any probe that is more likley to be a false positive)__
+
+# Import data 
+
+Technical note: all processed files have been generated separately and saved as RDS objects. For this document, it is simplest if all 4 versions (with/without EDASeq, with/without batch) are imported as items within a list. Visualizations can then be performed on each member of the list using lapply
+
+
+```{r, cache.lazy = FALSE}
+mega_ti_true_DEG_per_probe_named_pivot <- list()
+mega_ti_true_DEG_per_probe_named_pivot[[1]] <- readRDS("processed/batch_EDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+mega_ti_true_DEG_per_probe_named_pivot[[2]] <- readRDS("processed/batch_noEDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+mega_ti_true_DEG_per_probe_named_pivot[[3]] <- readRDS("processed/nobatch_EDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+mega_ti_true_DEG_per_probe_named_pivot[[4]] <- readRDS("processed/nobatch_noEDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+
+mega_ti_res_sig_cat_combined_group <- list()
+mega_ti_res_sig_cat_combined_group[[1]] <- readRDS("processed/batch_EDASeq/ti_res_sig_cat_combined_group.RDS")
+mega_ti_res_sig_cat_combined_group[[2]] <- readRDS("processed/batch_noEDASeq/ti_res_sig_cat_combined_group.RDS")
+mega_ti_res_sig_cat_combined_group[[3]] <- readRDS("processed/nobatch_EDASeq/ti_res_sig_cat_combined_group.RDS")
+mega_ti_res_sig_cat_combined_group[[4]] <- readRDS("processed/nobatch_noEDASeq/ti_res_sig_cat_combined_group.RDS")
+
+mega_ti_probe_sum_category_pivot <- list()
+mega_ti_probe_sum_category_pivot[[1]] <- readRDS("processed/batch_EDASeq/ti_probe_sum_category_pivot.RDS")
+mega_ti_probe_sum_category_pivot[[2]] <- readRDS("processed/batch_noEDASeq/ti_probe_sum_category_pivot.RDS")
+mega_ti_probe_sum_category_pivot[[3]] <- readRDS("processed/nobatch_EDASeq/ti_probe_sum_category_pivot.RDS")
+mega_ti_probe_sum_category_pivot[[4]] <- readRDS("processed/nobatch_noEDASeq/ti_probe_sum_category_pivot.RDS")
+
+mega_names <- list("batch_EDASeq", "batch_noEDASeq", "nobatch_EDASeq", "nobatch_noEDASeq")
+
+names(mega_ti_true_DEG_per_probe_named_pivot) <- mega_names
+names(mega_ti_res_sig_cat_combined_group) <- mega_names
+names(mega_ti_probe_sum_category_pivot) <- mega_names
+```
+
+# Number of times each probe is statistically significant
+
+```{r}
+p_fun_bar_DEGprop_probe <- function(i,mega_ti_probe_sum_category_pivot) {
+  ggplot(data = mega_ti_probe_sum_category_pivot[[i]], aes(x=Sample_size, y=DEGs))+
+    geom_bar(stat="identity", aes(fill=factor(range, (levels=rev(c("0", "1", "2", "3-4", "5-8", "9-16", "17-32", "33-64", "65-128", "129-256", ">256"))))))+
+    facet_wrap(~Pool, nrow=1)+
+    guides(fill=guide_legend(title="#times significant"))+
+    scale_fill_viridis_d(option="F")+
+    xlab("Sample size")+
+    ylab("Number of probes")+
+    theme_minimal()
+}
+pls_bar_DEGprop_probe <- lapply(mega_names, p_fun_bar_DEGprop_probe,
+                     mega_ti_probe_sum_category_pivot)
+```
+
+## {.tabset}
+
+### batch_EDASeq
+```{r}
+pls_bar_DEGprop_probe[[1]]
+```
+
+### batch_noEDASeq
+```{r}
+pls_bar_DEGprop_probe[[2]]
+```
+
+### nobatch_EDASeq
+```{r}
+pls_bar_DEGprop_probe[[3]]
+```
+
+### nobatch_noEDASeq
+```{r}
+pls_bar_DEGprop_probe[[4]]
+```
+
+## {-}
+
+# Boxplot showing the number of times each probe reaches significance
+
+```{r}
+p_fun_bar_probe_sig <- function(i, mega_ti_true_DEG_per_probe_named_pivot, Sample_size, DEGs_per_probe, Pool) {
+  mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    ggplot(aes(x=factor(Sample_size) , y=(DEGs_per_probe+1)))+
+    geom_boxplot(aes(fill=factor(Sample_size)))+
+    scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool, nrow=1) +
+    ylab("Number of times each probe is significant+1 (log10 scale)")+
+    xlab("Sample size")+
+    theme_bw()+
+    theme(legend.position = "none")
+}
+pls_bar_probe_sig <- lapply(mega_names, p_fun_bar_probe_sig,
+                            mega_ti_true_DEG_per_probe_named_pivot)
+```
+
+## {.tabset}
+
+### batch_EDASeq
+```{r}
+pls_bar_probe_sig[[1]]
+```
+
+### batch_noEDASeq
+```{r}
+pls_bar_probe_sig[[2]]
+```
+
+### nobatch_EDASeq
+```{r}
+pls_bar_probe_sig[[3]]
+```
+
+### nobatch_noEDASeq
+```{r}
+pls_bar_probe_sig[[4]]
+```
+
+## {-}
+
+# Predictors of the number of times the probe reaches significance
+## Probe GC content
+
+```{r}
+p_fun_scatter_gc_sig <- function(i, mega_ti_true_DEG_per_probe_named_pivot, probe_gc, DEGs_per_probe, Pool, Sample_size) {
+  mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    ggplot(aes(x = probe_gc, y = (DEGs_per_probe+1), colour= probe_gc)) +
+    geom_point(size=0.5, alpha=0.5) +
+    geom_smooth(colour="black", linewidth=0.5)+
+    scale_y_continuous(trans='log10')+
+    scale_colour_gradient(low="blue", high="red")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    ylab("Number of times each probe is significant+1 (log10 scale)")+
+    xlab("Probe %GC")+
+    theme_minimal()+
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+    guides(colour=guide_legend(title="Probe %GC"))
+}
+pls_scatter_gc_sig <- lapply(mega_names, p_fun_scatter_gc_sig,
+                            mega_ti_true_DEG_per_probe_named_pivot)
+```
+
+### {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_scatter_gc_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_scatter_gc_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_scatter_gc_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_scatter_gc_sig[[4]]
+```
+
+### {-}
+
+## Pool-specific mean counts
+
+```{r}
+JS_pfun_probecharacteristic_v_DEG_box <- function(i, jsyvar, mega_ti_true_DEG_per_probe_named_pivot, Pool, DEGs_per_probe, Sample_size, jsxlab, mywidth) {
+  jsyvar01 <- paste0(jsyvar, "_P01")
+  jsyvar05 <- paste0(jsyvar, "_P05")
+  jsyvar10 <- paste0(jsyvar, "_P10")
+  jsyvar20 <- paste0(jsyvar, "_P20")
+  p1 <- mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    filter(Pool=="P01") %>% 
+    mutate(bin=cut_width(log10(!!ensym(jsyvar01)), width=mywidth, boundary=0)) %>%
+    ggplot(aes(x = bin, y = (DEGs_per_probe+1))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    scale_y_continuous(trans='log10')+
+    facet_wrap(~Sample_size, nrow=1)+
+    ylab("P01 \n #DEGs per probe")+
+    xlab(jsxlab)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank(),axis.title.x=element_blank(),legend.position="none")
+  p2 <- mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    filter(Pool=="P05") %>% 
+    mutate(bin=cut_width(log10(!!ensym(jsyvar05)), width=mywidth, boundary=0)) %>%
+    ggplot(aes(x = bin, y = (DEGs_per_probe+1))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    scale_y_continuous(trans='log10')+
+    facet_wrap(~Sample_size, nrow=1)+
+    ylab("P05 \n #DEGs per probe")+
+    xlab(jsxlab)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank(),axis.title.x=element_blank(),legend.position="none")
+  p3 <- mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    filter(Pool=="P10") %>% 
+    mutate(bin=cut_width(log10(!!ensym(jsyvar10)), width=mywidth, boundary=0)) %>%
+    ggplot(aes(x = bin, y = (DEGs_per_probe+1))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    scale_y_continuous(trans='log10')+
+    facet_wrap(~Sample_size, nrow=1)+
+    ylab("P10 \n #DEGs per probe")+
+    xlab(jsxlab)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank(),axis.title.x=element_blank(),legend.position="none")
+  p4 <- mega_ti_true_DEG_per_probe_named_pivot[[i]] %>% 
+    filter(Pool=="P20") %>% 
+    mutate(bin=cut_width(log10(!!ensym(jsyvar20)), width=mywidth, boundary=0)) %>%
+    ggplot(aes(x = bin, y = (DEGs_per_probe+1))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    scale_y_continuous(trans='log10')+
+    facet_wrap(~Sample_size, nrow=1)+
+    ylab("P20 \n #DEGs per probe")+
+    xlab(jsxlab)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p1/p2/p3/p4
+}
+```
+
+### Mean counts v #DEGs {.tabset}
+
+```{r}
+pls_box_count_mean_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box,
+                            jsyvar="count_mean", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific mean counts (log10 scale)",
+                                  mywidth=0.25)
+```
+
+#### batch_EDASeq
+```{r}
+pls_box_count_mean_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_count_mean_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_count_mean_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_count_mean_sig[[4]]
+```
+
+### {-}
+
+### Median counts v #DEGs {.tabset}
+```{r}
+pls_box_count_median_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box, jsyvar="count_median", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific median counts (log10 scale)", 
+                                  mywidth=0.25)
+```
+
+#### batch_EDASeq
+```{r}
+pls_box_count_median_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_count_median_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_count_median_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_count_median_sig[[4]]
+```
+
+### {-}
+
+### Standard deviation of counts v #DEGs {.tabset}
+
+```{r}
+pls_box_count_sd_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box, jsyvar="count_stdev", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific standard deviation of counts (log10 scale)", 
+                                  mywidth=0.25)
+```
+
+
+#### batch_EDASeq
+```{r}
+pls_box_count_sd_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_count_sd_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_count_sd_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_count_sd_sig[[4]]
+```
+
+### {-}
+
+### Mean CPM v #DEGs {.tabset}
+
+```{r}
+pls_box_cpm_mean_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box, jsyvar="CPM_mean", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific mean CPM (log10 scale)", 
+                                  mywidth=0.25)
+```
+
+#### batch_EDASeq
+```{r}
+pls_box_cpm_mean_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_cpm_mean_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_cpm_mean_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_cpm_mean_sig[[4]]
+```
+
+### {-}
+
+### Median CPM v #DEGs {.tabset}
+
+```{r}
+pls_box_cpm_median_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box, jsyvar="CPM_median", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific median CPM (log10 scale)", 
+                                  mywidth=0.25)
+```
+
+#### batch_EDASeq
+```{r}
+pls_box_cpm_median_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_cpm_median_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_cpm_median_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_cpm_median_sig[[4]]
+```
+
+### {-}
+
+### Standard deviation of CPM v #DEGs {.tabset}
+
+```{r}
+pls_box_cpm_sd_sig <- lapply(mega_names, JS_pfun_probecharacteristic_v_DEG_box, jsyvar="CPM_stdev", 
+                                  mega_ti_true_DEG_per_probe_named_pivot, 
+                                  Pool, 
+                                  DEGs_per_probe, 
+                                  Sample_size, 
+                                  jsxlab="Pool-specific standard deviation of CPM (log10 scale)", 
+                                  mywidth=0.25)
+```
+
+#### batch_EDASeq
+```{r}
+pls_box_cpm_sd_sig[[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_box_cpm_sd_sig[[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_box_cpm_sd_sig[[3]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_box_cpm_sd_sig[[4]]
+```
+
+### {-}
+
+# Exploring DEG-specific characteristics
+The analysis above looks at probe characteristics averaged across all 24 samples within each pool. When considering an individual DEG, these averages are limited as only a subset of samples were used in the identification of each DEG (e.g. from 24 samples in the pool, as few as 6 were involved in generating a specific DEG if n=3 per group)
+
+The following analysis explores the characteristics of all DEGs, using data from within each bootstrap iteration (e.g. baseMean, log2FoldChange) to explore the general characteristics of all DEGs. Only data from probes that were significant are included
+
+It can be useful to visualize these data as scatterplots of boxplots - both are therefore shown below
+
+### Scatterplot baseMean vs absolute log2FoldChange {.tabset}
+
+```{r}
+i <- 3
+#baseMean v abs log2FoldChange
+p_fun_scatter_mean_fold <- function(i, mega_ti_res_sig_cat_combined_group, baseMean, log2FoldChange, lfcSE, Pool, Sample_size, bin) {
+  p1 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    ggplot(aes(x = baseMean, y = abs(log2FoldChange), colour=lfcSE))+
+    geom_point(size=0.1, alpha=0.5)+
+    scale_x_continuous(trans='log10')+
+    scale_colour_gradient(low = "blue",  high = "red")+
+    xlab("baseMean (log10 scale)")+
+    ylab("log2 fold change")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p2 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    mutate(bin=cut_width(log10(baseMean), width=0.5, boundary=0)) %>%
+    ggplot(aes(x = bin, y = abs(log2FoldChange))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    # scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    xlab("baseMean (log10 scale)")+
+    ylab("log2 fold change")+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  list(p2, p1)
+}
+pls_mean_fold <- lapply(mega_names, p_fun_scatter_mean_fold,
+                            mega_ti_res_sig_cat_combined_group, baseMean, log2FoldChange, lfcSE, Pool, Sample_size, bin)
+```
+
+#### batch_EDASeq
+```{r}
+pls_mean_fold[[1]][[2]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_mean_fold[[2]][[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_mean_fold[[3]][[2]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_mean_fold[[4]][[2]]
+```
+
+### {-}
+
+### Boxplot baseMean vs absolute log2FoldChange {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_mean_fold[[1]][[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_mean_fold[[2]][[1]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_mean_fold[[3]][[1]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_mean_fold[[4]][[1]]
+```
+
+### {-}
+
+### Scatterplot Probe GC vs absolute log2FoldChange {.tabset}
+
+```{r}
+# ProbeGC v abs log2FoldChange
+p_fun_scatter_gc_fold <- function(i, mega_ti_res_sig_cat_combined_group, probe_gc, log2FoldChange, Pool, Sample_size, bin) {
+  p1 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    ggplot(aes(x = probe_gc, y = abs(log2FoldChange), colour=probe_gc))+
+    geom_point(size=0.1, alpha=0.5)+
+    # scale_x_continuous(trans='log10')+
+    scale_colour_gradient(low = "blue",  high = "red")+
+    xlab("Probe GC")+
+    ylab("log2 fold change")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p2 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    mutate(bin=cut_width(probe_gc, width=0.05, boundary=0)) %>%
+    ggplot(aes(x = bin, y = abs(log2FoldChange))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    # scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    xlab("Probe GC")+
+    ylab("log2 fold change")+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  list(p2, p1)
+}
+
+pls_gc_fold <- lapply(mega_names, p_fun_scatter_gc_fold,
+                            mega_ti_res_sig_cat_combined_group, probe_gc, log2FoldChange, Pool, Sample_size, bin)
+```
+
+#### batch_EDASeq
+```{r}
+pls_gc_fold[[1]][[2]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_gc_fold[[2]][[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_gc_fold[[3]][[2]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_gc_fold[[4]][[2]]
+```
+
+### {-}
+
+### Boxplot Probe GC vs absolute log2FoldChange {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_gc_fold[[1]][[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_gc_fold[[2]][[1]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_gc_fold[[3]][[1]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_gc_fold[[4]][[1]]
+```
+
+### {-}
+
+### Scatterplot baseMean vs padj {.tabset}
+
+```{r}
+# baseMean v padj
+p_fun_scatter_mean_p <- function(i, mega_ti_res_sig_cat_combined_group, baseMean, padj, lfcSE, Pool, Sample_size, bin) {
+  p1 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    ggplot(aes(x = baseMean, y = -log10(padj), colour=lfcSE))+
+    geom_point(size=0.1, alpha=0.5)+
+    scale_x_continuous(trans='log10')+
+    scale_colour_gradient(low = "blue",  high = "red")+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p2 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    mutate(bin=cut_width(log10(baseMean), width=0.5, boundary=0)) %>%
+    ggplot(aes(x = bin, y = -log10(padj))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    # scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  list(p2, p1)
+}
+
+pls_mean_p <- lapply(mega_names, p_fun_scatter_mean_p,
+                            mega_ti_res_sig_cat_combined_group, baseMean, padj, lfcSE, Pool, Sample_size, bin)
+```
+
+#### batch_EDASeq
+```{r}
+pls_mean_p[[1]][[2]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_mean_p[[2]][[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_mean_p[[3]][[2]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_mean_p[[4]][[2]]
+```
+
+### {-}
+
+### Boxplot baseMean vs padj {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_mean_p[[1]][[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_mean_p[[2]][[1]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_mean_p[[3]][[1]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_mean_p[[4]][[1]]
+```
+
+### {-}
+
+### Scatterplot Probe GC vs padj {.tabset}
+
+```{r}
+# ProbeGC v padj
+p_fun_scatter_gc_p <- function(i, mega_ti_res_sig_cat_combined_group, probe_gc, padj, lfcSE, Pool, Sample_size, bin) {
+  p1 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    ggplot(aes(x = probe_gc, y = -log10(padj), colour=lfcSE))+
+    geom_point(size=0.1, alpha=0.5)+
+    # scale_x_continuous(trans='log10')+
+    scale_colour_gradient(low = "blue",  high = "red")+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p2 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    mutate(bin=cut_width(probe_gc, width=0.05, boundary=0)) %>%
+    ggplot(aes(x = bin, y = -log10(padj))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    # scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  list(p2, p1)
+}
+
+pls_gc_p <- lapply(mega_names, p_fun_scatter_gc_p,
+                            mega_ti_res_sig_cat_combined_group, probe_gc, padj, lfcSE, Pool, Sample_size, bin)
+```
+
+#### batch_EDASeq
+```{r}
+pls_gc_p[[1]][[2]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_gc_p[[2]][[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_gc_p[[3]][[2]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_gc_p[[4]][[2]]
+```
+
+### {-}
+
+### Boxplot Probe GC vs padj {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_gc_p[[1]][[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_gc_p[[2]][[1]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_gc_p[[3]][[1]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_gc_p[[4]][[1]]
+```
+
+### {-}
+
+### Scatterplot absolute log2FoldChange vs padj {.tabset}
+
+```{r}
+# abs(log2FoldChange) v padj
+p_fun_scatter_fold_p <- function(i, mega_ti_res_sig_cat_combined_group, log2FoldChange, padj, lfcSE, Pool, Sample_size, bin) {
+  p1 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    ggplot(aes(x = abs(log2FoldChange), y = -log10(padj), colour=lfcSE))+
+    geom_point(size=0.1, alpha=0.5)+
+    # scale_x_continuous(trans='log10')+
+    scale_colour_gradient(low = "blue",  high = "red")+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  p2 <- mega_ti_res_sig_cat_combined_group[[i]] %>% 
+    mutate(bin=cut_width(abs(log2FoldChange), width=0.5, boundary=0)) %>%
+    ggplot(aes(x = bin, y = -log10(padj))) +
+    geom_boxplot(size=0.3, outlier.size = 0.2, fill="red") +
+    # scale_y_continuous(trans='log10')+
+    facet_wrap(~Pool+Sample_size, nrow=4)+
+    xlab("baseMean (log10 scale)")+
+    ylab("-log10 adjusted p value")+
+    theme_minimal()+
+    theme(axis.text.x=element_blank())
+  list(p2, p1)
+}
+
+pls_fold_p <- lapply(mega_names, p_fun_scatter_fold_p,
+                            mega_ti_res_sig_cat_combined_group, log2FoldChange, padj, lfcSE, Pool, Sample_size, bin)
+```
+
+#### batch_EDASeq
+```{r}
+pls_fold_p[[1]][[2]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_fold_p[[2]][[2]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_fold_p[[3]][[2]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_fold_p[[4]][[2]]
+```
+
+### {-}
+
+### Boxplot absolute log2FoldChange vs padj {.tabset}
+
+#### batch_EDASeq
+```{r}
+pls_fold_p[[1]][[1]]
+```
+
+#### batch_noEDASeq
+```{r}
+pls_fold_p[[2]][[1]]
+```
+
+#### nobatch_EDASeq
+```{r}
+pls_fold_p[[3]][[1]]
+```
+
+#### nobatch_noEDASeq
+```{r}
+pls_fold_p[[4]][[1]]
+```
+
+### {-}

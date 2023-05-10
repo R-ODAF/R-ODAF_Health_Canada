@@ -1,0 +1,496 @@
+---
+title: "031 Processing bootstrapped results"
+author: "John Stead"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    theme: yeti
+    code_folding: hide
+    highlight: espresso
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+    number_sections: yes
+    keep_md: no
+  pdf_document:
+    fig_caption: true
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  eval = FALSE,
+  include = TRUE,
+  echo = TRUE,
+  collapse = TRUE,
+  error = TRUE,
+  fig.align = 'left',
+  fig.retina = 2,
+  out.width = "90%",
+  warning = TRUE,
+  messages = FALSE,
+  size = "large",
+  tidy = FALSE,
+  cache = TRUE
+  )
+```
+
+Load libraries
+```{r}
+library(edgeR)
+library(patchwork)
+library(readxl)
+library(tidyverse)
+library(viridis)
+```
+
+
+# Import data
+
+## Results
+
+```{r}
+
+manifest <- read.delim("~/shared/dbs/biospyder/100739_homo_sapiens_wt_2.1_full_manifest_revB.csv")
+
+probe_stats <- readRDS("saved_objects/probe_stats.RDS")
+
+```
+
+# Collate outputs into a single object
+
+```{r}
+
+summarise_degs <- function(bootstrapped_list) {
+  degs <- lapply(bootstrapped_list, function(x) row.names(as.data.frame(x$DESeqResDEGs)))
+  degs_length <- unlist(lapply(degs, length))
+  #degs_df <- do.call(rbind, degs) # problematic for empty data
+  #degs_df <- dplyr::bind_rows(degs, .id = "df_id")
+  names <- unlist(lapply(bootstrapped_list, "[[", 11))
+  split_names <- strsplit(names, "_")
+  # extract the second element from each resulting vector
+  sample_size <- sapply(split_names, function(x) x[2])
+  
+  df <- data.frame(name = names,
+                   n_per_group = as.numeric(sample_size),
+                   nDEGs = as.numeric(degs_length))
+  
+  breaks <- c(-1, 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, Inf)
+  # create a new column with the bin for each observation
+  df$range <- cut(df$nDEGs,
+                  breaks,
+                  labels = c("0", "1", "2",
+                             "3-4", "5-8",
+                             "9-16", "17-32",
+                             "33-64", "65-128",
+                             "129-256", "257-512",
+                             "513-1024", ">1025"))
+  
+  df <- df %>%
+    dplyr::group_by(n_per_group, range) %>%
+    add_count(name = "binned_counts")
+  df$y <- 1
+  return(df)
+}
+
+tk6df <- summarise_degs(tk6)
+tk6df$cell_line <- "TK6"
+
+spheroidsdf <- summarise_degs(spheroids)
+spheroidsdf$cell_line <- "Liver spheroids"
+
+hepargdf <- summarise_degs(heparg)
+hepargdf$cell_line <- "HepaRG"
+
+mcf7df <- summarise_degs(mcf7)
+mcf7df$cell_line <- "MCF-7"
+
+all_cell_lines <- dplyr::bind_rows(spheroidsdf, tk6df ) #, hepargdf, , mcf7df) 
+
+ggplot(data = all_cell_lines, aes(x=n_per_group, y=y))+
+  geom_bar(stat="identity",
+           aes(fill=factor(range,
+                           (levels=rev(c("0", "1", "2", "3-4",
+                                         "5-8", "9-16", "17-32",
+                                         "33-64", "65-128", "129-256",
+                                         "257-512", "513-1024", ">1025")))))) +
+  guides(fill=guide_legend(title="Number of DEGs")) +
+  scale_fill_viridis_d(option="F") +
+  xlab("Sample size") +
+  ylab("Number of bootstrap iterations") +
+  theme_minimal() +
+  scale_y_reverse() +
+  facet_grid(~cell_line)
+
+```
+
+```{r}
+jsfun_rename_cols <- function(i, ls_res, dplyr, rename_with, ls_run_name, .) {
+  ls_res[[i]] %>% 
+    dplyr::rename_with(~paste0(ls_run_name[[i]], "_", .), all_of(c("baseMean","log2FoldChange","lfcSE","pvalue","padj", "pass_p_fold", "fail_quantile", "fail_spike", "true_DEG")))
+}
+
+ls_res_renamed <- lapply(ls_run_number, jsfun_rename_cols,
+                         test, dplyr, rename_with, ls_run_name, .)
+```
+
+
+```{r}
+jsfun_res_sum <- function(i, ls_res, pass_p_fold, true_DEG, sum, ls_run_name, iteration) {
+  ls_res[[i]] %>% 
+    summarise_at(vars(pass_p_fold:true_DEG), sum) %>% 
+    mutate("iteration" = ls_run_name[[i]]) %>% 
+    select(iteration, everything())
+}
+
+ls_res_sum <- lapply(ls_run_number, jsfun_res_sum,
+                     ls_res, pass_p_fold, true_DEG, sum, ls_run_name, iteration)
+ti_res_sum <- tibble()
+
+for (i in 1:length(ls_run_number)){
+  ti_res_sum <- rbind(ti_res_sum, ls_res_sum[[i]])
+}
+
+ti_res_sum <- ti_res_sum %>% 
+  mutate("Pool" = substr(iteration, 1, 3)) %>% 
+  mutate("Sample_size" = substr(iteration, 5, 5))
+
+ti_res_sum$Sample_size <- as.integer(str_replace(ti_res_sum$Sample_size, "1", "10"))
+
+saveRDS(ti_res_sum, "ti_res_sum.RDS")
+
+```
+
+The following code generates data that can be used to plot the proportion of runs that have a specified number of DEGs:
+
+```{r}
+ti_res_sum_category <- ti_res_sum %>% 
+  group_by(Pool, Sample_size) %>% 
+  mutate("0" = sum(true_DEG==0)) %>% 
+  mutate("1" = sum(true_DEG>0 & true_DEG<=1)) %>% 
+  mutate("2" = sum(true_DEG>1 & true_DEG<=2)) %>% 
+  mutate("3-4" = sum(true_DEG>2 & true_DEG<=4)) %>% 
+  mutate("5-8" = sum(true_DEG>4 & true_DEG<=8)) %>% 
+  mutate("9-16" = sum(true_DEG>8 & true_DEG<=16)) %>% 
+  mutate("17-32" = sum(true_DEG>16 & true_DEG<=32)) %>% 
+  mutate("33-64" = sum(true_DEG>32 & true_DEG<=64)) %>% 
+  mutate("65-128" = sum(true_DEG>64 & true_DEG<=128)) %>% 
+  mutate("129-256" = sum(true_DEG>128 & true_DEG<=256)) %>% 
+  mutate("257-512" = sum(true_DEG>256 & true_DEG<=512)) %>% 
+  mutate("513-1024" = sum(true_DEG>512 & true_DEG<=1024)) %>% 
+  mutate(">1025" = sum(true_DEG>1025)) %>% 
+  mutate("run" = substr(iteration, 9, 12)) %>% 
+  filter(run==1) %>% 
+  select(Pool:`>1025`)
+
+ti_res_sum_category_pivot <- ti_res_sum_category %>% 
+  pivot_longer(cols=c("0":">1025"),
+               values_to="DEGs",
+               names_to="range")
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ti_res_sum_category_pivot, "processed/batch_EDASeq/ti_res_sum_category_pivot.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ti_res_sum_category_pivot, "processed/batch_noEDASeq/ti_res_sum_category_pivot.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ti_res_sum_category_pivot, "processed/nobatch_EDASeq/ti_res_sum_category_pivot.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ti_res_sum_category_pivot, "processed/nobatch_noEDASeq/ti_res_sum_category_pivot.RDS")
+            }
+          }}}
+```
+
+# Data processing for exploring individual probes
+## Generate ti_true_DEG_per_probe_named_pivot
+Data below will be used to explore how frequently each probe reaches significance, and whether that is affected by probe-level information (e.g. probe GC content, mean expression level for probe)
+
+`ti_true_DEG_per_probe_named` is a single tibble with one row for every probe. Probe level information is included (mean, standard deviation, etc). Each combination of pool and sample size is represented by a single column, which states the number of times the probe was significant across all iterations of the bootstrap. `ti_true_DEG_per_probe_named_pivot` is a long format of the same data, suitable for ggplot
+
+First, create a tibble with res data from all iterations.
+
+```{r}
+# Collapse all outputs into a single dataframe
+ti_probe_id <- manifest %>% 
+  dplyr::select(probe_id)
+
+js_fun_align_tibble_to_probe_list <- function(i, ti_probe_id, ls_res_renamed) {
+  left_join(ti_probe_id, ls_res_renamed[[i]], by = c("probe_id" = "probe_id")) %>% 
+    select(!(probe_id))
+}
+
+ls_res_renamed_aligned <- lapply(ls_run_number, js_fun_align_tibble_to_probe_list,
+                                 ti_probe_id, ls_res_renamed)
+
+ti_res_renamed_aligned <- as_tibble(data.frame(ls_res_renamed_aligned))
+ti_res_renamed_aligned <- tibble(ti_probe_id, ti_res_renamed_aligned)
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ti_res_renamed_aligned, "processed/batch_EDASeq/ti_res_renamed_aligned.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ti_res_renamed_aligned, "processed/batch_noEDASeq/ti_res_renamed_aligned.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ti_res_renamed_aligned, "processed/nobatch_EDASeq/ti_res_renamed_aligned.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ti_res_renamed_aligned, "processed/nobatch_noEDASeq/ti_res_renamed_aligned.RDS")
+            }
+          }}}
+```
+
+Next, create one spreadsheet for every pool/group combination, containing only the information from the true_DEG column. Add all stats data for each probe, then pivot the spreadsheet, ready for ggplot
+
+```{r}
+# Start by creating names for every pool/group combination
+Pool_vector <- c("P01",  "P05", "P10", "P20")
+n_vector <- c(3,4,5,6,7,8,9,10)
+nboot <- 1000
+ls_category <- list()
+for(k in 1:length(Pool_vector)){
+  Pool <- Pool_vector[k]
+  for(j in 1:length(n_vector)){
+    group1_n <- n_vector[j]
+    group2_n <- group1_n
+    i <- ((k-1)*length(n_vector))+j
+    print(i)
+    print(paste0(Pool, "_", group1_n, "_", group2_n))
+    ls_category[i] <- paste0(Pool, "_", group1_n, "_", group2_n)
+  }
+}
+
+# Reduce ti_res_renamed_aligned to only probe_id and true_DEG columns
+ti_res_renamed_true_DEG <- ti_res_renamed_aligned[,(str_detect(colnames(ti_res_renamed_aligned), "true_DEG|probe_id"))]
+
+# Separate the outputs by category names
+ls_cat_ti_res_renamed_true_DEG <- list()
+for (i in 1:(length(ls_category))){
+  print(paste0(ls_category[[i]], "|probe_id"))
+  ls_cat_ti_res_renamed_true_DEG[[i]] <- ti_res_renamed_true_DEG[,(str_detect(colnames(ti_res_renamed_true_DEG), paste0(ls_category[[i]], "|probe_id")))]
+}
+
+# Convert NA to FALSE
+for (i in 1:(length(ls_category))){
+  ls_cat_ti_res_renamed_true_DEG[[i]][is.na(ls_cat_ti_res_renamed_true_DEG[[i]])] <- FALSE
+}
+
+ls_true_DEG_per_probe <- list()
+for (i in 1:(length(ls_category))){
+  ls_true_DEG_per_probe[[i]] <- tibble(ls_cat_ti_res_renamed_true_DEG[[i]]$probe_id, rowSums(ls_cat_ti_res_renamed_true_DEG[[i]][-1])) %>% 
+  dplyr::rename("probe_id" = "ls_cat_ti_res_renamed_true_DEG[[i]]$probe_id") %>%
+  dplyr::rename("DEGs_per_probe" = "rowSums(ls_cat_ti_res_renamed_true_DEG[[i]][-1])")
+}
+
+ls_true_DEG_per_probe_named <- list()
+for (i in 1:(length(ls_category))){
+  ls_true_DEG_per_probe_named[[i]] <- ls_true_DEG_per_probe[[i]] %>% 
+    dplyr::rename_with(~paste0(ls_category[[i]]), "DEGs_per_probe")
+}
+
+ti_true_DEG_per_probe_named <- probe_stats
+
+for (i in 1:(length(ls_category))){
+  ti_true_DEG_per_probe_named <- cbind(ti_true_DEG_per_probe_named, ls_true_DEG_per_probe_named[[i]][,2])
+}
+
+ti_true_DEG_per_probe_named_pivot <- pivot_longer(ti_true_DEG_per_probe_named,
+                                                    cols=!(names(probe_stats)),
+                                                    values_to="DEGs_per_probe",
+                                                    names_to="Category"
+) %>% 
+  mutate("Pool" = substr(Category, 1, 3)) %>% 
+  mutate("Sample_size" = substr(Category, 5, 5))
+
+ti_true_DEG_per_probe_named_pivot$Sample_size <- as.integer(str_replace(ti_true_DEG_per_probe_named_pivot$Sample_size, "1", "10"))
+
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ti_true_DEG_per_probe_named_pivot, "processed/batch_EDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ti_true_DEG_per_probe_named_pivot, "processed/batch_noEDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ti_true_DEG_per_probe_named_pivot, "processed/nobatch_EDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ti_true_DEG_per_probe_named_pivot, "processed/nobatch_noEDASeq/ti_true_DEG_per_probe_named_pivot.RDS")
+            }
+          }}}
+```
+
+## Generate ls_res_sig_cat_combined
+
+The previous analysis relates the number of times each probe is significant to the _probe characteristics of the entire pool_ (e.g. average expression across all 24 P01 pools). It cannot be used to explore average expression level _for the specific bootstrap iteration which led to the significant result_. The `ls_res_sig_cat_combined` object below is a list with a separate tibble for every pool/sample size combination, and which lists all DEGs from all iterations into a single tibble.
+
+```{r}
+js_fun_select_true_DEGs <- function(i, ls_res, true_DEG) {
+  ls_res_sig <- ls_res[[i]] %>% 
+    filter(true_DEG == TRUE)
+}
+ls_res_sig <- lapply(ls_run_number, js_fun_select_true_DEGs,
+                         ls_res)
+names(ls_res_sig) <- ls_run_name
+
+ls_res_sig_cat <- list()
+for (i in 1:length(ls_category)){
+  ls_res_sig_cat[[i]] <- ls_res_sig[(str_detect(names(ls_res_sig), ls_category[[i]]))]
+}
+names(ls_res_sig_cat) <- ls_category
+ls_res_sig_cat_combined <- list()
+for (i in 1:length(ls_category)){
+  ls_res_sig_cat_combined[[i]] <- dplyr::bind_rows(ls_res_sig_cat[[i]]) %>% 
+    left_join(probe_stats, by = c("probe_id"="probe_id"))
+}
+names(ls_res_sig_cat_combined) <- ls_category
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ls_res_sig_cat_combined, "processed/batch_EDASeq/ls_res_sig_cat_combined.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ls_res_sig_cat_combined, "processed/batch_noEDASeq/ls_res_sig_cat_combined.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ls_res_sig_cat_combined, "processed/nobatch_EDASeq/ls_res_sig_cat_combined.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ls_res_sig_cat_combined, "processed/nobatch_noEDASeq/ls_res_sig_cat_combined.RDS")
+            }
+          }}}
+```
+
+The next chunk adds pool and sample size information to each tibble, then combines all tibbles into a single tibble ready for facetted plotting
+
+```{r}
+ls_res_sig_cat_combined_group <- list()
+for (i in 1:length(ls_category)){
+  ls_res_sig_cat_combined_group[[i]] <- ls_res_sig_cat_combined[[i]] %>% 
+    mutate("Pool" = substr(ls_category[[i]], 1, 3)) %>% 
+    mutate("Sample_size" = substr(ls_category[[i]], 5, 5))
+  }
+
+ti_res_sig_cat_combined_group <- dplyr::bind_rows(ls_res_sig_cat_combined_group)
+ti_res_sig_cat_combined_group$Sample_size <- as.integer(str_replace(ti_res_sig_cat_combined_group$Sample_size, "1", "10"))
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ti_res_sig_cat_combined_group, "processed/batch_EDASeq/ti_res_sig_cat_combined_group.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ti_res_sig_cat_combined_group, "processed/batch_noEDASeq/ti_res_sig_cat_combined_group.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ti_res_sig_cat_combined_group, "processed/nobatch_EDASeq/ti_res_sig_cat_combined_group.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ti_res_sig_cat_combined_group, "processed/nobatch_noEDASeq/ti_res_sig_cat_combined_group.RDS")
+            }
+          }}}
+```
+
+Process the probe data to determine how many probes were significant, within specified boundaries
+
+```{r}
+ti_probe_id <- manifest %>% 
+  dplyr::select(probe_id)
+
+js_fun_align_to_probe_id <- function(i, ti_probe_id, ls_res, probe_id, true_DEG) {
+  ls_res_align <- left_join(ti_probe_id, ls_res[[i]], by=c("probe_id"="probe_id")) %>% 
+    select(probe_id, true_DEG)
+}
+ls_res_align <- lapply(ls_run_number, js_fun_align_to_probe_id,
+                       ti_probe_id, ls_res, probe_id, true_DEG)
+# rename ls_res_align using the 8000 iteration names
+names(ls_res_align) <- ls_run_name
+
+# subdivide ls_res into 32 categories, based on the iteration names
+ls_res_align_cat <- list()
+for (i in 1:length(ls_category)){
+  ls_res_align_cat[[i]] <- ls_res_align[(str_detect(names(ls_res_align), ls_category[[i]]))]
+}
+ls_res_align_cat_ti <- list()
+# Within each of the 32 categories, combine all outputs to a single file
+for (i in 1:32){
+  ls_res_align_cat_ti[[i]] <- as_tibble(data.frame(ls_res_align_cat[[i]]))
+}
+
+for (i in 1:32){
+  ls_res_align_cat_ti[[i]] <- ls_res_align_cat_ti[[i]][str_detect(names(ls_res_align_cat_ti[[i]]), "true_DEG")]
+}
+for (i in 1:32){
+  ls_res_align_cat_ti[[i]][is.na(ls_res_align_cat_ti[[i]])] <- FALSE
+}
+ls_probe_sums <- list()
+# sum true_DEGs across all columns within a file
+for (i in 1:32){
+  ls_probe_sums[[i]] <- tibble(ti_probe_id, rowSums(ls_res_align_cat_ti[[i]]))
+}
+
+ti_probe_sum <- tibble(data.frame(ls_probe_sums))
+ti_probe_sum <- ti_probe_sum[,str_detect(names(ti_probe_sum), "rowSum")]
+names(ti_probe_sum) <- unlist(ls_category)
+
+df_probe_sum <- data.frame(ti_probe_id, ti_probe_sum)
+
+df.long<- df_probe_sum %>% pivot_longer(cols= -1)
+
+df_probe_sum_t <-pivot_wider(df.long,
+                       names_from = "probe_id",values_from = "value")
+
+ti_probe_sum_final <- df_probe_sum_t %>% 
+  mutate("Pool" = substr(name, 1, 3)) %>% 
+  mutate("Sample_size" = substr(name, 5, 5))
+ti_probe_sum_final$Sample_size <- as.integer(str_replace(ti_probe_sum_final$Sample_size, "1", "10"))
+
+ti_probe_sum_final <- ti_probe_sum_final %>% 
+  select(name, Pool, Sample_size, everything()) %>% 
+  dplyr::rename("category"="name")
+
+ti_probe_sum_final_pivot <- ti_probe_sum_final %>% 
+  pivot_longer(cols = c(4:3186),
+               values_to = "DEGs",
+               names_to = "probe_id")
+
+ti_probe_sum_category <- ti_probe_sum_final_pivot %>% 
+  group_by(Pool, Sample_size) %>% 
+  mutate("0" = sum(DEGs==0)) %>% 
+  mutate("1" = sum(DEGs>0 & DEGs<=1)) %>%
+  mutate("2" = sum(DEGs>1 & DEGs<=2)) %>%
+  mutate("3-4" = sum(DEGs>2 & DEGs<=4)) %>%
+  mutate("5-8" = sum(DEGs>4 & DEGs<=8)) %>%
+  mutate("9-16" = sum(DEGs>8 & DEGs<=16)) %>% 
+  mutate("17-32" = sum(DEGs>16 & DEGs<=32)) %>%
+  mutate("33-64" = sum(DEGs>32 & DEGs<=64)) %>%
+  mutate("65-128" = sum(DEGs>64 & DEGs<=128)) %>%
+  mutate("129-256" = sum(DEGs>128 & DEGs<=256)) %>%
+  mutate(">256" = sum(DEGs>256)) %>%
+  filter(probe_id=="AANAT2_86500") %>% 
+  select(!c(DEGs, probe_id))
+
+ti_probe_sum_category_pivot <- ti_probe_sum_category %>% 
+  pivot_longer(cols = c("0":">256"),
+               values_to = "DEGs",
+               names_to = "range")
+
+if(include_batch==TRUE & runEDASeq==TRUE){
+  saveRDS(ti_probe_sum_category_pivot, "processed/batch_EDASeq/ti_probe_sum_category_pivot.RDS")
+  }else{
+    if(include_batch==TRUE & runEDASeq==FALSE){
+      saveRDS(ti_probe_sum_category_pivot, "processed/batch_noEDASeq/ti_probe_sum_category_pivot.RDS")
+      }else{
+        if(include_batch==FALSE & runEDASeq==TRUE){
+          saveRDS(ti_probe_sum_category_pivot, "processed/nobatch_EDASeq/ti_probe_sum_category_pivot.RDS")
+          }else{
+            if(include_batch==FALSE & runEDASeq==FALSE){
+              saveRDS(ti_probe_sum_category_pivot, "processed/nobatch_noEDASeq/ti_probe_sum_category_pivot.RDS")
+            }
+          }}}
+```
+
+
+
