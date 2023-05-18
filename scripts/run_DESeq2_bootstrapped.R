@@ -354,4 +354,4 @@ mcf7 <- parallel::mclapply(X = ls_run_number[24001:32000],
                              FUN = js_fun_everything,
                              mc.cores = 40)
 names(mcf7) <- ls_run_name[24001:32000]
-saveRDS(heparg, file=paste0(path, "/mcf7.RDS"))
+saveRDS(mcf7, file=paste0(path, "/mcf7.RDS"))

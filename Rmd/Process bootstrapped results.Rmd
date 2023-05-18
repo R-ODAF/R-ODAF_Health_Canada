@@ -45,6 +45,7 @@ library(patchwork)
 library(readxl)
 library(tidyverse)
 library(viridis)
+library(ggridges)
 ```
 
 
@@ -64,11 +65,72 @@ probe_stats <- readRDS("saved_objects/probe_stats.RDS")
 
 ```{r}
 
+tk6 <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/tk6.RDS")
+spheroids <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/spheroids.RDS")
+mcf7 <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/mcf7.RDS")
+heparg <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/heparg.RDS")
+
 summarise_degs <- function(bootstrapped_list) {
-  degs <- lapply(bootstrapped_list, function(x) row.names(as.data.frame(x$DESeqResDEGs)))
-  degs_length <- unlist(lapply(degs, length))
-  #degs_df <- do.call(rbind, degs) # problematic for empty data
-  #degs_df <- dplyr::bind_rows(degs, .id = "df_id")
+  final_degs <- lapply(bootstrapped_list,
+                       function(x) row.names(as.data.frame(x$DESeqResDEGs)))
+  final_degs_length <- unlist(lapply(final_degs, length))
+  
+  R_ODAF_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqResFiltered)
+    )
+  )
+  R_ODAF_DEGs_length <- unlist(lapply(R_ODAF_DEGs, length))
+  
+  raw_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqRes)
+    )
+  )
+  raw_DEGs_length <- unlist(lapply(raw_DEGs, length))
+  
+  pval_filter_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqRes)[as.data.frame(x$DESeqRes)$padj < 0.05,]
+    )
+  )
+  pval_filter_length <- unlist(lapply(pval_filter_DEGs, length))
+  
+  pval_fc_filter_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqRes)[as.data.frame(x$DESeqRes)$padj < 0.05 &
+                                abs(as.data.frame(x$DESeqRes)$log2FoldChange) >
+                                  log2(1.5),]
+    )
+  )
+  pval_fc_filter_length <- unlist(lapply(pval_fc_filter_DEGs, length))
+
+  rodaf_pval_filter_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqRes)[as.data.frame(x$DESeqResFiltered)$padj < 0.05,]
+    )
+  )
+  rodaf_pval_filter_length <- unlist(lapply(rodaf_pval_filter_DEGs, length))
+  
+  rodaf_fc_filter_DEGs <- lapply(
+    bootstrapped_list,
+    function(x)
+    row.names(
+      as.data.frame(x$DESeqRes)[as.data.frame(x$DESeqResFiltered)$padj < 0.05,]
+    )
+  )
+  rodaf_fc_filter_length <- unlist(lapply(rodaf_fc_filter_DEGs, length))
+  
   names <- unlist(lapply(bootstrapped_list, "[[", 11))
   split_names <- strsplit(names, "_")
   # extract the second element from each resulting vector
@@ -76,22 +138,14 @@ summarise_degs <- function(bootstrapped_list) {
   
   df <- data.frame(name = names,
                    n_per_group = as.numeric(sample_size),
-                   nDEGs = as.numeric(degs_length))
+                   n_final_DEGs = as.numeric(final_degs_length),
+                   n_R_ODAF_DEGs = as.numeric(R_ODAF_DEGs_length),
+                   n_raw_DEGs = as.numeric(raw_DEGs_length),
+                   n_pval_DEGs = as.numeric(pval_filter_length),
+                   n_pval_fc_DEGs = as.numeric(pval_fc_filter_length),
+                   n_rodaf_pval_DEGs = as.numeric(rodaf_pval_filter_length),
+                   n_rodaf_fc_DEGs = as.numeric(rodaf_fc_filter_length))
   
-  breaks <- c(-1, 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, Inf)
-  # create a new column with the bin for each observation
-  df$range <- cut(df$nDEGs,
-                  breaks,
-                  labels = c("0", "1", "2",
-                             "3-4", "5-8",
-                             "9-16", "17-32",
-                             "33-64", "65-128",
-                             "129-256", "257-512",
-                             "513-1024", ">1025"))
-  
-  df <- df %>%
-    dplyr::group_by(n_per_group, range) %>%
-    add_count(name = "binned_counts")
   df$y <- 1
   return(df)
 }
@@ -108,10 +162,75 @@ hepargdf$cell_line <- "HepaRG"
 mcf7df <- summarise_degs(mcf7)
 mcf7df$cell_line <- "MCF-7"
 
-all_cell_lines <- dplyr::bind_rows(spheroidsdf, tk6df ) #, hepargdf, , mcf7df) 
+all_cell_lines <- dplyr::bind_rows(spheroidsdf, hepargdf, tk6df, mcf7df) %>%
+  #dplyr::group_by(name, cell_line) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_longer(ends_with("_DEGs"), names_to = "Filter", values_to = "nDEGs")
 
-ggplot(data = all_cell_lines, aes(x=n_per_group, y=y))+
+breaks <- c(-1, 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, Inf)
+break_labels <- c("0", "1", "2",
+                    "3-4", "5-8",
+                    "9-16", "17-32",
+                    "33-64", "65-128",
+                    "129-256", "257-512",
+                    "513-1024", ">1025")
+                             
+  # create a new column with the bin for each observation
+  all_cell_lines$range <- cut(all_cell_lines$nDEGs, 
+                              breaks, labels = break_labels)
+
+all_cell_lines$Filter <- factor(all_cell_lines$Filter,
+                                levels = c(
+                                  "n_R_ODAF_DEGs",
+                                  "n_rodaf_fc_DEGs",
+                                  "n_rodaf_pval_DEGs",
+                                  "n_pval_DEGs",
+                                  "n_pval_fc_DEGs",
+                                  "n_final_DEGs"
+                                ))
+
+all_cell_lines$Filter <- recode_factor(all_cell_lines$Filter,
+                                       "n_R_ODAF_DEGs" = "R-ODAF Only",
+                                       "n_rodaf_fc_DEGs" = "R-ODAF + Fold Change",
+                                       "n_rodaf_pval_DEGs" = "R-ODAF + P-Value",
+                                       "n_pval_DEGs" = "P-Value Only",
+                                       "n_pval_fc_DEGs" = "P-Value + Fold Change",
+                                       "n_final_DEGs" = "Final DEGs")
+
+                                       
+                                       
+
+
+p <- ggplot(data = all_cell_lines %>% dplyr::filter(!Filter %in% NA),
+            aes(x=n_per_group, y=y))+
   geom_bar(stat="identity",
+           aes(fill=factor(range,
+                           (levels=rev(c("0", "1", "2", "3-4",
+                                         "5-8", "9-16", "17-32",
+                                         "33-64", "65-128", "129-256",
+                                         "257-512", "513-1024", ">1025")))))) +
+  guides(fill=guide_legend(title="Number of DEGs")) +
+  scale_fill_viridis_d(option="F") +
+  xlab("Sample size") +
+  ylab("Number of bootstrap iterations") +
+  theme_minimal() +
+  scale_y_reverse()
+       
+p + facet_grid(Filter~cell_line)
+p + facet_grid(cell_line~Filter)
+p + facet_grid(~cell_line)
+p + facet_grid(~Filter)
+
+
+
+
+
+
+
+ggplot(data = all_cell_lines %>% dplyr::filter(!Filter=="n_raw_DEGs"),
+       aes(x=n_per_group, y=y))+
+  geom_bar(stat="identity",
+           position = "stack",
            aes(fill=factor(range,
                            (levels=rev(c("0", "1", "2", "3-4",
                                          "5-8", "9-16", "17-32",
@@ -124,6 +243,28 @@ ggplot(data = all_cell_lines, aes(x=n_per_group, y=y))+
   theme_minimal() +
   scale_y_reverse() +
   facet_grid(~cell_line)
+
+
+
+
+
+
+
+
+
+
+all_cell_lines_cum_sum <-  all_cell_lines %>%
+  arrange(nDEGs) %>%
+  group_by(cell_line, n_per_group, Filter) %>%
+  mutate(cumulative_sum = cumsum(nDEGs))
+
+ggplot(all_cell_lines_cum_sum %>% dplyr::filter(!Filter=="n_raw_DEGs"),
+       aes(x = cumulative_sum, y = range, fill = factor(nDEGs))) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01)  #+
+  scale_fill_viridis_c(name = "Temp. [F]", option = "C") #+
+  labs(title = 'Temperatures in Lincoln NE in 2016')  +
+  scale_y_reverse() +
+  facet_grid(Filter~cell_line)
 
 ```
 
