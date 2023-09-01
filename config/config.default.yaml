@@ -82,6 +82,6 @@ DESeq2:
   generate_main_report: TRUE
   generate_stats_report: TRUE
   generate_data_explorer_report: TRUE
-  generate_go_pathway_report: TRUE
+  generate_go_pathway_report: FALSE
   output_digits: 5 # control rounding of DEG output. Primarily used to suppress RNG variability so our tests don't fail :)
   parallel: FALSE
