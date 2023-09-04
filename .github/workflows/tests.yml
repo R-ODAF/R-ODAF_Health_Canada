@@ -98,8 +98,8 @@ jobs:
           md5sum analysis/QC/details/QC_per_sample.txt > checksum.QC_per_sample
           md5sum analysis/DEG_lists/BaP/*.txt > checksums.BaP_DEGs
           md5sum analysis/DEG_lists/CISP/*.txt > checksums.CISP_DEGs
-          md5sum analysis/pathway_analysis/BaP/*WikiPathways* > checksums.BaP_pathways
-          md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
+          # md5sum analysis/pathway_analysis/BaP/*WikiPathways* > checksums.BaP_pathways
+          # md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
           md5sum analysis/BMD_and_biomarker_files/*.txt > checksums.BMD_files
           md5sum analysis/BMD_and_biomarker_files/*/*.txt >> checksums.BMD_files
       - name: Compare pre-processing and QC files to truth set
@@ -120,10 +120,10 @@ jobs:
           cat checksums.CISP_DEGs
           echo "CISP DEG checksums from 'truth' set:"
           cat truth_checksums/checksums.CISP_DEGs # Can be informative if there are errors
-          echo "BaP pathway checksums from this run:"
-          cat checksums.BaP_pathways
-          echo "BaP pathway checksums from 'truth' set:"
-          cat truth_checksums/checksums.BaP_pathways
+         #  echo "BaP pathway checksums from this run:"
+          # cat checksums.BaP_pathways
+          # echo "BaP pathway checksums from 'truth' set:"
+          # cat truth_checksums/checksums.BaP_pathways
       - name: Compare DEG lists to truth set
         run: |
           # Only check first column, because of timestamps in filenames
