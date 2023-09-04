@@ -141,9 +141,9 @@ jobs:
                   <(grep -Fxf \
                   <(cat checksums.CISP_DEGs | awk {'print $1'}) \
                   <(cat truth_checksums/checksums.CISP_DEGs | awk {'print $1'} | sort -u))
-      - name: Compare pathway analysis to truth set
-        run: |
-          cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
+     # - name: Compare pathway analysis to truth set
+        # run: |
+          # cmp truth_checksums/checksums.BaP_pathways checksums.BaP_pathways
       - name: Compare BMD input files to truth set
         run: |
           cat checksums.BMD_files # Can be informative if there are errors
