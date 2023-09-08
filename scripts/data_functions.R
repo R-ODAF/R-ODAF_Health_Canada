@@ -66,7 +66,11 @@ sort_contrasts <- function(exp_metadata, contrasts, design, sortcol){
     ordered_contrasts <- contrasts %>%
         dplyr::slice(match(ordered_design, V1)) %>%
         unique()
-    return(ordered_contrasts)
+    if(nrow(contrasts) == nrow(ordered_contrasts)) {
+      return(ordered_contrasts)
+    } else { return(contrasts)
+      warning("NOTE: Your contrasts will NOT be sorted, because the sortcol does not appear to have a one-to-one relationship with contrasts.")
+    }
 }
 
 process_data_and_metadata <- function(count_data, exp_metadata, contrasts, intgroup, design, params){

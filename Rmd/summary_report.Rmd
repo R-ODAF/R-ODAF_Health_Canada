@@ -67,9 +67,6 @@ db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
 load(dataFile) # metadata, contrasts, counts, resultsList
 
-exp_metadata <- exp_metadata %>%
-  mutate(uv_dosage_2 = factor(uv_dosage_2, levels = c( "Sham", "5_mJ_cm2", "10_mJ_cm2", "20_mJ_cm2", "40_mJ_cm2", "5pct_Oxalazone")))
-
 ```
 
 

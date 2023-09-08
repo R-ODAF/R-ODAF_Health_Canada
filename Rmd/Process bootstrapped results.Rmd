@@ -65,10 +65,10 @@ probe_stats <- readRDS("saved_objects/probe_stats.RDS")
 
 ```{r}
 
-tk6 <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/tk6.RDS")
-spheroids <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/spheroids.RDS")
-mcf7 <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/mcf7.RDS")
-heparg <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/heparg.RDS")
+tk6_DEGs <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/tk6.RDS")
+spheroid_DEGs <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/spheroids.RDS")
+mcf7_DEGs <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/mcf7.RDS")
+heparg_DEGs <- readRDS("bootstrap_DEGs/output/1000_iterations/nobatch_2023-05-10/heparg.RDS")
 
 summarise_degs <- function(bootstrapped_list) {
   final_degs <- lapply(bootstrapped_list,
@@ -150,22 +150,24 @@ summarise_degs <- function(bootstrapped_list) {
   return(df)
 }
 
-tk6df <- summarise_degs(tk6)
+tk6df <- summarise_degs(tk6_DEGs)
 tk6df$cell_line <- "TK6"
 
-spheroidsdf <- summarise_degs(spheroids)
+spheroidsdf <- summarise_degs(spheroid_DEGs)
 spheroidsdf$cell_line <- "Liver spheroids"
 
-hepargdf <- summarise_degs(heparg)
+hepargdf <- summarise_degs(heparg_DEGs)
 hepargdf$cell_line <- "HepaRG"
 
-mcf7df <- summarise_degs(mcf7)
+mcf7df <- summarise_degs(mcf7_DEGs)
 mcf7df$cell_line <- "MCF-7"
 
 all_cell_lines <- dplyr::bind_rows(spheroidsdf, hepargdf, tk6df, mcf7df) %>%
   #dplyr::group_by(name, cell_line) %>%
   dplyr::ungroup() %>%
   tidyr::pivot_longer(ends_with("_DEGs"), names_to = "Filter", values_to = "nDEGs")
+
+saveRDS(all_cell_lines, "compiled_summary_boostrapped_DEGs_FDR_data.RDS")
 
 breaks <- c(-1, 0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, Inf)
 break_labels <- c("0", "1", "2",
@@ -227,8 +229,10 @@ p + facet_grid(~Filter)
 
 
 
-ggplot(data = all_cell_lines %>% dplyr::filter(!Filter=="n_raw_DEGs"),
-       aes(x=n_per_group, y=y))+
+ggplot(data = all_cell_lines %>%
+         dplyr::filter(!Filter=="n_raw_DEGs") %>%
+         dplyr::filter(cell_line == "HepaRG"),
+       aes(x=Filter, y=y))+
   geom_bar(stat="identity",
            position = "stack",
            aes(fill=factor(range,
@@ -241,16 +245,9 @@ ggplot(data = all_cell_lines %>% dplyr::filter(!Filter=="n_raw_DEGs"),
   xlab("Sample size") +
   ylab("Number of bootstrap iterations") +
   theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
   scale_y_reverse() +
-  facet_grid(~cell_line)
-
-
-
-
-
-
-
-
+  facet_grid(~n_per_group)
 
 
 all_cell_lines_cum_sum <-  all_cell_lines %>%
@@ -258,13 +255,101 @@ all_cell_lines_cum_sum <-  all_cell_lines %>%
   group_by(cell_line, n_per_group, Filter) %>%
   mutate(cumulative_sum = cumsum(nDEGs))
 
-ggplot(all_cell_lines_cum_sum %>% dplyr::filter(!Filter=="n_raw_DEGs"),
-       aes(x = cumulative_sum, y = range, fill = factor(nDEGs))) +
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01)  #+
-  scale_fill_viridis_c(name = "Temp. [F]", option = "C") #+
-  labs(title = 'Temperatures in Lincoln NE in 2016')  +
+# ggplot(all_cell_lines_cum_sum %>% dplyr::filter(!Filter=="n_raw_DEGs"),
+#        aes(x = cumulative_sum, y = range, fill = factor(nDEGs))) +
+#   geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01)  #+
+#   scale_fill_viridis_c(name = "Temp. [F]", option = "C") #+
+#   labs(title = 'Temperatures in Lincoln NE in 2016')  +
+#   scale_y_reverse() +
+#   facet_grid(Filter~cell_line)
+  
+significant_simulations <- sum(fdr < 0.05)
+
+# Calculate the FDR as you described
+false_discovery_rate <- significant_simulations / length(fdr)
+
+```
+
+
+# Heat map view
+```{r}
+
+all_cell_lines_2 <- all_cell_lines %>%
+  arrange(cell_line, Filter, n_per_group) %>%
+  group_by(cell_line, Filter, n_per_group) %>%
+  mutate(rank = rank(nDEGs, ties.method = "first"))
+
+all_cell_lines_2$cell_line <- factor(all_cell_lines_2$cell_line,
+                                     levels = c("TK6",
+                                                "Liver spheroids",
+                                                "MCF-7",
+                                                "HepaRG"))
+
+all_cell_lines_3 <- all_cell_lines_2 %>%
+  mutate(nDEGs2 = rep(c(1,10,100,1000,10000), 200)) %>%
+  arrange(cell_line, Filter, n_per_group) %>%
+  group_by(cell_line, Filter, n_per_group) %>% 
+  mutate(rank2 = rank(nDEGs2, ties.method = "first"))
+  
+p <- ggplot(all_cell_lines_2 %>%
+         dplyr::filter(!Filter=="n_raw_DEGs") %>%
+         dplyr::filter(Filter %in% c("Final DEGs",
+                                     "R-ODAF + Fold Change",
+                                     "R-ODAF + P-Value")),
+       aes(x = n_per_group, y = rank, fill = nDEGs+1)) +
+  geom_raster() +
   scale_y_reverse() +
-  facet_grid(Filter~cell_line)
+  scale_fill_viridis_c(option = "F",
+                       name = "# DEGs in trial",
+                       direction = -1,
+                       trans = "log",
+                       breaks = c(1, 10, 100, 1000, 10000),
+                       labels = c(1, 10, 100, 1000, 10000)) +
+  #theme(axis.text.y=element_blank()) +
+  #theme(legend.position = "none") +
+  theme_minimal(base_size = 16) +
+  xlab("Sample size") +
+  ylab("Number of bootstrap iterations")
+
+p  + facet_grid(Filter~cell_line) + theme(strip.text.y = element_text(size = rel(0.95)))
+p  + facet_grid(~cell_line)
+p  + facet_grid(~Filter)
+p  + facet_grid(cell_line~Filter)
+
+
+
+p2 <- ggplot(all_cell_lines_2 %>%
+         dplyr::filter(!Filter=="n_raw_DEGs") %>%
+         dplyr::filter(Filter %in% c("Final DEGs")),
+       aes(x = n_per_group, y = rank, fill = nDEGs+1)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_viridis_c(option = "F",
+                       name = "# DEGs in trial",
+                       direction = -1,
+                       trans = "log",
+                       breaks = c(1, 10, 100, 1000, 10000),
+                       labels = c(1, 10, 100, 1000, 10000)) +
+  #theme(axis.text.y=element_blank()) +
+  #theme(legend.position = "none") +
+  theme_minimal() +
+  xlab("Sample size") +
+  ylab("Number of bootstrap iterations")
+p2  + facet_grid(~cell_line)
+
+all_cell_lines_2$contains_false_positive <- all_cell_lines_2$nDEGs>0
+FDRs_DEGs <- all_cell_lines_2 %>% dplyr::filter(Filter == "Final DEGs") %>%
+  dplyr::group_by(cell_line, contains_false_positive, n_per_group) %>% 
+  dplyr::tally() %>%
+  dplyr::mutate(FDR = ifelse(contains_false_positive == T, n/1000, NA))
+
+
+ggplot(FDRs_DEGs %>% dplyr::filter(!is.na(FDR)), aes(x = n_per_group, y = FDR, group = cell_line)) +
+  geom_point() + geom_line() +
+  geom_hline(yintercept = 0.05, col = "red", lty = "dashed") +
+  facet_grid(~cell_line) + 
+  theme_bw() +
+  xlab("Sample size per group")
 
 ```
 
