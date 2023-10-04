@@ -1,9 +1,9 @@
 ########################################################
 ## Build R-ODAF container for transcriptomic analysis ##
 ########################################################
-# Conda base image
-FROM continuumio/miniconda3 as base 
-#:4.12.0 as base
+# Mamba base image
+FROM condaforge/mambaforge:23.3.1-1 as base
+#continuumio/miniconda3 - difficult to install mamba, so switched away from this base 
 
 # Required to avoid interactive prompts
 ARG DEBIAN_FRONTEND=noninteractive
@@ -20,15 +20,16 @@ RUN apt-get update && apt-get -y install \
 	libcairo2-dev \
 	libxt-dev \
 	tree \
-	vim
+        gosu \
+	vim && \
+      mamba install -y -c conda-forge -c bioconda -n base snakemake && \
+      rm -rf /var/lib/apt/lists/* && \
+      gosu nobody true 
+      # last line is to verify that gosu works
 
 RUN mkdir -p /home/R-ODAF/R-ODAF_Health_Canada
 WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
-RUN conda install 'mamba<=1.4.5' -n base -c conda-forge
-RUN conda update mamba -n base -c conda-forge
-#RUN conda install -n base -c conda-forge mamba
-RUN mamba install -y -c conda-forge -c bioconda -n base snakemake
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
 RUN mv data data.bak && mv config config.bak
@@ -38,10 +39,15 @@ RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 
 # Build environments with Snakemake
-RUN snakemake --cores 32 --use-conda --conda-create-envs-only
+RUN /bin/bash -c "snakemake --cores 32 --use-conda --conda-create-envs-only"
 
 # Install extra dependency for reports
-RUN conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R
+RUN /bin/bash -c "conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R"
+
+# Change ownership of files
+USER root
+RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
+USER R-ODAF
 
 ########################################################
 ## Build R-ODAF container for transcriptomic analysis ##
@@ -51,14 +57,10 @@ RUN conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.y
 # Note that if you alter any dependencies, the base container must be rebuilt
 FROM base as tests
 
-# Update code if it has changed in build context
-COPY . . 
-USER root
-RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
-USER R-ODAF
-
+# Run tests
 RUN /bin/bash -c "snakemake --cores 32 --use-conda"
 
+# Clean up files
 FROM tests as cleanup
 
 # Clean up directories
@@ -72,29 +74,15 @@ RUN mkdir ./tests && \
        data \
        config \
        ./tests/
-RUN sleep 1 && mv -vf "data.bak" "data" && \
-    mv -vf "config.bak" "config"
+RUN /bin/bash -c "tree data.bak && tree config.bak && \
+                  mv data.bak data && mv config.bak config"
+# Move test files
+USER root
+RUN mv ./tests /opt/tests
 
 ########################################################
 ## Build R-ODAF container for transcriptomic analysis ##
 ########################################################
 # From tested container with updated code
 FROM cleanup
-
-USER root
-
-# Move files
-RUN mv tests /opt/tests
-
-# Install gosu
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y gosu; \
-	rm -rf /var/lib/apt/lists/*; \
-# verify that the binary works
-	gosu nobody true
-
-COPY entrypoint.sh .
-RUN ["chmod", "+x", "entrypoint.sh"]
 ENTRYPOINT ["/home/R-ODAF/R-ODAF_Health_Canada/entrypoint.sh"]
-#CMD ["/bin/bash" "-l"]
