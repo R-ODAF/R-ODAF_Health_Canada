@@ -1093,6 +1093,7 @@ if (!is.na(batch_var)) {
 QAQC_metadata_subset <- QAQC_annotated %>%
   dplyr::select(unlist(exp_groups), !!ensym(batch_var),
                 NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+  QAQC_metadata_subset[,batch_var] <- factor(QAQC_metadata_subset[,batch_var])
 } else {
     QAQC_metadata_subset <- QAQC_annotated %>%
     dplyr::select(unlist(exp_groups),
@@ -1100,14 +1101,14 @@ QAQC_metadata_subset <- QAQC_annotated %>%
 }
 
 QAQC_metadata_subset %>%
-    summarise_each(levels(as.factor(.))) %>% tally()
+    summarise_all(~length(unique(.))) # Just info. Output not used
+    #summarise_each(levels(as.factor(.))) %>% tally()
 
 potential_covariates <- QAQC_metadata_subset %>%
   dplyr::mutate_all(as.factor) %>%
   purrr::map(levels) %>%
   purrr::map(length)
 
-QAQC_metadata_subset[,batch_var] <- factor(QAQC_metadata_subset[,batch_var])
 
 covariate_names <- names(potential_covariates[potential_covariates < 24])
 
