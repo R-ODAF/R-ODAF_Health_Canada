@@ -1,8 +1,5 @@
-import re
+from pathlib import Path
 import pandas as pd
-from glob import glob
-import pathlib
-from snakemake.utils import validate
 import os
 
 # load and validate config stuff
@@ -79,18 +76,18 @@ rule all:
 
 if common_config["platform"] =="TempO-Seq":
     length_required_fastp = 50
-    trim_tail1_fastp = 1
+    trim_tail1_fastp = 0
 else:
     length_required_fastp = 36
     trim_tail1_fastp = 0
 
 rule fastp_se:
     input:
-        R1=ancient(str(raw_dir / "{sample}.fastq.gz")),
+        R1 = ancient(str(raw_dir / "{sample}.fastq.gz"))
     output:
-        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
+        R1 = temp(trim_dir / "{sample}.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
-        html = trim_dir / "{sample}_fastp.html",
+        html = trim_dir / "{sample}_fastp.html"
     conda:
         "envs/preprocessing.yml"
     params:
@@ -101,9 +98,9 @@ rule fastp_se:
         right_size = 4,
         right_quality = 15,
         length_required = length_required_fastp,
-        trim_tail1 = trim_tail1_fastp,
+        trim_tail1 = trim_tail1_fastp
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
-    threads: num_threads,
+    threads: num_threads
     shell:
         '''
         fastp \
@@ -129,13 +126,13 @@ rule fastp_se:
 
 rule fastp_pe:
     input:
-        R1=ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
-        R2=ancient(str(raw_dir / "{sample}.R2.fastq.gz")),
+        R1 = ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
+        R2 = ancient(str(raw_dir / "{sample}.R2.fastq.gz"))
     output:
-        R1 = pipe(trim_dir / "{sample}.R1.fastq.gz"),
-        R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
+        R1 = temp(trim_dir / "{sample}.R1.fastq.gz"),
+        R2 = temp(trim_dir / "{sample}.R2.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
-        html = trim_dir / "{sample}_fastp.html",
+        html = trim_dir / "{sample}_fastp.html"
     conda:
         "envs/preprocessing.yml"
     params:
@@ -145,9 +142,9 @@ rule fastp_pe:
         tail_quality = 3,
         right_size = 4,
         right_quality = 15,
-        length_required = length_required_fastp,
+        length_required = length_required_fastp
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
-    threads: num_threads,
+    threads: num_threads
     shell:
         '''
         fastp \
@@ -202,9 +199,9 @@ rule STAR_make_index:
     conda:
         "envs/preprocessing.yml"
     output:
-        directory(genome_dir / "STAR_index"),
+        directory(genome_dir / "STAR_index")
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
-    threads: workflow.cores,
+    threads: workflow.cores
     shell:
         '''
 		STAR \
@@ -228,13 +225,13 @@ rule STAR_make_index:
 # https://github.com/snakemake/snakemake/pull/1413
 rule STAR_load:
     input:
-        genome_dir / "STAR_index",
+        genome_dir / "STAR_index"
     output:
         touch("genome.loaded")
     conda:
         "envs/preprocessing.yml"
     params:
-        index = STAR_index,
+        index = STAR_index
     benchmark: log_dir / "benchmark.STAR_load.txt"
     shell:
         '''
@@ -245,13 +242,13 @@ rule STAR_load:
 rule STAR_all:
     input:
         expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
-        "genome.removed",
+        "genome.removed"
 
 if pipeline_config["mode"] == "se":
     rule STAR:
         input:
             loaded_index = "genome.loaded",
-            R1 = trim_dir / "{sample}.fastq.gz",
+            R1 = trim_dir / "{sample}.fastq.gz"
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
@@ -264,9 +261,9 @@ if pipeline_config["mode"] == "se":
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: num_threads,
+        threads: num_threads
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
@@ -293,7 +290,7 @@ if pipeline_config["mode"] == "pe":
         input:
             loaded_index = "genome.loaded",
             R1 = trim_dir / "{sample}.R1.fastq.gz",
-            R2 = trim_dir / "{sample}.R2.fastq.gz",
+            R2 = trim_dir / "{sample}.R2.fastq.gz"
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
             toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
@@ -303,11 +300,11 @@ if pipeline_config["mode"] == "pe":
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: num_threads,
+        threads: num_threads
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
@@ -354,9 +351,9 @@ if common_config["platform"] =="TempO-Seq":
 
     rule samtools_index:
         input:
-            aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+            aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam"
         output:
-            index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai",
+            index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"
         conda:
             "envs/temposeqr.yml"
         benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
@@ -367,7 +364,7 @@ if common_config["platform"] =="TempO-Seq":
 
     rule quantification_input:
         input:
-            list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES)),
+            list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES))
         output:
             samplefile = processed_dir / "samplefile.txt"
         benchmark: log_dir / "benchmark.quantification_input.txt"
@@ -385,10 +382,10 @@ if common_config["platform"] =="TempO-Seq":
         params:
             annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
             threads = workflow.cores,
-            genome = str(genome_dir / pipeline_config["genome_filename"]),
-        threads: workflow.cores,
+            genome = str(genome_dir / pipeline_config["genome_filename"])
+        threads: workflow.cores
         output:
-            count_table = processed_dir / "count_table.tsv",
+            count_table = processed_dir / "count_table.tsv"
         conda:
             "envs/temposeqr.yml"
         benchmark: log_dir / "benchmark.quantification.txt"
@@ -416,9 +413,9 @@ if common_config["platform"] =="RNA-Seq":
             genome = genome_dir / pipeline_config["genome_filename"]
         params:
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            genome_name = pipeline_config["genome_name"],
+            genome_name = pipeline_config["genome_name"]
         output:
-            directory(genome_dir / "RSEM_index"),
+            directory(genome_dir / "RSEM_index")
         conda:
             "envs/preprocessing.yml"
         benchmark: log_dir / "benchmark.RSEM_make_index.txt"
@@ -432,18 +429,18 @@ if common_config["platform"] =="RNA-Seq":
         rule RSEM:
             input:
                 bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
-                index = genome_dir / "RSEM_index" 
+                index = genome_dir / "RSEM_index"
             output:
                 isoforms = quant_dir / "{sample}.isoforms.results",
-                genes = quant_dir / "{sample}.genes.results",
+                genes = quant_dir / "{sample}.genes.results"
             conda:
                 "envs/preprocessing.yml"
             params:
                 threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = pipeline_config["genome_name"],
+                index_name = pipeline_config["genome_name"]
             benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
-            threads: workflow.cores,
+            threads: workflow.cores
             shell:
                 '''
                 rsem-calculate-expression \
@@ -459,16 +456,16 @@ if common_config["platform"] =="RNA-Seq":
         rule RSEM:
             input:
                 bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
-                index = genome_dir / "RSEM_index" 
+                index = genome_dir / "RSEM_index"
             output:
                 isoforms = quant_dir / "{sample}.isoforms.results",
-                genes = quant_dir / "{sample}.genes.results",
+                genes = quant_dir / "{sample}.genes.results"
             conda:
                 "envs/preprocessing.yml"
             params:
                 threads = workflow.cores,
                 output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = pipeline_config["genome_name"],
+                index_name = pipeline_config["genome_name"]
             benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
             threads: workflow.cores
             shell:
@@ -515,7 +512,7 @@ rule multiqc:
     message: "running multiqc for temposeq data"
     input:
         expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
-        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES),
+        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES)
     output:
         qc_dir / "MultiQC_Report.html"
     conda:
@@ -533,7 +530,7 @@ rule multiqc:
         -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
         mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
         '''
-        
+
 #####################
 ### Study-wide QC ###
 #####################
@@ -543,7 +540,7 @@ rule studywideqc:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-        "genome.removed",
+        "genome.removed"
     output:
         qc_dir / "details/samples_removed.txt"
     conda:
@@ -572,7 +569,7 @@ rule deseq2:
         rm genome.removed
         Rscript scripts/run_DESeq2.R 
         '''
-        
+
 ######################
 ### DESeq2 Reports ###
 ######################
