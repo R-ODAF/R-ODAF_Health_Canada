@@ -413,7 +413,8 @@ if common_config["platform"] =="RNA-Seq":
             genome = genome_dir / pipeline_config["genome_filename"]
         params:
             annotations = genome_dir / pipeline_config["annotation_filename"],
-            genome_name = pipeline_config["genome_name"]
+            genome_name = pipeline_config["genome_name"],
+            genome_dir = pipeline_config["genomedir"]
         output:
             directory(genome_dir / "RSEM_index")
         conda:
@@ -421,7 +422,7 @@ if common_config["platform"] =="RNA-Seq":
         benchmark: log_dir / "benchmark.RSEM_make_index.txt"
         shell:
             '''
-            mkdir RSEM_index
+            mkdir {params.genome_dir}/RSEM_index
             rsem-prepare-reference --gtf {params.annotations} {input.genome} {output}/{params.genome_name}
             '''
 
