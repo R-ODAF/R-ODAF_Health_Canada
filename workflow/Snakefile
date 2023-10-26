@@ -76,7 +76,7 @@ rule all:
 
 if common_config["platform"] =="TempO-Seq":
     length_required_fastp = 50
-    trim_tail1_fastp = 0
+    trim_tail1_fastp = 1
 else:
     length_required_fastp = 36
     trim_tail1_fastp = 0
@@ -85,7 +85,7 @@ rule fastp_se:
     input:
         R1 = ancient(str(raw_dir / "{sample}.fastq.gz"))
     output:
-        R1 = temp(trim_dir / "{sample}.fastq.gz"),
+        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html"
     conda:
@@ -129,8 +129,8 @@ rule fastp_pe:
         R1 = ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
         R2 = ancient(str(raw_dir / "{sample}.R2.fastq.gz"))
     output:
-        R1 = temp(trim_dir / "{sample}.R1.fastq.gz"),
-        R2 = temp(trim_dir / "{sample}.R2.fastq.gz"),
+        R1 = pipe(trim_dir / "{sample}.R1.fastq.gz"),
+        R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
         json = trim_dir / "{sample}_fastp.json",
         html = trim_dir / "{sample}_fastp.html"
     conda:
