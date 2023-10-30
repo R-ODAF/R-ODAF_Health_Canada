@@ -100,7 +100,7 @@ rule fastp_se:
         length_required = length_required_fastp,
         trim_tail1 = trim_tail1_fastp
     benchmark: log_dir / "benchmark.{sample}.fastp_se.txt"
-    threads: workflow.cores
+    threads: num_threads
     shell:
         '''
         fastp \
@@ -144,7 +144,7 @@ rule fastp_pe:
         right_quality = 15,
         length_required = length_required_fastp
     benchmark: log_dir / "benchmark.{sample}.fastp_pe.txt"
-    threads: workflow.cores
+    threads: num_threads
     shell:
         '''
         fastp \
@@ -201,7 +201,7 @@ rule STAR_make_index:
     output:
         directory(genome_dir / "STAR_index")
     benchmark: log_dir / "benchmark.STAR_make_index.txt"
-    threads: workflow.cores
+    threads: num_threads
     shell:
         '''
 		STAR \
@@ -263,7 +263,7 @@ if pipeline_config["mode"] == "se":
             folder = "{sample}",
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: workflow.cores
+        threads: num_threads
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
@@ -304,7 +304,7 @@ if pipeline_config["mode"] == "pe":
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: workflow.cores
+        threads: num_threads
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
