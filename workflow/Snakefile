@@ -1,9 +1,11 @@
 import pandas as pd
 from pathlib import Path
 import os
+from snakemake.utils import validate
 
-# load and validate config stuff
+# load and validate config
 configfile: "config/config.yaml"
+validate(config, "config/config.schema.yaml")
 
 common_config = config["common"]
 pipeline_config = config["pipeline"]
@@ -22,7 +24,11 @@ data_dir = main_dir / "data"
 raw_dir = data_dir / "raw" # should already exist
 metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
-#TODO set up a check to make sure this stuff exists
+
+# Validate metadata file
+meta_pandas = pd.read_table(metadata_file)
+
+validate(meta_pandas, "data/metadata.schema.yaml")
 
 if common_config["platform"] =="TempO-Seq":
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
