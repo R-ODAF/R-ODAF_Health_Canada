@@ -105,7 +105,8 @@ properties:
       treatment_var:
         type: string
       collapse_replicates:
-        type: boolean
+        type: string
+        enum: ["T", "F"]
       technical_control:
         type: string
       reference_rna:
