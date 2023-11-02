@@ -5,7 +5,7 @@ from snakemake.utils import validate
 
 # load and validate config
 configfile: "config/config.yaml"
-validate(config, "config/config.schema.yaml")
+validate(config, "schema/config.schema.yaml")
 
 common_config = config["common"]
 pipeline_config = config["pipeline"]
@@ -28,7 +28,7 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 # Validate metadata file
 meta_pandas = pd.read_table(metadata_file)
 
-validate(meta_pandas, "data/metadata.schema.yaml")
+validate(meta_pandas, "schema/metadata.schema.yaml")
 
 if common_config["platform"] =="TempO-Seq":
     temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
