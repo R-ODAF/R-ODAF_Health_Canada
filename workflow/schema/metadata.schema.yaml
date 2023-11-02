@@ -3,21 +3,27 @@ $schema: "https://json-schema.org/draft/2020-12/schema"
 description: an entry on the sample sheet
 
 properties:
-  sample_id:
+  sample_ID:
     type: string
     pattern: "^[a-zA-Z0-9-_]*$"
     description: The sample identifier column. No spaces or special characters allowed.
   technical_control:
-    type: string
-    enum: ["T", "F"]
+    anyOf:
+    - type: string
+      enum: ["T", "F"]
+    - type: boolean
     description: Defines whether a sample was a technical control
   reference_rna:
-    type: string
-    enum: ["T", "F"]
+    anyOf:
+    - type: string
+      enum: ["T", "F"]
+    - type: boolean
     description: Defines whether a sample was an RNA control in a TempO-Seq experiment
   solvent_control:
-    type: string
-    enum: ["T", "F"]
+    anyOf:
+    - type: string
+      enum: ["T", "F"]
+    - type: boolean
     description: Defines whether a sample was a solvent control
   dose:
     type: number
@@ -26,7 +32,7 @@ properties:
   
 
 required:
-  - sample_id
+  - sample_ID
   - technical_control
   - reference_rna
   - solvent_control
