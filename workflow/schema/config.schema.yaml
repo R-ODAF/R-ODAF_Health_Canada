@@ -43,9 +43,12 @@ properties:
       biospyder_manifest_file:
         type: string
     required:
+      - projectdir
       - project_title
       - project_name
+      - project_description
       - batch_var
+      - dose
       - platform
       - nmr_threshold
       - write_additional_output
@@ -192,9 +195,12 @@ properties:
       run_pathway_analysis:
         type: boolean
       wikipathways_directory:
-        type: string
+        type: 
+          - string
+          - 'null'
       wikipathways_filename:
-        type: string
+          - string
+          - 'null'
       nBestFeatures:
         type: integer
         minimum: 1
@@ -231,6 +237,18 @@ properties:
       - design
       - intgroup
       - intgroup_to_plot
+      - formula_override
+      - group_facet
+      - group_filter
+      - display_group_facet
+      - display_group_filter
+      - sortcol
+      - lenient_contrasts
+      - strict_contrasts
+      - exclude_samples
+      - exclude_groups
+      - include_only_column
+      - include_only_group
       - cpus
       - run_pathway_analysis
       - wikipathways_directory
