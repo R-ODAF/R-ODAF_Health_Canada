@@ -1,6 +1,8 @@
-import pandas as pd
-from pathlib import Path
 import os
+import tempfile
+from pathlib import Path
+
+import pandas as pd
 
 # load and validate config stuff
 configfile: "config/config.yaml"
@@ -14,6 +16,8 @@ if main_dir is None:
     main_dir = os.getcwd()
 main_dir = Path(main_dir)
 
+tmp_dir = tempfile.gettempdir()
+print("Temporary directory: ", tmp_dir)
 
 genome_dir = Path(pipeline_config["genomedir"])
 num_threads = pipeline_config["threads"]
@@ -24,8 +28,6 @@ metadata_dir = data_dir / "metadata" # should already exist
 metadata_file = metadata_dir / "metadata.txt" # should aready exist
 #TODO set up a check to make sure this stuff exists
 
-if common_config["platform"] =="TempO-Seq":
-    temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
 sample_id_col = pipeline_config["sample_id"]
 
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
@@ -85,9 +87,9 @@ rule fastp_se:
     input:
         R1 = ancient(str(raw_dir / "{sample}.fastq.gz"))
     output:
-        R1 = pipe(trim_dir / "{sample}.fastq.gz"),
-        json = trim_dir / "{sample}_fastp.json",
-        html = trim_dir / "{sample}_fastp.html"
+        R1 = temp(trim_dir / 'se' / "{sample}.fastq.gz"),
+        json = trim_dir / 'se' / "{sample}_fastp.json",
+        html = trim_dir / 'se' / "{sample}_fastp.html"
     conda:
         "envs/preprocessing.yml"
     params:
@@ -129,10 +131,10 @@ rule fastp_pe:
         R1 = ancient(str(raw_dir / "{sample}.R1.fastq.gz")),
         R2 = ancient(str(raw_dir / "{sample}.R2.fastq.gz"))
     output:
-        R1 = pipe(trim_dir / "{sample}.R1.fastq.gz"),
-        R2 = pipe(trim_dir / "{sample}.R2.fastq.gz"),
-        json = trim_dir / "{sample}_fastp.json",
-        html = trim_dir / "{sample}_fastp.html"
+        R1 = temp(trim_dir / 'pe' / "{sample}.R1.fastq.gz"),
+        R2 = temp(trim_dir / 'pe' / "{sample}.R2.fastq.gz"),
+        json = trim_dir / 'pe' / "{sample}_fastp.json",
+        html = trim_dir / 'pe' / "{sample}_fastp.html"
     conda:
         "envs/preprocessing.yml"
     params:
@@ -170,15 +172,14 @@ rule fastp_pe:
 ################################
 ### Alignment of reads: STAR ###
 ################################
+STAR_index = genome_dir / "STAR_index"
 
 if common_config["platform"] =="TempO-Seq":
-    STAR_index = genome_dir / "STAR_index"
     STAR_insertion_deletion_penalty = -1000000 # STAR scoring penalty for deletion/insertion, set by biospyder
     STAR_genomeSAindexNbases = 4 # Non-default as specified by BioSpyder
     STAR_multimap_nmax = 1
     STAR_mismatch_nmax = 2
 else:
-    STAR_index = genome_dir / "STAR_index"
     STAR_insertion_deletion_penalty = -2 # STAR defaults
     STAR_genomeSAindexNbases = 14 # STAR defaults
     STAR_multimap_nmax = 20
@@ -189,7 +190,6 @@ rule STAR_make_index:
     input:
         genome = ancient(genome_dir / pipeline_config["genome_filename"])
     params:
-        index_dir = STAR_index,
         annotations = genome_dir / pipeline_config["annotation_filename"],
         overhang = 100,
         suffix_array_sparsity = 2, # bigger for smaller (RAM), slower indexing
@@ -205,8 +205,8 @@ rule STAR_make_index:
     shell:
         '''
 		STAR \
-    --runMode genomeGenerate \
-		--genomeDir {params.index_dir} \
+        --runMode genomeGenerate \
+		--genomeDir {STAR_index} \
 		--genomeFastaFiles {input.genome} \
 		--sjdbGTFfile {params.annotations} \
 		--sjdbOverhang {params.overhang} \
@@ -230,12 +230,10 @@ rule STAR_load:
         touch("genome.loaded")
     conda:
         "envs/preprocessing.yml"
-    params:
-        index = STAR_index
     benchmark: log_dir / "benchmark.STAR_load.txt"
     shell:
         '''
-        STAR --genomeLoad LoadAndExit --genomeDir {params.index}
+        STAR --genomeLoad LoadAndExit --genomeDir {STAR_index}
         rm -f genome.removed
         '''
 
@@ -244,81 +242,103 @@ rule STAR_all:
         expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
         "genome.removed"
 
-if pipeline_config["mode"] == "se":
-    rule STAR:
-        input:
-            loaded_index = "genome.loaded",
-            R1 = trim_dir / "{sample}.fastq.gz"
-        output:
-            sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
-            toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
-        conda:
-            "envs/preprocessing.yml"
-        params:
-            index = STAR_index,
-            penalty = STAR_insertion_deletion_penalty,
-            multimap_nmax = STAR_multimap_nmax,
-            mismatch_nmax = STAR_mismatch_nmax,
-            annotations = genome_dir / pipeline_config["annotation_filename"],
-            folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
-        benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
-        threads: num_threads
-        shell:
-            '''
-            [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
-            STAR \
-                --alignEndsType EndToEnd \
-                --genomeLoad LoadAndKeep \
-                --runThreadN {threads} \
-                --genomeDir {params.index} \
-                --readFilesIn {input.R1} \
-                --quantMode TranscriptomeSAM \
-                --limitBAMsortRAM=10737418240 \
-                --outTmpDir /tmp/{params.folder} \
-                --scoreDelOpen {params.penalty} \
-                --scoreInsOpen {params.penalty} \
-                --outFilterMultimapNmax {params.multimap_nmax} \
-                --outFilterMismatchNmax {params.mismatch_nmax} \
-                --readFilesCommand zcat \
-                --outFileNamePrefix {params.bam_prefix} \
-                --outSAMtype BAM SortedByCoordinate
-            '''
-
-if pipeline_config["mode"] == "pe":
-    rule STAR:
-        input:
-            loaded_index = "genome.loaded",
-            R1 = trim_dir / "{sample}.R1.fastq.gz",
-            R2 = trim_dir / "{sample}.R2.fastq.gz"
-        output:
-            sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
-            toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
-        conda:
-            "envs/preprocessing.yml"
-        params:
-            index = STAR_index,
-            annotations = genome_dir / pipeline_config["annotation_filename"],
-            folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
-        resources:
-            load=100
-        benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
-        threads: num_threads
-        shell:
-            '''
-            [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
-            STAR \
+rule STAR_se:
+    input:
+        loaded_index = "genome.loaded",
+        R1 = trim_dir / 'se' / "{sample}.fastq.gz"
+    output:
+        sortedByCoord = align_dir / 'se' / "{sample}.Aligned.sortedByCoord.out.bam",
+        toTranscriptome = align_dir / 'se' / "{sample}.Aligned.toTranscriptome.out.bam"
+    conda:
+        "envs/preprocessing.yml"
+    params:
+        penalty = STAR_insertion_deletion_penalty,
+        multimap_nmax = STAR_multimap_nmax,
+        mismatch_nmax = STAR_mismatch_nmax,
+        annotations = genome_dir / pipeline_config["annotation_filename"],
+        tmp_dir = lambda wildcards: Path(tmp_dir, wildcards.sample),
+        bam_prefix = lambda wildcards : align_dir / 'se' / f"{wildcards.sample}."
+    benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
+    threads: num_threads
+    shell:
+        '''
+        [ -e {params.tmp_dir} ] && rm -r {params.tmp_dir}
+        STAR \
+            --alignEndsType EndToEnd \
             --genomeLoad LoadAndKeep \
             --runThreadN {threads} \
-            --genomeDir {params.index} \
-            --readFilesIn {input.R1} {input.R2} \
+            --genomeDir {STAR_index} \
+            --readFilesIn {input.R1} \
             --quantMode TranscriptomeSAM \
+            --limitBAMsortRAM=10737418240 \
+            --outTmpDir {params.tmp_dir} \
+            --scoreDelOpen {params.penalty} \
+            --scoreInsOpen {params.penalty} \
+            --outFilterMultimapNmax {params.multimap_nmax} \
+            --outFilterMismatchNmax {params.mismatch_nmax} \
             --readFilesCommand zcat \
             --outFileNamePrefix {params.bam_prefix} \
-            --outTmpDir /tmp/{params.folder} \
             --outSAMtype BAM SortedByCoordinate
-            '''
+        '''
+
+rule STAR_pe:
+    input:
+        loaded_index = "genome.loaded",
+        R1 = trim_dir / 'pe' / "{sample}.R1.fastq.gz",
+        R2 = trim_dir / 'pe' / "{sample}.R2.fastq.gz"
+    output:
+        sortedByCoord = align_dir / 'pe' / "{sample}.Aligned.sortedByCoord.out.bam",
+        toTranscriptome = align_dir / 'pe' / "{sample}.Aligned.toTranscriptome.out.bam"
+    conda:
+        "envs/preprocessing.yml"
+    params:
+        annotations = genome_dir / pipeline_config["annotation_filename"],
+        tmp_dir = lambda wildcards: Path(tmp_dir, wildcards.sample),
+        bam_prefix = lambda wildcards : align_dir / 'pe' / f"{wildcards.sample}."
+    resources:
+        load=100
+    benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
+    threads: num_threads
+    shell:
+        '''
+        [ -e {params.tmp_dir} ] && rm -r {params.tmp_dir}
+        STAR \
+        --genomeLoad LoadAndKeep \
+        --runThreadN {threads} \
+        --genomeDir {STAR_index} \
+        --readFilesIn {input.R1} {input.R2} \
+        --quantMode TranscriptomeSAM \
+        --readFilesCommand zcat \
+        --outFileNamePrefix {params.bam_prefix} \
+        --outTmpDir {params.tmp_dir} \
+        --outSAMtype BAM SortedByCoordinate
+        '''
+
+rule select_bam_outputs:
+    input:
+        sortedByCoord = rules.STAR_se.output.sortedByCoord if pipeline_config['mode'] == 'se' else rules.STAR_pe.output.sortedByCoord,
+        toTranscriptome = rules.STAR_se.output.toTranscriptome if pipeline_config['mode'] == 'se' else rules.STAR_pe.output.toTranscriptome
+    output:
+        sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
+        toTranscriptome = align_dir / "{sample}.Aligned.toTranscriptome.out.bam"
+    shell:
+        '''
+        ln {input.sortedByCoord} {output.sortedByCoord}
+        ln {input.toTranscriptome} {output.toTranscriptome}
+        '''
+
+rule select_fastp_outputs:
+    input:
+        json = rules.fastp_pe.output.json if pipeline_config['mode'] == 'pe' else rules.fastp_se.output.json,
+        html = rules.fastp_pe.output.html if pipeline_config['mode'] == 'pe' else rules.fastp_se.output.html
+    output:
+        json = trim_dir / "{sample}_fastp.json",
+        html = trim_dir / "{sample}_fastp.html"
+    shell:
+        '''
+        ln {input.json} {output.json}
+        ln {input.html} {output.html}
+        '''
 
 rule STAR_unload:
     input:
@@ -337,177 +357,152 @@ rule STAR_unload:
         rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam
         '''
 
-
-
 ########################
 # Quantification QuasR #
 #   (TempOSeq only)    #
 ########################
 
-if common_config["platform"] =="TempO-Seq":
-    rule index_all:
-        input:
-            expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
+rule index_all:
+    input:
+        expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES)
 
-    rule samtools_index:
-        input:
-            aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam"
-        output:
-            index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"
-        conda:
-            "envs/temposeqr.yml"
-        benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
-        shell:
-            '''
-            samtools index {input.aligned}
-            '''
+rule samtools_index:
+    input:
+        aligned = align_dir / "{sample}.Aligned.sortedByCoord.out.bam"
+    output:
+        index = align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"
+    conda:
+        "envs/temposeqr.yml"
+    benchmark: log_dir / "benchmark.{sample}.samtools_index.txt"
+    shell:
+        '''
+        samtools index {input.aligned}
+        '''
 
-    rule quantification_input:
-        input:
-            list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES))
-        output:
-            samplefile = processed_dir / "samplefile.txt"
-        benchmark: log_dir / "benchmark.quantification_input.txt"
-        run:
-            print("samples: " + str(SAMPLES))
-            print("filenames: " + str(input))
-            df = pd.DataFrame({"FileName": input, "SampleName": SAMPLES})
-            df.to_csv(output.samplefile, index=False, sep='\t')
+rule quantification_input:
+    input:
+        list(expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES))
+    output:
+        samplefile = processed_dir / "samplefile.txt"
+    benchmark: log_dir / "benchmark.quantification_input.txt"
+    run:
+        print("samples: " + str(SAMPLES))
+        print("filenames: " + str(input))
+        df = pd.DataFrame({"FileName": input, "SampleName": SAMPLES})
+        df.to_csv(output.samplefile, index=False, sep='\t')
 
-    rule quantification:
-        input:
-            aligned = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES),
-            index = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES),
-            samplefile = processed_dir / "samplefile.txt"
-        params:
-            annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
-            threads = workflow.cores,
-            genome = str(genome_dir / pipeline_config["genome_filename"])
-        threads: workflow.cores
-        output:
-            count_table = processed_dir / "count_table.tsv"
-        conda:
-            "envs/temposeqr.yml"
-        benchmark: log_dir / "benchmark.quantification.txt"
-        shell:
-            '''
-            Rscript \
-            {temposeq_quantification_script} \
-            {input.samplefile} \
-            {params.genome} \
-            {params.annotfile} \
-            {output.count_table} \
-            {params.threads}
-            '''
-
-
+rule quantification:
+    input:
+        aligned = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam"), sample=SAMPLES),
+        index = expand(str(align_dir / "{sample}.Aligned.sortedByCoord.out.bam.bai"), sample=SAMPLES),
+        samplefile = processed_dir / "samplefile.txt"
+    params:
+        annotfile = str(genome_dir / pipeline_config["annotation_filename"]),
+        genome = str(genome_dir / pipeline_config["genome_filename"]),
+        temposeq_quantification_script = main_dir / "scripts/temposeq/temposeq_quantification.R"
+    threads: 2
+    output:
+        count_table = processed_dir / 'TempO-Seq' / "count_table.tsv"
+    conda:
+        "envs/temposeqr.yml"
+    benchmark: log_dir / "benchmark.quantification.txt"
+    shell:
+        '''
+        Rscript \
+        {params.temposeq_quantification_script} \
+        {input.samplefile} \
+        {params.genome} \
+        {params.annotfile} \
+        {output.count_table} \
+        {threads}
+        '''
 
 #######################
 # QUANTIFICATION RSEM #
 #   (RNA-seq only)    #
 #######################
 
-if common_config["platform"] =="RNA-Seq":
-    rule RSEM_make_index:
-        input:
-            genome = genome_dir / pipeline_config["genome_filename"]
-        params:
-            annotations = genome_dir / pipeline_config["annotation_filename"],
-            genome_name = pipeline_config["genome_name"],
-            genome_dir = pipeline_config["genomedir"]
-        output:
-            directory(genome_dir / "RSEM_index")
-        conda:
-            "envs/preprocessing.yml"
-        benchmark: log_dir / "benchmark.RSEM_make_index.txt"
-        shell:
-            '''
-            mkdir {params.genome_dir}/RSEM_index
-            rsem-prepare-reference --gtf {params.annotations} {input.genome} {output}/{params.genome_name}
-            '''
+rule RSEM_make_index:
+    input:
+        genome = genome_dir / pipeline_config["genome_filename"]
+    params:
+        annotations = genome_dir / pipeline_config["annotation_filename"],
+        genome_name = pipeline_config["genome_name"],
+        genome_dir = pipeline_config["genomedir"]
+    output:
+        directory(genome_dir / "RSEM_index")
+    conda:
+        "envs/preprocessing.yml"
+    benchmark: log_dir / "benchmark.RSEM_make_index.txt"
+    shell:
+        '''
+        mkdir {params.genome_dir}/RSEM_index
+        rsem-prepare-reference --gtf {params.annotations} {input.genome} {output}/{params.genome_name}
+        '''
 
-    if pipeline_config["mode"] == "pe":
-        rule RSEM:
-            input:
-                bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
-                index = genome_dir / "RSEM_index"
-            output:
-                isoforms = quant_dir / "{sample}.isoforms.results",
-                genes = quant_dir / "{sample}.genes.results"
-            conda:
-                "envs/preprocessing.yml"
-            params:
-                threads = workflow.cores,
-                output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = pipeline_config["genome_name"]
-            benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
-            threads: workflow.cores
-            shell:
-                '''
-                rsem-calculate-expression \
-                -p {params.threads} \
-                --paired-end \
-                --bam {input.bam} \
-                --no-bam-output \
-                {input.index}/{params.index_name} \
-                {params.output_prefix}
-                '''
+rule RSEM:
+    input:
+        bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
+        index = genome_dir / "RSEM_index"
+    output:
+        isoforms = quant_dir / "{sample}.isoforms.results",
+        genes = quant_dir / "{sample}.genes.results"
+    conda:
+        "envs/preprocessing.yml"
+    params:
+        threads = workflow.cores,
+        output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
+        index_name = pipeline_config["genome_name"],
+        is_paired_end = lambda wildcards: '--paired-end' if common_config['mode'] == 'pe' else ''
+    benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
+    threads: workflow.cores
+    shell:
+        '''
+        rsem-calculate-expression \
+        {params.is_paired_end} \
+        -p {params.threads} \
+        --bam {input.bam} \
+        --no-bam-output \
+        {input.index}/{params.index_name} \
+        {params.output_prefix}
+        '''
 
-    if pipeline_config["mode"] == "se":
-        rule RSEM:
-            input:
-                bam = align_dir / "{sample}.Aligned.toTranscriptome.out.bam",
-                index = genome_dir / "RSEM_index"
-            output:
-                isoforms = quant_dir / "{sample}.isoforms.results",
-                genes = quant_dir / "{sample}.genes.results"
-            conda:
-                "envs/preprocessing.yml"
-            params:
-                threads = workflow.cores,
-                output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
-                index_name = pipeline_config["genome_name"]
-            benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
-            threads: workflow.cores
-            shell:
-                '''
-                rsem-calculate-expression \
-                -p {params.threads} \
-                --bam {input.bam} \
-                --no-bam-output \
-                {input.index}/{params.index_name} \
-                {params.output_prefix}
-                '''
-
-    rule counts_matrix:
-        input:
-            genes = expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
-            isoforms = expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
-        output:
-            genes = processed_dir / "count_table.tsv",
-            isoforms = processed_dir / "isoforms_table.tsv"
-        conda:
-            "envs/preprocessing.yml"
-        benchmark: log_dir / "benchmark.counts_matrix.txt"
-        shell:
-            '''
-            rsem-generate-data-matrix {input.genes} > {output.genes}
-            sed -i 's/\.genes.results//g' {output.genes}
-            sed -i 's|{quant_dir}/||g' {output.genes}
-            sed -i 's/"//g' {output.genes}
-            rsem-generate-data-matrix {input.isoforms} > {output.isoforms}
-            sed -i 's/\.isoforms.results//g' {output.isoforms}
-            sed -i 's|{quant_dir}/||g' {output.isoforms}
-            sed -i 's/"//g' {output.isoforms}
-            '''
+rule counts_matrix:
+    input:
+        genes = expand(str(quant_dir / "{sample}.genes.results"), sample=SAMPLES),
+        isoforms = expand(str(quant_dir / "{sample}.isoforms.results"), sample=SAMPLES)
+    output:
+        genes = processed_dir / 'RNA-Seq' / "count_table.tsv",
+        isoforms = processed_dir / "isoforms_table.tsv"
+    conda:
+        "envs/preprocessing.yml"
+    benchmark: log_dir / "benchmark.counts_matrix.txt"
+    shell:
+        '''
+        rsem-generate-data-matrix {input.genes} > {output.genes}
+        sed -i 's/\.genes.results//g' {output.genes}
+        sed -i 's|{quant_dir}/||g' {output.genes}
+        sed -i 's/"//g' {output.genes}
+        rsem-generate-data-matrix {input.isoforms} > {output.isoforms}
+        sed -i 's/\.isoforms.results//g' {output.isoforms}
+        sed -i 's|{quant_dir}/||g' {output.isoforms}
+        sed -i 's/"//g' {output.isoforms}
+        '''
 
 
-
+rule select_count_table_output:
+    input:
+        TSV = processed_dir / f'{common_config["platform"]}' / "count_table.tsv"
+    output:
+        TSV = processed_dir / "count_table.tsv"
+    shell:
+        '''
+        mv {input.TSV} {output.TSV}
+        '''
 
 ###############
 ### MultiQC ###
 ###############
-
 
 rule multiqc:
     message: "running multiqc for temposeq data"
@@ -589,8 +584,6 @@ rule deseq_reports:
         rm DESeq2_complete
         Rscript scripts/render_DESeq2_report.parallel.R
         '''
-
-
 
 ###############
 ### Cleanup ###
