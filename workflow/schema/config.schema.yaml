@@ -199,6 +199,7 @@ properties:
           - string
           - 'null'
       wikipathways_filename:
+        type:
           - string
           - 'null'
       nBestFeatures:
