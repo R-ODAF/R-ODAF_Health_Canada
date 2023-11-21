@@ -129,7 +129,9 @@ subset_metadata <- function(exp_metadata, design, contrasts, current_facet, curr
     if (params$strict_contrasts == T) {
         contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
     }
-    exp_metadata_subset <- exp_metadata %>% dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) )
+    exp_metadata_subset <- exp_metadata %>%
+      dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) ) %>%
+      dplyr::filter(!!sym(current_facet) %in% current_filter)
     # relevel the design and interesting groups
     exp_metadata_subset[[design]] <- factor(exp_metadata_subset[[design]],
                                             levels = unique(unlist(contrasts_subset)),
