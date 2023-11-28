@@ -130,8 +130,13 @@ subset_metadata <- function(exp_metadata, design, contrasts, current_facet, curr
         contrasts_subset <- contrasts_subset %>% dplyr::filter(V2 %in% contrasts_to_filter)
     }
     exp_metadata_subset <- exp_metadata %>%
-      dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) ) %>%
-      dplyr::filter(!!sym(current_facet) %in% current_filter)
+      dplyr::filter(!!sym(design) %in% (unlist(contrasts_subset) %>% unique()) ) # %>%
+      # dplyr::filter(!!sym(current_facet) %in% current_filter) 
+        # The line above was added to deal with an edge case where samples were not properly filtered because current_facet wasn't in the contrast names
+        # That edge case is uncommon and there are probably easier ways to deal with it
+        # Including the commented dplyr code above breaks the analysis if controls aren't matched by chemical name
+        # Ex. works for BPA_10 vs BPA_0 (as in test data), but not for BPA_10 vs DMSO
+    
     # relevel the design and interesting groups
     exp_metadata_subset[[design]] <- factor(exp_metadata_subset[[design]],
                                             levels = unique(unlist(contrasts_subset)),
