@@ -1,15 +1,15 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "Default"    # Change depending on your project name
-  project_name: "Your name here" 
+  project_title: "Test"    # Change depending on your project name
+  project_name: "Name" 
   project_description: null # description of project for report, optional
-  batch_var: "batch"          # For example, multiple plates
+  batch_var: "sample_plate"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
-  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  celltype: "Some cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
@@ -30,8 +30,8 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
-  biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  biospyder_dbs: "./unify_temposeq_manifests/output_manifests"
+  biospyder_manifest_file:  "Human_S1500_1.2_standardized.csv"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
@@ -76,6 +76,7 @@ startTime <- Sys.time()
 library('clusterProfiler')
 library('enrichplot')
 
+source(here::here("scripts","setup_functions.R"), local = TRUE)
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 source(here::here("scripts","data_functions.R"), local = TRUE)
 
@@ -442,15 +443,18 @@ for (i in seq_along(contrasts)) {
 This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
 
 ```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
+
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
+bg_genes <-read.gmt("~/storage/LearnPipline/R-ODAF_Health_Canada/c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt") 
+
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
                                 id_table_entrez,
                                 by = "Feature_ID")
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
-  names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
+  names(foldChanges) <- DEGs_full %>% dplyr::pull(Gene_Symbol.x)
   foldChanges <- foldChanges %>% sort() %>% rev()
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
   if (length(foldChanges) < 10) {
@@ -458,7 +462,7 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
     next
   }
-  kk <- gseKEGG(foldChanges, keyType = "ncbi-geneid", organism = species_data$kegg_organism)
+  kk <- GSEA(foldChanges, pvalueCutoff = 0.05, TERM2GENE = bg_genes,)
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
   gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
