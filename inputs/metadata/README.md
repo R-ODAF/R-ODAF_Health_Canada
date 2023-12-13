@@ -1,9 +1,8 @@
 # Metadata
 
-This folder should contain at least the following two files:  
+This folder should contain at least the following file:  
 
-1. metadata.txt  
-2. contrasts.txt  
+metadata.txt  
 
 Metadata is information about your samples. One column should be a unique identifier, and should be labelled sample_id. Any additional columns should be descriptive information about the samples.
 
