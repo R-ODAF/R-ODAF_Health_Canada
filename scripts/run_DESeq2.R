@@ -17,7 +17,7 @@ source(here::here("scripts","DESeq_functions.R"))
 # SETUP
 ##############################################################################################
 
-config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
 params <- c(config$common, config$DESeq2)
@@ -56,7 +56,7 @@ check_required_params(params)
 
 # Identify where metadata can be found
 MetadataFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
-ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
+ContrastsFile <- file.path(paths$contrasts, "contrasts.txt")
 
 sample_count_metadata <- list()
 
