@@ -36,17 +36,16 @@
 # R Environment Variables
 .Renviron
 
-# snakemake stuff
+# Snakemake stuff
 .snakemake
 *.log
 
 # Python stuff
 *.pyc
 
-# Output directory
-output/
 
 # Custom
+## Sequence files
 *fq
 *fq.gz
 *fastq
@@ -56,28 +55,27 @@ output/
 *fasta
 *bam
 *sam
-*results
-DEG_output*
-reports
-paths.txt
+*.bai
+
+## Inputs
 *metadata.txt
 *contrasts.txt
+*config.yaml
+
+## Outputs
+output/
 count_table*.csv
-./data/raw
-./data/processed/*
-data/metadata/metadata.txt
-data/metadata/contrasts.txt
-data/metadata/metadata.QC_applied.txt
-data/processed/*
-data/rnaseq
-data/temposeq
-/logs/
 *metadata.QC_applied.txt
+/logs/
+*.pdf
+*.html
+
 TODO.txt
-data/metadata/metadata.QC_applied.txt
+
 run.sh
 preprocessing.txt
-config/config.yaml
+
+## Misc
 *Log.out
 *Log.progress.out
 *Log.final.out
@@ -87,24 +85,14 @@ config/config.yaml
 *.cnt
 *_table.txt
 .~lock*
-count_table.tsv
-isoforms_table.tsv
-MultiQC_Report.html
-MultiQC_Report_data.zip
-*fastp.html
-*fastp.json
-DESeq2_report_new.html
+
 extra_stats_report.html
 *.png
-*.out
-*.out.tab
-*.bam
-*.bai
+
+# Snakemake dummy files
 genome.loaded
 genome.removed
-*.pdf
-*.html
-analysis*
+analysis_complete
+
 *.bak
 *remove.txt
-data/raw/run_folders.txt
