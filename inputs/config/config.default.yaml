@@ -21,13 +21,13 @@ common:
 ###### Alignment and processing pipeline parameters
 
 pipeline:
-  genomedir: ~/shared/dbs/biospyder/humansurrogate2_0/ # directory where genone information can be found (the files below should be in this directory)
+  genomedir: ~/shared/dbs/biospyder/humansurrogate2_0/ # directory where genome information can be found (the files below should be in this directory)
   genome_filename: humansurrogate2_0.fa # filename for genome
   annotation_filename: humansurrogate2_0.gtf # filename for gene annotations
   genome_name: "S1500_2.0" # used for labeling genome index files
-  sample_id: "Sample_ID" # header for the column for 'sample id' in the metadata file. Fasta files should be named sampleid.fa.gz
+  sample_id: "sample_ID" # header for the column for sample identifier in the metadata file.
   mode: se # one of 'se' (single end) or 'pe' (paired end)
-  threads: 8 # number of threads to use, for multi-threaded programs
+  threads: 8 # number of threads to use for multi-threaded programs
 
 ###### QC parameters
 QC:
@@ -51,6 +51,7 @@ QC:
 
 ###### DESeq2 parameters
 DESeq2:
+  analysis_name: "default"  # short string identifying analysis settings. This will appear in the analysis directory and file names
   species: "human"                 # one of human, mouse, rat, hamster
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
