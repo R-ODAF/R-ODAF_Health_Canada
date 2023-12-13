@@ -4,6 +4,7 @@ params:
   project_title: "GeneTox21"    # Change depending on your project name
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
