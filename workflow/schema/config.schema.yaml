@@ -1,0 +1,277 @@
+$schema: 'https://json-schema.org/draft/2020-12/schema'
+type: object
+properties:
+  common:
+    type: object
+    properties:
+      projectdir:
+        type:
+          - 'null'
+          - string
+      project_title:
+        type: string
+      project_name:
+        type: string
+      project_description:
+        type:
+          - 'null'
+          - string
+      batch_var:
+        type:
+          - string
+          - 'null'
+      dose:
+        type:
+          - string
+          - 'null'
+      platform:
+        type: string
+        enum:
+          - TempO-Seq
+          - RNA-Seq
+      nmr_threshold:
+        type: integer
+        minimum: 0
+      write_additional_output:
+        type: boolean
+      celltype:
+        type: string
+      units:
+        type: string
+      biospyder_dbs:
+        type: string
+      biospyder_manifest_file:
+        type: string
+    required:
+      - projectdir
+      - project_title
+      - project_name
+      - project_description
+      - batch_var
+      - dose
+      - platform
+      - nmr_threshold
+      - write_additional_output
+      - celltype
+      - units
+      - biospyder_dbs
+      - biospyder_manifest_file
+  pipeline:
+    type: object
+    properties:
+      genomedir:
+        type: string
+      genome_filename:
+        type: string
+      annotation_filename:
+        type: string
+      genome_name:
+        type: string
+      sample_id:
+        type: string
+      mode:
+        type: string
+        enum:
+          - se
+          - pe
+      threads:
+        type: integer
+        minimum: 1
+    required:
+      - genomedir
+      - genome_filename
+      - annotation_filename
+      - genome_name
+      - sample_id
+      - mode
+      - threads
+  QC:
+    type: object
+    properties:
+      clust_method:
+        type: string
+      tree_height_cutoff:
+        type: number
+        minimum: 0
+      dendro_color_by:
+        type: string
+      align_threshold:
+        type: number
+        minimum: 0
+        maximum: 1
+      gini_cutoff:
+        type: number
+        minimum: 0
+        maximum: 1
+      exp_groups:
+        type: object
+      treatment_var:
+        type: string
+      collapse_replicates:
+        anyOf:
+          - type: boolean
+          - type: string
+            enum: ["T", "F"]
+      technical_control:
+        type: string
+      reference_rna:
+        type: string
+      solvent_control:
+        type: string
+    required:
+      - clust_method
+      - tree_height_cutoff
+      - dendro_color_by
+      - align_threshold
+      - gini_cutoff
+      - exp_groups
+      - treatment_var
+      - collapse_replicates
+  DESeq2:
+    type: object
+    properties:
+      analysis_name:
+        type:
+          - string
+          - 'null'
+      species:
+        type: string
+        enum:
+          - human
+          - mouse
+          - rat
+          - hamster
+      design:
+        type: string
+      intgroup:
+        type: array
+        items:
+          type: string
+      intgroup_to_plot:
+        type: string
+      formula_override:
+        type:
+          - string
+          - 'null'
+      group_facet:
+        type:
+          - string
+          - 'null'
+      group_filter:
+        type:
+          - string
+          - 'null'
+      display_group_facet:
+        type:
+          - string
+          - 'null'
+      display_group_filter:
+        type:
+          - string
+          - 'null'
+      sortcol:
+        type:
+          - string
+          - 'null'
+      lenient_contrasts:
+        type: boolean
+      strict_contrasts:
+        type: boolean
+      exclude_samples:
+        type:
+          - array
+          - 'null'
+      exclude_groups:
+        type:
+          - array
+          - 'null'
+      include_only_column:
+        type:
+          - string
+          - 'null'
+      include_only_group:
+        type:
+          - string
+          - 'null'
+      cpus:
+        type: integer
+        minimum: 1
+      run_pathway_analysis:
+        type: boolean
+      wikipathways_directory:
+        type: 
+          - string
+          - 'null'
+      wikipathways_filename:
+        type:
+          - string
+          - 'null'
+      nBestFeatures:
+        type: integer
+        minimum: 1
+      nBest:
+        type: integer
+        minimum: 1
+      nHeatmap:
+        type: integer
+        minimum: 1
+      nHeatmapDEGs:
+        type: integer
+        minimum: 1
+      cooks:
+        type:
+          - boolean
+          - integer
+      filter_gene_counts:
+        type: boolean
+      generate_main_report:
+        type: boolean
+      generate_stats_report:
+        type: boolean
+      generate_data_explorer_report:
+        type: boolean
+      generate_go_pathway_report:
+        type: boolean
+      output_digits:
+        type: integer
+        minimum: 1
+      parallel:
+        type: boolean
+    required:
+      - species
+      - design
+      - intgroup
+      - intgroup_to_plot
+      - formula_override
+      - group_facet
+      - group_filter
+      - display_group_facet
+      - display_group_filter
+      - sortcol
+      - lenient_contrasts
+      - strict_contrasts
+      - exclude_samples
+      - exclude_groups
+      - include_only_column
+      - include_only_group
+      - cpus
+      - run_pathway_analysis
+      - wikipathways_directory
+      - wikipathways_filename
+      - nBestFeatures
+      - nBest
+      - nHeatmap
+      - nHeatmapDEGs
+      - cooks
+      - filter_gene_counts
+      - generate_main_report
+      - generate_stats_report
+      - generate_data_explorer_report
+      - generate_go_pathway_report
+      - output_digits
+      - parallel
+required:
+  - common
+  - pipeline
+  - QC
+  - DESeq2
