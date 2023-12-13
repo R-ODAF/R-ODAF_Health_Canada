@@ -26,9 +26,7 @@ assignInNamespace("clean_tmpfiles", clean_tmpfiles_mod, ns = "rmarkdown")
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","setup_functions.R"))
 
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
 params <- c(config$common, config$DESeq2)
@@ -56,7 +54,7 @@ mergedDEGsList <- mergedDEGsList
 detach()
 
 # Identify where metadata can be found
-exp_metadata_file <- file.path(projectdir, "data/metadata/metadata.QC_applied.txt")
+exp_metadata_file <- file.path(paths$metadata, "metadata.QC_applied.txt")
 
 # Read in metadata
 exp_metadata <- read.delim(exp_metadata_file,
@@ -66,7 +64,6 @@ exp_metadata <- read.delim(exp_metadata_file,
                           quote = "\"",
                           row.names = 1) # Column must have unique IDs!!
 exp_metadata$original_names <- rownames(exp_metadata)
-
 
 
 # Generic function to build and filter facets
@@ -114,8 +111,8 @@ paths <- set_up_paths_3(paths,params,display_facets)
 
 
 # Make directory for DESeq2 Reports
-report_dir <- file.path(projectdir, "analysis", "DEG_reports")
-deglist_dir <- file.path(projectdir, "analysis", "DEG_lists")
+report_dir <- file.path(paths$results, "DEG_reports")
+deglist_dir <- file.path(paths$results, "DEG_lists")
 if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
@@ -260,5 +257,5 @@ if (!is.na(params$group_facet)) {
 system("rm -rf /tmp/intermediates_*")
 
 # save config and contrasts file too
-file.copy(file.path(paths$root, "config", "config.yaml"), paths$RData)
-file.copy(file.path(paths$metadata,"contrasts.txt"), paths$RData)
+file.copy(file.path(paths$inputs, "config", "config.yaml"), paths$RData)
+file.copy(file.path(paths$contrasts,"contrasts.txt"), paths$RData)
