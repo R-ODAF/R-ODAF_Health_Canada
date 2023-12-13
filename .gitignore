@@ -43,6 +43,8 @@
 # Python stuff
 *.pyc
 
+# Output directory
+output/
 
 # Custom
 *fq
