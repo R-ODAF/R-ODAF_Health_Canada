@@ -13,7 +13,7 @@ set_up_paths <- function(params) {
     paths$processed <- file.path(paths$output, "processed")
     paths$metadata <- file.path(paths$inputs, "metadata")
     paths$contrasts <- file.path(paths$inputs, "contrasts")
-    paths$results <- file.path(paths$output, "analysis", "most_recent_analysis")
+    paths$results <- file.path(paths$output, "analysis", results_location_arg)
     paths$BMD_output <- file.path(paths$results, "BMD_and_biomarker_files")
     paths$RData <- file.path(paths$results, "RData")
     paths$pathway_analysis <- file.path(paths$results, "pathway_analysis")

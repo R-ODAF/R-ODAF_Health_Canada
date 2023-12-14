@@ -23,7 +23,23 @@ single_facet_constant = "single_facet_constant_12345" # Used internally; don't h
 
 assignInNamespace("clean_tmpfiles", clean_tmpfiles_mod, ns = "rmarkdown")
 
-source(here::here("scripts","file_functions.R"))
+# Parse command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+
+# Check if at least one argument is provided
+if (length(args) > 0) {
+  # Assume the first argument is the new location
+  results_location_arg <- args[1]
+
+  # Source functions and pass along analysis directory argument
+  source(here::here("scripts","file_functions.R"))
+  
+} else {
+  cat("Error: Missing argument. Provide the analysis directory name as an argument.\n")
+}
+
+
 source(here::here("scripts","setup_functions.R"))
 
 config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
