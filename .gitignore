@@ -93,6 +93,7 @@ extra_stats_report.html
 genome.loaded
 genome.removed
 analysis_complete
+reports_complete
 
 *.bak
 *remove.txt
