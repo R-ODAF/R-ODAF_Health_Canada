@@ -170,7 +170,7 @@ This workflow is modularized, so you can run (or re-run) some sections independe
 - you want to try differential expression analysis with various parameters
 
 
-[placeholder for image]
+![pipeline_image](pipeline_figure.png)
 
 ### Performing a dry run
 We strongly recommend using snakemake's dry run functionality to check for errors before beginning an actual run. (See https://snakemake.readthedocs.io/en/v5.1.5/executable.html).
