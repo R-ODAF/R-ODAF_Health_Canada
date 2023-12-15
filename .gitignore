@@ -87,7 +87,7 @@ preprocessing.txt
 .~lock*
 
 extra_stats_report.html
-*.png
+output/*.png
 
 # Snakemake dummy files
 genome.loaded
