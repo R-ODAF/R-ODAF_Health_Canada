@@ -9,9 +9,24 @@ suppressMessages(library('BiocParallel'))
 
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
-source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
+
+# Parse command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+
+# Check if at least one argument is provided
+if (length(args) > 0) {
+  # Assume the first argument is the new location
+  results_location_arg <- args[1]
+
+  # Source functions and pass along analysis directory argument
+  source(here::here("scripts","file_functions.R"))
+  
+} else {
+  cat("Error: Missing argument. Provide the analysis directory name as an argument.\n")
+}
 
 ##############################################################################################
 # SETUP

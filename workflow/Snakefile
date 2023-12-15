@@ -3,7 +3,7 @@ include: "modules/1-define.smk"
 
 
 rule all:
-	input: "analysis_complete"
+	input: "reports_complete"
 
 if common_config["platform"] == "TempO-Seq":
 	include: "modules/4-preprocess_temposeq.smk"
