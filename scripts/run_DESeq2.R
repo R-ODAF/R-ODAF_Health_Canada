@@ -25,7 +25,7 @@ if (length(args) > 0) {
   source(here::here("scripts","file_functions.R"))
   
 } else {
-  cat("Error: Missing argument. Provide the analysis directory name as an argument.\n")
+  message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
 
 ##############################################################################################

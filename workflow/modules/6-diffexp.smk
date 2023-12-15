@@ -18,14 +18,12 @@ rule deseq2:
         qc_dir / "details/samples_removed.txt"
     output:
         touch("DESeq2_complete")
-    params:
-        analysis_folder = analysis_folder
     conda:
         "../envs/reports.yml"
     benchmark: log_dir / "benchmark.deseq2.txt"
     shell:
         '''
-        Rscript scripts/run_DESeq2.R {params.analysis_folder}
+        Rscript scripts/run_DESeq2.R {analysis_folder}
         # rm genome.removed
         '''
 
@@ -39,15 +37,13 @@ rule deseq_reports:
         "DESeq2_complete"
     output:
         touch("reports_complete")
-    params:
-        analysis_folder = analysis_folder
     conda:
         "../envs/reports.yml"
     benchmark: log_dir / "benchmark.deseq_report.txt"
     shell:
         '''
         rm DESeq2_complete
-        Rscript scripts/render_DESeq2_report.parallel.R {params.analysis_folder}
+        Rscript scripts/render_DESeq2_report.parallel.R {analysis_folder}
         '''
 
 
