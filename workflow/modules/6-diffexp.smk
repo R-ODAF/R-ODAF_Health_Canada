@@ -4,7 +4,7 @@ include: "1-define.smk"
 # Smk modules 2-5 are not in "include" statements to allow changing deseq2 params and re-running without Snakemake forcing reruns of previous steps
 # Smk module 1 is included because it defines paths used in rules below
 
-# Rule all for if running this module seperately from full pipeline
+# Rule all for if running this module separately from full pipeline
 rule diff_all:
 	input: "reports_complete"
 
