@@ -1,5 +1,10 @@
 include: "1-define.smk"
 
+# NOTE that preprocessing steps (1-4) must be complete before running this step.
+# Smk modules 2-3 are not in "include" statements to allow changing QC params and re-running without Snakemake forcing reruns of previous steps
+# Smk module 1 is included because it defines paths used in rules below
+
+# Rule all for if running this module independently
 rule qc_all:
 	input: qc_dir / "details/samples_removed.txt"
 
@@ -7,7 +12,6 @@ rule qc_all:
 ###############
 ### MultiQC ###
 ###############
-
 
 rule multiqc:
     message: "running multiqc data"
@@ -51,3 +55,6 @@ rule studywideqc:
         '''
         Rscript scripts/render_studywide_QC_report.R
         '''
+
+onerror:
+    print("Preprocessing steps must be completed before running this module.")
