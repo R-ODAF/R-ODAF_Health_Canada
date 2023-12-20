@@ -5,7 +5,7 @@ from snakemake.utils import validate
 
 # load and validate config 
 configfile: "inputs/config/config.yaml"
-config_schema = "../../workflow/schema/config.schema.yaml"
+config_schema = "../schema/config.schema.yaml"
 validate(config, config_schema)
 
 
@@ -31,7 +31,7 @@ metadata_file = metadata_dir / "metadata.txt" # should aready exist
 # Validate metadata file
 meta_pandas = pd.read_table(metadata_file)
 
-validate(meta_pandas, "../../workflow/schema/metadata.schema.yaml")
+validate(meta_pandas, "../schema/metadata.schema.yaml")
 
 # Import and validate sample information
 
