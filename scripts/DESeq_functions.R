@@ -101,7 +101,12 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
 
         compte <- Counts[Filter[,1] == 1,]
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
-
+        
+        #save all genes that are present regardless of counts 
+        dfGenesPassed <- data.frame(Ensembl_Gene_ID = rownames(subset(Filter, Filter[, 1] == 1)))
+        dfGenesFailed <- data.frame(Ensembl_Gene_ID = rownames(subset(Filter, Filter[, 1] == 0)))
+        dfGenes <- rbind(dfGenesPassed, dfGenesFailed)
+        
         intitial_count <- nrow(dds)
         num_relevance_filtered <- nrow(dds) - nrow(Filter)
         message(paste0("Relevance filtering removed ", num_relevance_filtered,
@@ -219,7 +224,7 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
     resListDEGs <- resListDEGs[!sapply(resListDEGs, is.null)]
     
     mergedDEGs <- unique(mergedDEGs)
-    return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
+    return(list(dfGenes=dfGenes,resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
 }
 
 
