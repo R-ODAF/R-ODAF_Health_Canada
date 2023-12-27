@@ -104,7 +104,7 @@ rule fastp_se:
     shell:
         '''
         fastp \
-        --in1 {input.R1} \
+        -i {input.R1} \
         --out1 {output.R1} \
         --json {output.json} \
         --html {output.html} \
@@ -148,7 +148,7 @@ rule fastp_pe:
     shell:
         '''
         fastp \
-        --in1 {input.R1} \
+        -i {input.R1} \
         --in2 {input.R2} \
         --out1 {output.R1} \
         --out2 {output.R2} \
@@ -522,8 +522,8 @@ rule multiqc:
     shell:
         '''
         multiqc \
-        --cl_config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
-        --cl_config "sample_names_replace_exact: True" \
+        --cl-config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+        --cl-config "sample_names_replace_exact: True" \
         --filename MultiQC_Report.html \
         --interactive \
         --sample-names {metadata_file} \
