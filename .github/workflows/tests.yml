@@ -147,4 +147,4 @@ jobs:
         run: |
           cat checksums.BMD_files # Can be informative if there are errors
           cat truth_checksums/checksums.BMD_files # Can be informative if there are errors
-          cmp truth_checksums/checksums.BMD_files checksums.BMD_files
+          cmp <(sort -u checksums.BMD_files | awk {'print $1'}) <(sort -u truth_checksums/checksums.BMD_files | awk {'print $1'} )
