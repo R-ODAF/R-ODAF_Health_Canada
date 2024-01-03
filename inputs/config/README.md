@@ -1,12 +1,22 @@
 # Config file
 
-### Batch variable parameter
+Information from the config file is used throughout this pipeline, both by the Snakemake workflows and in the R scripts that run analyses and generate reports. 
 
-### Manifest file parameter (for Tempo-seq experiments)
+A default file (inputs/config/configs.default.yaml) is provided that contains examples of all the necessary parameters. To copy the default file into a config.yaml file that you can populate with the correct information for your project, run `install.sh` .
 
 
 
-### Genome parameters
+## Parameters
+
+*Detailed explanations of config parameters coming soon* 
+
+### Batch variable
+
+### Manifest file (for Tempo-seq experiments)
+
+
+
+### Genome
 
 You must provide a reference sequence for alignment of the raw reads. For TempO-Seq experiments, these are provided by BioSpyder; for RNA-seq experiments they can be obtained through your favorite database. This is currently beyond the scope of this guide. Ensure you have some type of annotation file (GTF format) available as well, to dictate which sequences in the FASTA file correspond to which genes or probes. These should be used to create a STAR index within the directory where you store your reference genome in FASTA format.
 
