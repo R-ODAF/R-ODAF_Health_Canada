@@ -16,6 +16,7 @@ set_up_paths <- function(params) {
     paths$results <- file.path(paths$output, "analysis", results_location_arg)
     paths$BMD_output <- file.path(paths$results, "BMD_and_biomarker_files")
     paths$RData <- file.path(paths$results, "RData")
+    paths$record <- file.path(paths$results, "Pipeline_record")
     paths$pathway_analysis <- file.path(paths$results, "pathway_analysis")
     lapply(paths, function(x) if(!dir.exists(x)) dir.create(x, recursive = TRUE))
     return(paths)

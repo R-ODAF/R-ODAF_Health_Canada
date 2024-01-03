@@ -273,5 +273,5 @@ if (!is.na(params$group_facet)) {
 system("rm -rf /tmp/intermediates_*")
 
 # save config and contrasts file too
-file.copy(file.path(paths$inputs, "config", "config.yaml"), paths$RData)
-file.copy(file.path(paths$contrasts,"contrasts.txt"), paths$RData)
+file.copy(file.path(paths$inputs, "config", "config.yaml"), paths$record)
+file.copy(file.path(paths$contrasts,"contrasts.txt"), paths$record)

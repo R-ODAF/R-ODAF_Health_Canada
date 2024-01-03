@@ -50,6 +50,8 @@ rule deseq_reports:
         '''
         rm DESeq2_complete
         Rscript scripts/render_DESeq2_report.parallel.R {analysis_folder}
+
+        conda env export > output/analysis/{analysis_folder}/Pipeline_record/reports_env.yml
         '''
 
 onerror:
