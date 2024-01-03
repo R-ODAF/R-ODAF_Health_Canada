@@ -1,6 +1,6 @@
 include: "1-define.smk"
 include: "2-trim.smk"
-include:"3-align.smk"
+include: "3-align.smk"
 
 
 # Rule all for if only running pipeline to this step
