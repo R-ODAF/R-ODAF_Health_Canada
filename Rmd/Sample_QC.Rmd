@@ -115,10 +115,11 @@ solvent_control <- params$solvent_control
 ############################################################################
 paths <- list()
 paths$root <- here::here()
-paths$data <- file.path(paths$root, "data")
-paths$processed <- file.path(paths$data, "processed")
-paths$metadata <- file.path(paths$data, "metadata")
-paths$qc <- file.path(paths$root, "analysis", "QC")
+paths$inputs <- file.path(paths$root, "inputs")
+paths$output <- file.path(paths$root, "output")
+paths$processed <- file.path(paths$output, "processed")
+paths$metadata <- file.path(paths$inputs, "metadata")
+paths$qc <- file.path(paths$output, "QC")
 paths$details <- file.path(paths$qc, "details")
 
 if (!dir.exists(paths$details)) {dir.create(paths$details, recursive = TRUE)}

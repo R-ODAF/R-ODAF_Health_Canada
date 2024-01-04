@@ -7,7 +7,7 @@ source(here::here("scripts","setup_functions.R"))
 
 #Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
 
-config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
 params <- c(config$common, config$QC)
@@ -30,7 +30,7 @@ filename <- paste0("Study-wide_Sample_QC_",
                    params$project_title, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'),
                    ".html")
-out_dir <- file.path(projectdir, "analysis", "QC")
+out_dir <- file.path(projectdir, "output", "QC")
 if (!dir.exists(out_dir)) {
   dir.create(out_dir, recursive = TRUE)
 }

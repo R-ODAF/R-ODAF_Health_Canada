@@ -76,8 +76,7 @@ jobs:
         run: |
           ls -alht # What is in the "working directory"?
           git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
-          rm -r data # Remove existing directory before replacing w/ test data
-          rm -r config # Remove existing directory before replacing w/ test data
+          rm -r inputs # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
       - name: Build snakemake environment
@@ -92,16 +91,16 @@ jobs:
           snakemake --cores 8 --use-conda
       - name: Generate md5sums
         run: |
-          md5sum data/processed/count_table.tsv > checksum.count_table
-          md5sum data/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
-          md5sum analysis/QC/MultiQC_Report_data.zip > checksum.multiQC
-          md5sum analysis/QC/details/QC_per_sample.txt > checksum.QC_per_sample
-          md5sum analysis/DEG_lists/BaP/*.txt > checksums.BaP_DEGs
-          md5sum analysis/DEG_lists/CISP/*.txt > checksums.CISP_DEGs
-          # md5sum analysis/pathway_analysis/BaP/*WikiPathways* > checksums.BaP_pathways
-          # md5sum analysis/pathway_analysis/CISP/* > checksums.CISP_pathways
-          md5sum analysis/BMD_and_biomarker_files/*.txt > checksums.BMD_files
-          md5sum analysis/BMD_and_biomarker_files/*/*.txt >> checksums.BMD_files
+          md5sum output/processed/count_table.tsv > checksum.count_table
+          md5sum inputs/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
+          md5sum output/QC/MultiQC_Report_data.zip > checksum.multiQC
+          md5sum output/QC/details/QC_per_sample.txt > checksum.QC_per_sample
+          md5sum output/analysis/analysis_default_????????-????/DEG_lists/BaP/*.txt > checksums.BaP_DEGs #wildcards for timestamped folder
+          md5sum output/analysis/analysis_default_????????-????/DEG_lists/CISP/*.txt > checksums.CISP_DEGs #wildcards for timestamped folder
+          # md5sum output/analysis/analysis_default_????????-????/pathway_analysis/BaP/*WikiPathways* > checksums.BaP_pathways
+          # md5sum output/analysis/analysis_default_????????-????/pathway_analysis/CISP/* > checksums.CISP_pathways
+          md5sum output/analysis/analysis_default_????????-????/BMD_and_biomarker_files/*.txt > checksums.BMD_files
+          md5sum output/analysis/analysis_default_????????-????/BMD_and_biomarker_files/*/*.txt >> checksums.BMD_files
       - name: Compare pre-processing and QC files to truth set
         run: |
           cmp truth_checksums/checksum.count_table checksum.count_table
@@ -148,4 +147,4 @@ jobs:
         run: |
           cat checksums.BMD_files # Can be informative if there are errors
           cat truth_checksums/checksums.BMD_files # Can be informative if there are errors
-          cmp truth_checksums/checksums.BMD_files checksums.BMD_files
+          cmp <(sort -u checksums.BMD_files | awk {'print $1'}) <(sort -u truth_checksums/checksums.BMD_files | awk {'print $1'} )

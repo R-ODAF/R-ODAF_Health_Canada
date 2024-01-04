@@ -12,9 +12,7 @@ source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
 
-config <- yaml::read_yaml(file.path(here::here(),
-                                    "config/config.yaml"),
-                          eval.expr = T)
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
 params <- c(config$common, config$DESeq2)

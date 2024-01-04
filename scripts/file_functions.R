@@ -7,13 +7,16 @@ set_up_paths <- function(params) {
     paths$wikipathways <- params$wikipathways_directory
     # For project structure
     paths$root <- params$projectdir
-    paths$data <- file.path(paths$root, "data")
-    paths$raw <- file.path(paths$data, "raw")
-    paths$processed <- file.path(paths$data, "processed")
-    paths$metadata <- file.path(paths$data, "metadata")
-    paths$results <- file.path(paths$root, "analysis")
+    paths$inputs <- file.path(paths$root, "inputs")
+    paths$output <- file.path(paths$root, "output")
+    paths$raw <- file.path(paths$inputs, "raw")
+    paths$processed <- file.path(paths$output, "processed")
+    paths$metadata <- file.path(paths$inputs, "metadata")
+    paths$contrasts <- file.path(paths$inputs, "contrasts")
+    paths$results <- file.path(paths$output, "analysis", results_location_arg)
     paths$BMD_output <- file.path(paths$results, "BMD_and_biomarker_files")
     paths$RData <- file.path(paths$results, "RData")
+    paths$record <- file.path(paths$results, "Pipeline_record")
     paths$pathway_analysis <- file.path(paths$results, "pathway_analysis")
     lapply(paths, function(x) if(!dir.exists(x)) dir.create(x, recursive = TRUE))
     return(paths)

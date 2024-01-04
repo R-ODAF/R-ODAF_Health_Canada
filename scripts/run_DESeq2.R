@@ -9,15 +9,30 @@ suppressMessages(library('BiocParallel'))
 
 source(here::here("scripts","setup_functions.R"))
 source(here::here("scripts","data_functions.R"))
-source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
+
+# Parse command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+
+# Check if at least one argument is provided
+if (length(args) > 0) {
+  # Assume the first argument is the new location
+  results_location_arg <- args[1]
+
+  # Source functions and pass along analysis directory argument
+  source(here::here("scripts","file_functions.R"))
+  
+} else {
+  message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
+}
 
 ##############################################################################################
 # SETUP
 ##############################################################################################
 
-config <- yaml::read_yaml(here::here("config","config.yaml"), eval.expr = T)
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
 # Combine required params from config
 params <- c(config$common, config$DESeq2)
@@ -56,7 +71,7 @@ check_required_params(params)
 
 # Identify where metadata can be found
 MetadataFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
-ContrastsFile <- file.path(paths$metadata, "contrasts.txt")
+ContrastsFile <- file.path(paths$contrasts, "contrasts.txt")
 
 sample_count_metadata <- list()
 
