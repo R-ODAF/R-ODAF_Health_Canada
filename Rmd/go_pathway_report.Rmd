@@ -4,7 +4,8 @@ params:
   project_title: "Test"    # Change depending on your project name
   project_name: "Name" 
   project_description: null # description of project for report, optional
-  batch_var: "sample_plate"          # For example, multiple plates
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
+  batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
