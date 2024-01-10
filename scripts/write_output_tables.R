@@ -135,10 +135,6 @@ write_tables <- function(facet) {
   #######################################
   message("write results tables to txt")
   message(paste0("Rounding numeric data to ",params$output_digits," digits."))
-  write.table(id_table %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
-              file = file.path(output_folder,
-                               paste0(prefix,"-ALL_non_CPM_Filter.txt")),
-              quote = F, sep = '\t', col.names = NA)
   write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
