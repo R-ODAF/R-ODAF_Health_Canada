@@ -62,6 +62,7 @@
 *contrasts.txt
 *config.yaml
 inputs/reference/*
+*.gmt
 
 ## Outputs
 output/
