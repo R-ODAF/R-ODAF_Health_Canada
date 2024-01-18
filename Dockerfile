@@ -32,7 +32,10 @@ WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
-RUN mv data data.bak && mv config config.bak
+RUN /bin/bash -c "tree data.bak && tree config.bak && \
+                  mv data data.bak && mv config config.bak"
+# Why???
+# RUN mv data data.bak && mv config config.bak
 
 RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/temposeq/* ./ \

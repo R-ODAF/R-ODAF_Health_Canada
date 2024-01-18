@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  tests:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     strategy:
