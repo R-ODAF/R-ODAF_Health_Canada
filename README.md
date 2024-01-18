@@ -111,7 +111,7 @@ mkdir ~/snakemake_envs #Place and name this directory as you wish, and use corre
 
 snakemake --cores 32 --software-deployment-method conda --conda-create-envs-only --conda-prefix ~/snakemake_envs/
 
-conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml//) Rscript ../RODAF-test2/R-ODAF_Health_Canada/install.R
+conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml//) Rscript install.R
 ```
 
 *When running the workflow, remember to use the --conda-prefix flag.*
