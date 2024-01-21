@@ -7,6 +7,7 @@ FROM condaforge/mambaforge:23.3.1-1 as base
 
 # Required to avoid interactive prompts
 ARG DEBIAN_FRONTEND=noninteractive
+ARG PLATFORM=temposeq
 
 # Set up a user for running; -m creates home directory, -s sets default shell
 RUN useradd -ms /bin/bash R-ODAF
@@ -32,13 +33,10 @@ WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
-RUN /bin/bash -c "tree data && tree config && \
-                  mv data data.bak && mv config config.bak"
-# Why???
-# RUN mv data data.bak && mv config config.bak
+RUN rm -r inputs
 
 RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
-&& mv test-data/temposeq/* ./ \
+&& mv test-data/${PLATFORM}/* ./ \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 
 # Build environments with Snakemake
