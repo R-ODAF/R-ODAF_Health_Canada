@@ -33,7 +33,7 @@ WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
 USER R-ODAF
-RUN rm -r inputs
+RUN mv inputs inputs.bak
 
 RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/${PLATFORM}/* ./ \
@@ -66,17 +66,15 @@ FROM tests as cleanup
 
 # Clean up directories
 RUN mkdir ./tests && \
-    mv analysis \
+    mv output \
        test-data \
        truth_checksums \
        wikipathways-20210810-gmt-Homo_sapiens.gmt \
        Human_S1500_1.2_standardized.csv \
-       logs \
-       data \
-       config \
+       inputs \
        ./tests/
-RUN /bin/bash -c "tree data.bak && tree config.bak && \
-                  mv data.bak data && mv config.bak config"
+RUN /bin/bash -c "tree inputs.bak && \
+                  mv inputs.bak inputs"
 # Move test files
 USER root
 RUN mv ./tests /opt/tests
