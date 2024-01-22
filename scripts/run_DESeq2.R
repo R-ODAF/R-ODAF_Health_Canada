@@ -141,7 +141,7 @@ if(!is.na(params$group_facet)){
       filter(!(solvent_control==TRUE)) %>%
       pull(params$group_facet) %>% 
       unique()
-  }
+    }
 } else {
   facets <- NA
 }
