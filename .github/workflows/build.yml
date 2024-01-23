@@ -2,7 +2,7 @@ name: Build and push a container to GHCR
 on:
   push:
     branches:
-      - *
+      - "*"
 permissions:
   contents: write
   packages: write
