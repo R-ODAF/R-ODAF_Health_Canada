@@ -33,6 +33,7 @@ params:
   wikipathways_directory: "~/shared/dbs/wikipathways"
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "Human_S1500_Surrogate_2.0_standardized.csv"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"

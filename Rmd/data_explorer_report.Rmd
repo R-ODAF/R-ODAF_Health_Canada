@@ -37,6 +37,7 @@ params:
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
   wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
   # "wikipathways-20210810-gmt-Mus_musculus.gmt"
   # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
   nBestFeatures: 20              # The number of best features to make plots of their counts
