@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - main
+permissions:
+  contents: write
+  packages: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,6 +23,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ghcr.io/r-odaf/r-odaf_health_canada:latest ## ${{ github.sha }}
+          tags: ghcr.io/r-odaf/r-odaf_health_canada:latest2
           file: ./Dockerfile
           
