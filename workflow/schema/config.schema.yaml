@@ -148,7 +148,12 @@ properties:
         items:
           type: string
       intgroup_to_plot:
-        type: string
+        type: 
+          - string
+          - 'null'
+          - array
+        items:
+          type: string
       formula_override:
         type:
           - string
