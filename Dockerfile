@@ -8,6 +8,7 @@ FROM condaforge/mambaforge:23.3.1-1 as base
 # Required to avoid interactive prompts
 ARG DEBIAN_FRONTEND=noninteractive
 ARG PLATFORM=temposeq
+ARG BUILD_CORES=8
 
 # Set up a user for running; -m creates home directory, -s sets default shell
 RUN useradd -ms /bin/bash R-ODAF
@@ -40,7 +41,7 @@ RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
 
 # Build environments with Snakemake
-RUN /bin/bash -c "snakemake --cores 32 --use-conda --conda-create-envs-only"
+RUN /bin/bash -c "snakemake --cores ${BUILD_CORES} --use-conda --conda-create-envs-only"
 
 # Install extra dependency for reports
 RUN /bin/bash -c "conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R"
@@ -59,7 +60,7 @@ USER R-ODAF
 FROM base as tests
 
 # Run tests
-RUN /bin/bash -c "snakemake --cores 32 --use-conda"
+RUN /bin/bash -c "snakemake --cores 8 --use-conda"
 
 # Clean up files
 FROM tests as cleanup
