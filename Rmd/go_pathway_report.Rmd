@@ -37,6 +37,7 @@ params:
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
   wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
   # "wikipathways-20210810-gmt-Mus_musculus.gmt"
   # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
   nBestFeatures: 20              # The number of best features to make plots of their counts
@@ -77,7 +78,6 @@ startTime <- Sys.time()
 library('clusterProfiler')
 library('enrichplot')
 
-source(here::here("scripts","setup_functions.R"), local = TRUE)
 source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 source(here::here("scripts","data_functions.R"), local = TRUE)
 
@@ -448,14 +448,16 @@ This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways a
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
-bg_genes <-read.gmt("~/storage/LearnPipline/R-ODAF_Health_Canada/c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt") 
+config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
+bg_genes <-read.gmt(paste0(params$wikipathways_directory,params$KEGGpathways_filename)) 
 
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
                                 id_table_entrez,
-                                by = "Feature_ID")
+                                by = c("Feature_ID", "Gene_Symbol"))
+  
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
-  names(foldChanges) <- DEGs_full %>% dplyr::pull(Gene_Symbol.x)
+  names(foldChanges) <- DEGs_full %>% dplyr::pull(Gene_Symbol)
   foldChanges <- foldChanges %>% sort() %>% rev()
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
   if (length(foldChanges) < 10) {

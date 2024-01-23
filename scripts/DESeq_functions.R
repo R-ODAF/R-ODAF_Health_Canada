@@ -103,9 +103,7 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
         
         #save all genes that are present regardless of counts 
-        dfGenesPassed <- data.frame(Ensembl_Gene_ID = rownames(subset(Filter, Filter[, 1] == 1)))
-        dfGenesFailed <- data.frame(Ensembl_Gene_ID = rownames(subset(Filter, Filter[, 1] == 0)))
-        dfGenes <- rbind(dfGenesPassed, dfGenesFailed)
+        dfGenes <- data.frame(Ensembl_Gene_ID = rownames(Counts))
         
         intitial_count <- nrow(dds)
         num_relevance_filtered <- nrow(dds) - nrow(Filter)
