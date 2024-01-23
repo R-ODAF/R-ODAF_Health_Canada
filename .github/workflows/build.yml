@@ -25,5 +25,4 @@ jobs:
           push: true
           tags: ghcr.io/r-odaf/r-odaf_health_canada:latest ## ${{ github.sha }}
           file: ./Dockerfile
-          load: true
           
