@@ -19,6 +19,8 @@ check_required_params <- function(params){
       stop(paste0("Required param ",p," was NA. You should set that param to something in config.yaml."))
     } else if(is.null(params[p])){
       stop(paste0("Required param ",p," was null. This shouldn't happen, as you should be running 'replace_nulls_in_config"))
+    } else if(params$group_facet %in% params$intgroup_to_plot){
+      stop(paste0("The column for faceting (",params$group_facet,") should not be an element in your intgroup_to_plot list."))
     }
   }
 }
