@@ -104,9 +104,6 @@ check_data <- function(sd, des, con){
     stopifnot(all(des$original_names %in% colnames(sd)))
     # Sanity check: each column in the count data should have a corresponding sample (row) in the metadata
     stopifnot(all(colnames(sd) %in% des$original_names))
-    # Sanity check: config['group_facet'] not an element in config['intgroup_to_plot'] 
-    if(params$group_facet %in% params$intgroup_to_plot)
-        stop("The column for faceting should not be an element in your intgroup_to_plot list.")
     message("All OK 👍")
 }
 
