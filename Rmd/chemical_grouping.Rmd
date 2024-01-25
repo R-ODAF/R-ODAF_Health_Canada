@@ -6,25 +6,367 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+library(tidyverse)
+library(dendextend)
+library(viridis)
+library(ape)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Chemical grouping
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+### All doses
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r load-data}
 
-```{r cars}
-summary(cars)
+load("../analysis/RData/Bisphenol Replacements Study_DEG_data.RData")
+
+# bp_count_data <- read.table("../data/processed/count_table.tsv",
+#                             sep = ",", header = T)
+
+# Look at 10 uM concentration for DESeq2 results
+
+# What concentrations should we select?
+# Should we re-run DESeq2 excluding the samples that were not used due to cytotoxicity
+
+results_selected_all <- list()
+for (x in 1:length(overallResListAll)) {
+  results_selected_all[[x]] <- lapply(names(overallResListAll[[x]]), function(element_name) {
+    element <- overallResListAll[[x]][[element_name]]
+    df <- as.data.frame(element)
+    df$name <- element_name
+    df$gene <- rownames(element)
+    return(df)
+  })
+}
+
+results_selected_all_processed <- purrr::map_dfr(results_selected_all, bind_rows)
+
+results_selected_all_processed_filtered <- results_selected_all_processed %>%
+  dplyr::group_by(gene) %>%
+  dplyr::filter(any(padj < 0.05 & 
+                  abs(log2FoldChange) > log2(1.5) ))
+
+matrix_DEGs_all <- results_selected_all_processed_filtered %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+id <- matrix_DEGs_all$gene
+
+matrix_DEGs_all <- as.matrix(matrix_DEGs_all[, -1])
+rownames(matrix_DEGs_all) <- id
+matrix_DEGs_all[is.na(matrix_DEGs_all)] <- 0
+
+
 ```
 
-## Including Plots
+```{r}
 
-You can also embed plots, for example:
+dist_method = "pearson"
+link_method = "average" # "ward.D"
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+# Originally...
+# hclust(dist(t(matrix_DEGs_all), method = dist_method ), method = link_method)
+clustered_DEGs_all <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_all),
+                                  method = dist_method)),
+                              method = link_method)
+
+#dend_all <- as.dendrogram(clustered_DEGs_all)
+dend <- as.dendrogram(clustered_DEGs_all)
+# Extract unique chemicals and assign colorblind-friendly palette
+unique_chemicals <- unique(sapply(colnames(matrix_DEGs_all), function(label) {
+  parts <- unlist(strsplit(label, "_"))
+  parts[1]  # Extract the chemical part
+}))
+
+# Generate a color palette with a different color for each unique chemical
+color_palette <- viridis(length(unique_chemicals))
+
+# Create a named vector mapping chemicals to colors
+chemical_colors <- setNames(color_palette, unique_chemicals)
+
+# Customize dendrogram labels
+labels_colors <- sapply(labels(dend), function(label) {
+  parts <- unlist(strsplit(label, "_"))
+  chemical <- parts[1]
+  color <- chemical_colors[chemical]
+  list(text = paste(chemical, parts[2], sep = "_"), col = color)
+})
+
+# Set label attributes
+labels(dend) <-  gsub("_vs_DMSO.*", "", labels(dend))
+# Adjust text size
+
+# Plot the dendrogram
+
+# From Andrew: label coloring example. We should do this both by dose and by chemical.
+# labels_colors(dend) <- c(rep("red", 13), rep("blue", 16), "dark green")[order.dendrogram(dend)]
+
+par(mar = c(20, 4, 4, 4), cex = 0.5)
+plot(dend, horiz = F, main = "All doses")
+
+
+```
+
+### Top doses
+
+```{r}
+
+# bp_count_data <- read.table("../data/processed/count_table.tsv",
+#                             sep = ",", header = T)
+
+# Look at 10 uM concentration for DESeq2 results
+
+# What concentrations should we select?
+# Should we re-run DESeq2 excluding the samples that were not used due to cytotoxicity
+
+results_selected_top <- list()
+for (x in 1:length(overallResListAll)) {
+  results_selected_top[[x]] <- as.data.frame(overallResListAll[[x]][[length(overallResListAll[[x]])]])
+  results_selected_top[[x]]$name <- names(overallResListAll[[x]])[[length(overallResListAll[[x]])]]
+  results_selected_top[[x]]$gene <- rownames(overallResListAll[[x]][[length(overallResListAll[[x]])]])
+}
+results_selected_processed_top <- data.table::rbindlist(results_selected_top)
+
+results_selected_processed_filtered_top <- results_selected_processed_top %>%
+  dplyr::group_by(gene) %>%
+  dplyr::filter(any(padj < 0.05 & 
+                  abs(log2FoldChange) > log2(1.5) ))
+
+matrix_DEGs_top <- results_selected_processed_filtered_top %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+id <- matrix_DEGs_top$gene
+
+matrix_DEGs_top <- as.matrix(matrix_DEGs_top[, -1])
+rownames(matrix_DEGs_top) <- id
+matrix_DEGs_top[is.na(matrix_DEGs_top)] <- 0
+clustered_DEGs_top <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top),
+                                  method = dist_method) ),
+                         method = link_method)
+dend.top <- as.dendrogram(clustered_DEGs_top)
+
+par(mar = c(20,4,4,4), cex = 0.5)
+plot(dend.top, horiz = F, main = "Top doses")
+
+
+
+```
+
+
+### Low doses
+
+```{r}
+
+# bp_count_data <- read.table("../data/processed/count_table.tsv",
+#                             sep = ",", header = T)
+
+# Look at 10 uM concentration for DESeq2 results
+
+# What concentrations should we select?
+# Should we re-run DESeq2 excluding the samples that were not used due to cytotoxicity
+
+results_selected_low <- list()
+for (x in 1:length(overallResListAll)) {
+  results_selected_low[[x]] <- as.data.frame(overallResListAll[[x]][[1]])
+  results_selected_low[[x]]$name <- names(overallResListAll[[x]])[[1]]
+  results_selected_low[[x]]$gene <- rownames(overallResListAll[[x]][[1]])
+}
+results_selected_processed_low <- data.table::rbindlist(results_selected_low)
+
+results_selected_processed_filtered_low <- results_selected_processed_low %>%
+  dplyr::group_by(gene) %>%
+  dplyr::filter(any(padj < 0.05 & 
+                  abs(log2FoldChange) > log2(1.5) ))
+
+matrix_DEGs_low <- results_selected_processed_filtered_low %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+id <- matrix_DEGs_low$gene
+
+matrix_DEGs_low <- as.matrix(matrix_DEGs_low[, -1])
+rownames(matrix_DEGs_low) <- id
+matrix_DEGs_low[is.na(matrix_DEGs_low)] <- 0
+clustered_DEGs <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_low),
+                                  method = dist_method)),
+                         method = link_method)
+
+par(mar = c(20,4,4,4), cex = 0.5)
+plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Low doses")
+
+
+
+```
+
+
+### Bioactivity > 0.1%
+
+```{r}
+
+# Need to load in objects from summarize_across_facets.R
+
+p2_data <- filtered_table %>%
+  group_by(facet,contrast) %>%
+  mutate(not_significant = initial-(relevance_filtered+quantile_filtered+spike_filtered)) %>%
+  mutate(contrast = str_replace(contrast, "_vs_", " vs ")) %>%
+  ungroup() %>%
+  pivot_longer(cols=c(not_significant,relevance_filtered,quantile_filtered,spike_filtered,passed_all_filters)) %>%
+  mutate(perc = value/initial) %>%
+  mutate(name = factor(name, levels=c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters"))) %>%
+  mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels))
+
+proportions <- p2_data %>% dplyr::filter(name == "passed_all_filters")
+contrasts_of_interest <- proportions %>% dplyr::filter(perc > 0.01) %>%
+  mutate(contrast_original = str_replace(contrast, " vs ", "_vs_")) %>%
+  pull(contrast_original)
+
+# # Unlist the nested list
+# unlistedRes <- unlist(overallResListAll)
+# 
+# # Remove the prefix using sub
+# names(unlistedRes) <- sub("^.*_", "", names(unlistedRes))
+
+
+results_selected_gt0.01 <- list()
+for (x in 1:length(overallResListAll)) {
+  print(x)
+  matching_names <- sapply(contrasts_of_interest,
+                                function(name) {
+                                  exists(name, overallResListAll[[x]])})
+  if(any(matching_names)) {
+    results_selected_gt0.01[[x]] <- as.data.frame(overallResListAll[[x]][[names(which(matching_names))[[1]]]])
+  results_selected_gt0.01[[x]]$name <- names(which(matching_names))[[1]]
+  results_selected_gt0.01[[x]]$gene <- rownames(overallResListAll[[x]][[names(which(matching_names))[[1]]]])
+  }
+}
+results_selected_bioactivity_gt_0.01 <- data.table::rbindlist(results_selected_gt0.01)
+
+results_selected_bioactivity_gt_0.01_filt <- results_selected_bioactivity_gt_0.01 %>%
+  dplyr::group_by(gene) %>%
+  dplyr::filter(any(padj < 0.05 & 
+                  abs(log2FoldChange) > log2(1.5) ))
+
+matrix_DEGs_bioactivity_gt_0.01 <- results_selected_bioactivity_gt_0.01_filt %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+id <- matrix_DEGs_bioactivity_gt_0.01$gene
+
+matrix_DEGs_bioactivity_gt_0.01 <- as.matrix(matrix_DEGs_bioactivity_gt_0.01[, -1])
+rownames(matrix_DEGs_bioactivity_gt_0.01) <- id
+matrix_DEGs_bioactivity_gt_0.01[is.na(matrix_DEGs_bioactivity_gt_0.01)] <- 0
+clustered_DEGs <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.01),
+                                  method = dist_method)),
+                         method = link_method)
+
+par(mar = c(20,4,4,4), cex = 0.5)
+plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >0.1%")
+
+
+
+```
+
+
+### Bioactivity > 0.2%
+
+```{r}
+
+# Need to load in objects from summarize_across_facets.R
+contrasts_of_interest_0.02 <- proportions %>% dplyr::filter(perc > 0.02) %>%
+  mutate(contrast_original = str_replace(contrast, " vs ", "_vs_")) %>%
+  pull(contrast_original)
+
+results_selected_gt0.02 <- list()
+for (x in 1:length(overallResListAll)) {
+  print(x)
+  matching_names <- sapply(contrasts_of_interest_0.02,
+                                function(name) {
+                                  exists(name, overallResListAll[[x]])})
+  if(any(matching_names)) {
+    results_selected_gt0.02[[x]] <- as.data.frame(overallResListAll[[x]][[names(which(matching_names))[[1]]]])
+  results_selected_gt0.02[[x]]$name <- names(which(matching_names))[[1]]
+  results_selected_gt0.02[[x]]$gene <- rownames(overallResListAll[[x]][[names(which(matching_names))[[1]]]])
+  }
+}
+results_selected_bioactivity_gt_0.02 <- data.table::rbindlist(results_selected_gt0.02)
+
+results_selected_bioactivity_gt_0.02_filt <- results_selected_bioactivity_gt_0.02 %>%
+  dplyr::group_by(gene) %>%
+  dplyr::filter(any(padj < 0.05 & 
+                  abs(log2FoldChange) > log2(1.5) ))
+
+matrix_DEGs_bioactivity_gt_0.02 <- results_selected_bioactivity_gt_0.02_filt %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+id <- matrix_DEGs_bioactivity_gt_0.02$gene
+
+matrix_DEGs_bioactivity_gt_0.02 <- as.matrix(matrix_DEGs_bioactivity_gt_0.02[, -1])
+rownames(matrix_DEGs_bioactivity_gt_0.02) <- id
+matrix_DEGs_bioactivity_gt_0.02[is.na(matrix_DEGs_bioactivity_gt_0.02)] <- 0
+clustered_DEGs <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.02),
+                                  method = dist_method)),
+                         method = link_method)
+
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >0.2%")
+
+
+
+```
+
+
+### Top doses with inactive chemicals removed @ 1% bioactivity
+
+```{r}
+
+# Extract the first element before underscores from matrix_DEGs_top
+matrix_DEGs_top_names <- sub("_.*", "", colnames(matrix_DEGs_top))
+
+# Extract the first element before underscores from results_selected_bioactivity_gt_0.01$name
+selected_names <- sub("_.*", "", results_selected_bioactivity_gt_0.01$name)
+
+# Filter matrix_DEGs_top based on common_names
+# NOTE This depends on the order of matrix_DEGs_top_names being the same. It should be.
+matrix_DEGs_top_bioactive <- matrix_DEGs_top[, matrix_DEGs_top_names %in% selected_names]
+
+clustered_DEGs_top_bioactive <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_bioactive),
+                                  method = dist_method) ),
+                         method = link_method)
+dend.top.active <- as.dendrogram(clustered_DEGs_top_bioactive)
+
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(dend.top.active, horiz = F, main = "Top doses of bioactive chemicals with a 0.1% threshold")
+
+```
+### Top doses with inactive chemicals removed @ 2% bioactivity
+
+```{r }
+# Extract the first element before underscores from matrix_DEGs_top
+matrix_DEGs_top_names <- sub("_.*", "", colnames(matrix_DEGs_top))
+
+# Extract the first element before underscores from results_selected_bioactivity_gt_0.01$name
+selected_names <- sub("_.*", "", results_selected_bioactivity_gt_0.02$name)
+
+# Filter matrix_DEGs_top based on common_names
+# NOTE This depends on the order of matrix_DEGs_top_names being the same. It should be.
+matrix_DEGs_top_bioactive <- matrix_DEGs_top[, matrix_DEGs_top_names %in% selected_names]
+
+clustered_DEGs_top_bioactive <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_bioactive),
+                                  method = dist_method) ),
+                         method = link_method)
+dend.top.active <- as.dendrogram(clustered_DEGs_top_bioactive)
+
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(dend.top.active, horiz = F, main = "Highest doses of bioactive chemicals with a 0.2% threshold")
+
+```
+
+
+### PCA plots
+
+```{r }
+# PCA plots for ????
+
+
+```

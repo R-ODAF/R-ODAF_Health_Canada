@@ -98,7 +98,7 @@ if(length(facets) == 1){
         ylab("Number of DEGs") +
         xlab("Facet: contrast")
 }
-ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1,
+ggsave(file.path(here::here(),paste0(prefix,"_","DEG_summary_plot.png")),p1,
        width=plot_size, height=plot_size, units="in", dpi=300)
 
 
@@ -143,5 +143,19 @@ if(length(facets) == 1){
   
 ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
        width=plot_size, height=plot_size, units="in", dpi=300)
+
+
+# Determine, on a per-chemical basis, the number of DEGs in the facet (chemical)
+# Determine, on a per-chemical basis, the total number of genes measured for that chemical
+proportions <- p2_data %>% dplyr::filter(name == "passed_all_filters")
+ggplot(proportions, aes(x = facet_contrast, y = perc)) +
+  geom_bar(stat="identity",position="dodge") +
+  facet_wrap(~facet, scales = "free_x")
+
+
+# Pick, within facets (chemicals), the dose (contrast) that most closely matches
+
+contrasts_of_interest <- proportions %>% dplyr::filter(perc > 0.01) %>%
+  pull(contrast)
 
 
