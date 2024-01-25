@@ -96,7 +96,7 @@ load_biospyder_new <- function(biospyder_dbs, temposeq_manifest){
                           header = TRUE,
                           quote = "\"")
   
-  feature_id <- "Probe_Name"
+  feature_id <- "Gene_Symbol"  # "Probe_Name"
   biospyder[ biospyder == "NULL" ] <- NA
   return_data$biospyder <- biospyder
   return_data$feature_id <- feature_id
@@ -108,7 +108,7 @@ set_up_platform_params <-function(params){
     species_data <- params$species_data
     count_data_file <- file.path(paths$processed, "count_table.tsv")
     params$count_data_file <- count_data_file
-    params$sampledata_sep = "\t"
+    params$sampledata_sep = ","
   # set some additional parameters based on platform
   if (params$platform == "RNA-Seq") {
     params$MinCount <- 1

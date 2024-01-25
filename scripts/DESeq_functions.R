@@ -242,30 +242,39 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
       if(params$platform == "TempO-Seq"){
         deg_table <- dplyr::left_join(deg_table,
                                       params$biospyder, 
-                                      by = c(Feature_ID = params$feature_id))
-      } else{
-        # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
-        result = tryCatch({
-          descriptions <- AnnotationDbi::select(get(params$species_data$orgdb),
-                                                columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
-                                                keys = deg_table$Feature_ID,
-                                                keytype="ENSEMBL") %>%
-            distinct(ENSEMBL, .keep_all=TRUE)
-          colnames(descriptions) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
-          descriptions$Feature_ID <- descriptions$Ensembl_Gene_ID
-          deg_table <- dplyr::left_join(deg_table, descriptions, by="Feature_ID")
-        }, error = function(e) {
-          message("error")
-        })
+                                      by = c(Feature_ID = params$feature_id),
+                                      relationship = "many-to-many")
       }
+      # need to catch a testForValidKeys error in the case where the only resulting genes have ensembl IDs that aren't in the AnnotationDBI database
+      result = tryCatch({
+        feature_id_keytype = ifelse(params$platform == "TempO-Seq",
+                                    yes = "SYMBOL",
+                                    no = "ENSEMBL")
+        descriptions <- AnnotationDbi::select(get(params$species_data$orgdb),
+                                              columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
+                                              keys = deg_table$Feature_ID,
+                                              keytype = feature_id_keytype) %>%
+          distinct(ENSEMBL, .keep_all=TRUE)
+        #descriptions$Feature_ID <- descriptions[[feature_id_keytype]]
+        name_mapping <- c("SYMBOL" = "Gene_Symbol",
+                          "ENSEMBL" = "Ensembl_Gene_ID",
+                          "GENENAME" = "description")
+        colnames(descriptions) <- name_mapping[colnames(descriptions)] # indepdent of order
+        deg_table <- dplyr::left_join(deg_table, descriptions, by="Ensembl_Gene_ID")
+      }, error = function(e) {
+        message("error")
+      })
+        
       if(!("Gene_Symbol" %in% colnames(deg_table))){
+        # Not sure what situation this applies to? Why would there be no gene symbol?
         deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
         deg_table$Gene_Symbol <- NA
       }
       deg_table <- deg_table %>%
         mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2 ^ log2FoldChange, -1 / (2 ^ log2FoldChange))) %>%
         mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Ensembl_Gene_ID)) %>%
-        dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol = Gene_Symbol_2, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+        dplyr::select(Gene_Symbol = Gene_Symbol_2, Ensembl_Gene_ID, description, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
+        #dplyr::select(Feature_ID, Ensembl_Gene_ID, Gene_Symbol = Gene_Symbol_2, baseMean, log2FoldChange, linearFoldChange, lfcSE, pvalue, padj, contrast)
       
       ## FILTERS ##
       if (biosets_filter == T) {

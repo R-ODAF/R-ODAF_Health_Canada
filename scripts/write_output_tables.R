@@ -33,18 +33,22 @@ write_tables <- function(facet) {
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
   
+  feature_id_keytype = ifelse(params$platform == "TempO-Seq",
+                              yes = "SYMBOL",
+                              no = "ENSEMBL")
+  descriptions <- AnnotationDbi::select(get(params$species_data$orgdb),
+                                        columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
+                                        keys = allResults$Ensembl_Gene_ID,
+                                        keytype = "ENSEMBL") %>%
+    distinct(ENSEMBL, .keep_all=TRUE)
+  #descriptions$Feature_ID <- descriptions[[feature_id_keytype]]
+  name_mapping <- c("SYMBOL" = "Gene_Symbol",
+                    "ENSEMBL" = "Ensembl_Gene_ID",
+                    "GENENAME" = "description")
+  colnames(descriptions) <- name_mapping[colnames(descriptions)] # indepdent of order
   
-  if(params$platform == "TempO-Seq"){
-    descriptions <- AnnotationDbi::select(db, columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
-    colnames(descriptions) <- c("Ensembl_Gene_ID","description")
-    id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID, description) # this is annoying: could select columns using contains("Gene_Symbol", ignore.case =T)
-  } else {
-    id_table <- AnnotationDbi::select(db, columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
-    colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
-    id_table$Feature_ID <- id_table$Ensembl_Gene_ID
-  }
   summaryTable <- allResults %>%
-    dplyr::select(Feature_ID, baseMean) %>%
+    dplyr::select(Gene_Symbol, baseMean) %>%
     distinct()
   
   contrastsInSummary <- c()
@@ -65,12 +69,12 @@ write_tables <- function(facet) {
               x = resultsListAll[[i]]@elementMetadata[[2]][2])
     toJoin <- as.data.frame(resultsListAll[[i]])
     setDT(toJoin, keep.rownames = T)[]
-    setnames(toJoin, 1, "Feature_ID")
+    setnames(toJoin, 1, "Gene_Symbol")
     toJoin <- mutate(toJoin, linearFoldChange = ifelse(log2FoldChange > 0,
                                                        2 ^ log2FoldChange,
                                                        -1 / (2 ^ log2FoldChange)))
     toJoin <- toJoin[, c(1:3, 7, 4:6)]
-    summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = "Feature_ID")
+    summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = "Gene_Symbol")
     
     names(summaryTable)[[ncol(summaryTable) - 2]] <- paste0("log2FoldChange_", i)
     names(summaryTable)[[ncol(summaryTable) - 1]] <- paste0("linearFoldChange_", i)
@@ -83,22 +87,22 @@ write_tables <- function(facet) {
   
   message("getting final output tables")
   maxFCs <- allResults %>%
-    dplyr::group_by(Feature_ID) %>%
+    dplyr::group_by(Gene_Symbol) %>%
     dplyr::filter(abs(linearFoldChange) == max(abs(linearFoldChange))) %>%
     dplyr::ungroup() %>%
-    dplyr::select(Feature_ID, linearFoldChange)
+    dplyr::select(Gene_Symbol, linearFoldChange)
   
   minPvals <- allResults %>%
-    dplyr::group_by(Feature_ID) %>%
+    dplyr::group_by(Gene_Symbol) %>%
     dplyr::filter(padj == min(padj)) %>%
     dplyr::ungroup() %>%
-    dplyr::select(Feature_ID, padj)
+    dplyr::select(Gene_Symbol, padj)
   
   
   summaryTable <- summaryTable %>%
-    left_join(id_table, by = "Feature_ID") %>%
-    left_join(maxFCs, by = "Feature_ID") %>%
-    left_join(minPvals, by = "Feature_ID") %>%
+    left_join(descriptions, by = "Gene_Symbol") %>%
+    left_join(maxFCs, by = "Gene_Symbol") %>%
+    left_join(minPvals, by = "Gene_Symbol") %>%
     dplyr::rename(maxFoldChange = linearFoldChange,
                   minFDR_pval = padj) %>%
     dplyr::distinct() %>%
@@ -114,7 +118,7 @@ write_tables <- function(facet) {
   summaryTable <- summaryTable %>% dplyr::distinct() # Just in case duplicates snuck by
   
   CPMddsDF <- data.frame(genes = row.names(CPMdds), CPMdds, check.names = F)
-  CPMddsDF <- dplyr::left_join(CPMddsDF, id_table, by = c("genes" = "Feature_ID"))
+  CPMddsDF <- dplyr::left_join(CPMddsDF, descriptions, by = c("genes" = "Gene_Symbol"))
   numColsToPrepend <- ncol(CPMddsDF) - ncol(CPMdds) - 1
   colPositionsToPrependSTART <- ncol(CPMddsDF) - numColsToPrepend + 1
   colPositionsOfData <- ncol(CPMddsDF) - numColsToPrepend

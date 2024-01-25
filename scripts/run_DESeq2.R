@@ -12,7 +12,6 @@ source(here::here("scripts","data_functions.R"))
 source(here::here("scripts","file_functions.R"))
 source(here::here("scripts","DESeq_functions.R"))
 
-
 ##############################################################################################
 # SETUP
 ##############################################################################################
@@ -106,7 +105,10 @@ original_design <- params$design
 
 # load count data
 count_data <- load_count_data(params$count_data_file, params$sampledata_sep)
-
+if (params$collapse_probes_to_key == T) {
+  count_data2 <- load_count_data(params$count_data_file, params$sampledata_sep,
+                                 collapse_probes = params$collapse_probes_to_key)
+} else { count_data2 <- count_data }
 
 processed <- process_data_and_metadata(count_data, exp_metadata, contrasts, intgroup, design_to_use, params)
 count_data <- processed$count_data
@@ -148,46 +150,73 @@ mergedDEGsList <- list()
 filtered_table <- data.frame()
 
 if(is.na(params$group_facet)){
-    message("### Learning a single model for the whole experiment. ###")
-    if(params$write_additional_output){
-      write_additional_output(count_data, exp_metadata, design_to_use, params)
-    }
-    dds <- learn_deseq_model(count_data, exp_metadata, design_to_use, params)
-    rld <- regularize_data(dds, original_design, covariates, params$batch_var)
-    DESeq_results <- get_DESeq_results(dds, exp_metadata, contrasts, design_to_use, params, NA, paths$DEG_output)
-    ddsList[['all']] <- dds
-    overallResListAll[['all']] <- DESeq_results$resListAll
-    overallResListFiltered[['all']] <- DESeq_results$resListFiltered
-    overallResListDEGs[['all']] <- DESeq_results$resListDEGs
-    designList[['all']] <- exp_metadata
-    contrastsList[['all']] <- contrasts
-    rldList[['all']] <- rld
-    mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
-    filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  message("### Learning a single model for the whole experiment. ###")
+  if(params$write_additional_output){
+    write_additional_output(count_data, exp_metadata, design_to_use, params)
+  }
+  dds <- learn_deseq_model(count_data, exp_metadata, design_to_use, params)
+  rld <- regularize_data(dds, original_design, covariates, params$batch_var)
+  DESeq_results <- get_DESeq_results(dds, exp_metadata, contrasts, design_to_use, params, NA, paths$DEG_output)
+  ddsList[['all']] <- dds
+  overallResListAll[['all']] <- DESeq_results$resListAll
+  overallResListFiltered[['all']] <- DESeq_results$resListFiltered
+  overallResListDEGs[['all']] <- DESeq_results$resListDEGs
+  designList[['all']] <- exp_metadata
+  contrastsList[['all']] <- contrasts
+  rldList[['all']] <- rld
+  mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
+  filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
 } else {
-    for (current_filter in facets) {
-        message(paste0("### Learning model for ", current_filter, ". ###"))
-        metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$group_facet, current_filter)
-        exp_metadata_subset <- metadata_subset$exp_metadata
-        contrasts_subset <- metadata_subset$contrasts
-        count_data_subset <- subset_data(count_data, exp_metadata_subset)
-        
-        check_data(count_data_subset, exp_metadata_subset, contrasts_subset)
-        
-        if(params$write_additional_output){
-          write_additional_output(count_data_subset, exp_metadata_subset, design_to_use, params)
-        }
-        ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, design_to_use, params)
-        designList[[current_filter]] <- exp_metadata_subset
-        contrastsList[[current_filter]] <- contrasts_subset
-        rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
-        DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
-        overallResListAll[[current_filter]] <- DESeq_results$resListAll
-        overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
-        overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
-        mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
-        filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  for (current_filter in facets) {
+    message(paste0("### Learning model for ", current_filter, ". ###"))
+    metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$group_facet, current_filter)
+    exp_metadata_subset <- metadata_subset$exp_metadata
+    contrasts_subset <- metadata_subset$contrasts
+    count_data_subset <- subset_data(count_data, exp_metadata_subset)
+    
+    check_data(count_data_subset, exp_metadata_subset, contrasts_subset)
+    
+    if(params$write_additional_output){
+      write_additional_output(count_data_subset, exp_metadata_subset, design_to_use, params)
     }
+    count_data_subset <- subset_data(count_data2, exp_metadata_subset)
+    ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, design_to_use, params)
+    designList[[current_filter]] <- exp_metadata_subset
+    contrastsList[[current_filter]] <- contrasts_subset
+    rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
+    DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
+    overallResListAll[[current_filter]] <- DESeq_results$resListAll
+    overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
+    overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
+    mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
+    filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  }
+}
+
+  for (current_filter in facets) {
+    message(paste0("### Learning model for ", current_filter, ". ###"))
+    metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$group_facet, current_filter)
+    exp_metadata_subset <- metadata_subset$exp_metadata
+    contrasts_subset <- metadata_subset$contrasts
+    count_data_subset <- subset_data(count_data, exp_metadata_subset)
+    
+    check_data(count_data_subset, exp_metadata_subset, contrasts_subset)
+    
+    if(params$write_additional_output){
+      write_additional_output(count_data_subset, exp_metadata_subset, design_to_use, params)
+    }
+    count_data_subset <- subset_data(count_data2, exp_metadata_subset)
+    ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, design_to_use, params)
+    designList[[current_filter]] <- exp_metadata_subset
+    contrastsList[[current_filter]] <- contrasts_subset
+    rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates, params$batch_var)
+    DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, design_to_use, params, current_filter, paths$DEG_output)
+    overallResListAll[[current_filter]] <- DESeq_results$resListAll
+    overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
+    overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
+    mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
+    filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  }
 }
 
 summary_counts <- data.frame()
@@ -220,5 +249,5 @@ message(paste(capture.output(summary_counts), collapse="\n"))
 
 # save DESeq results to a file
 save(ddsList, designList, contrastsList, overallResListAll, overallResListFiltered, overallResListDEGs, rldList, mergedDEGsList, exp_metadata, facets, count_data, contrasts, intgroup, design_to_use, paths, filtered_table, sample_count_metadata, file=file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
-
+load("analysis/RData/Bisphenol Replacements Study_DEG_data.RData")
 source(here::here("scripts","write_output_tables.R"))

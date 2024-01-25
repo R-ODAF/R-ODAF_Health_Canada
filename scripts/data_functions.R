@@ -1,4 +1,5 @@
 library(gtools)
+library(data.table)
 
 # filter metadata
 # this only applies to specifically included/excluded data, not the facet filtering
@@ -108,7 +109,7 @@ check_data <- function(sd, des, con){
 }
 
 
-load_count_data <- function(count_data_file, sampledata_sep){
+load_count_data <- function(count_data_file, sampledata_sep, collapse_probes = FALSE){
   count_data <- read.delim(count_data_file,
                          sep = sampledata_sep,
                          stringsAsFactors = FALSE,
@@ -116,6 +117,21 @@ load_count_data <- function(count_data_file, sampledata_sep){
                          quote = "\"",
                          row.names = 1,
                          check.names = FALSE)
+  if (collapse_probes == TRUE) {
+    count_data$gene <- rownames(count_data)
+    count_data$gene <- gsub("_.*", "", count_data$gene)
+    data.table::setDT(count_data)
+    count_data[, lapply(.SD, sum),
+               by = gene, .SDcols = which(sapply(count_data, is.numeric))]
+    
+    # count_data <- count_data %>%
+    #   dplyr::group_by(gene) %>%
+    #   dplyr::summarize(across(where(is.numeric), sum))
+    #count_data <- as.data.frame(count_data)
+    
+    rownames(count_data) <- count_data$gene
+    count_data <- count_data[,-1]
+  }
   return(count_data)
 }
 
