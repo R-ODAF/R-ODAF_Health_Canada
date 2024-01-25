@@ -271,8 +271,6 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
       if (biosets_filter == T) {
         # for biosets, filter on unadjusted p-value
         deg_table <- deg_table[!is.na(deg_table$pval) & deg_table$pval < params$alpha & abs(deg_table$linearFoldChange) > 1.2, ]
-      }else if (filter_results == T) {
-        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < params$alpha & abs(deg_table$linearFoldChange) > 1.2, ]
       }
       annotated_results[[i]] <- deg_table %>% dplyr::distinct()
     }
