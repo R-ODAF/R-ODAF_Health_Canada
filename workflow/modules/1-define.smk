@@ -13,6 +13,10 @@ common_config = config["common"]
 pipeline_config = config["pipeline"]
 deseq_config = config["DESeq2"]
 
+# Check that group_facet is not in intgroup_to_plot
+if deseq_config['group_facet'] in deseq_config['intgroup_to_plot']:
+    sys.exit(f"Error! 'group_facet' should not be in 'intgroup_to_plot' elements.")
+
 # Set up input directories
 main_dir = common_config["projectdir"]
 if main_dir is None:
@@ -39,6 +43,32 @@ sample_id_col = pipeline_config["sample_id"]
 
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
+
+
+# Check existence of reference files, break if not there
+genome_filename = pipeline_config["genome_filename"]
+annotation_filename = pipeline_config["annotation_filename"]
+
+genome_filepath = genome_dir / genome_filename
+annotation_filepath = genome_dir / annotation_filename
+
+check_ref_fasta = os.path.exists(genome_filepath)
+
+if check_ref_fasta == False:
+    sys.exit(f"Error! You are missing the expected reference genome file: {genome_filepath}")
+
+check_ref_genome = os.path.exists(annotation_filepath)
+
+if check_ref_genome == False:
+    sys.exit(f"Error! You are missing the expected reference annotation file: {annotation_filepath}")
+
+if common_config["platform"] =="TempO-Seq":
+    biospyder_filepath = common_config["biospyder_dbs"] + common_config["biospyder_manifest_file"]
+
+    check_manifest = os.path.exists(biospyder_filepath)
+
+    if check_manifest == False:
+        sys.exit(f"Error! You are missing the expected biospyder manifest file: {biospyder_filepath}")
 
 # Set up output directories
 

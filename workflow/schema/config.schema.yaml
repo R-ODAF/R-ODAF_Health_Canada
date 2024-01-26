@@ -148,7 +148,12 @@ properties:
         items:
           type: string
       intgroup_to_plot:
-        type: string
+        type: 
+          - string
+          - 'null'
+          - array
+        items:
+          type: string
       formula_override:
         type:
           - string
@@ -203,10 +208,6 @@ properties:
           - string
           - 'null'
       wikipathways_filename:
-        type:
-          - string
-          - 'null'
-      KEGGpathways_filename:
         type:
           - string
           - 'null'
