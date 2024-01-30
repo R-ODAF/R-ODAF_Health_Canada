@@ -32,7 +32,7 @@ rule fastp_se:
     shell:
         '''
         fastp \
-        --in1 {input.R1} \
+        -i {input.R1} \
         --out1 {output.R1} \
         --json {output.json} \
         --html {output.html} \
@@ -76,7 +76,7 @@ rule fastp_pe:
     shell:
         '''
         fastp \
-        --in1 {input.R1} \
+        -i {input.R1} \
         --in2 {input.R2} \
         --out1 {output.R1} \
         --out2 {output.R2} \
