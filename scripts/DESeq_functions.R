@@ -183,10 +183,10 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
 
         # Extract the final list of DEGs
         
-        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
+        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter_DEGs))
         
         allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
-        DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
+        DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter_DEGs) ,]
         DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
         DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
         #TODO: output quantile rule failing and spike failing genes

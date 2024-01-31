@@ -120,7 +120,7 @@ searchURL_NCBI <- "http://www.ncbi.nlm.nih.gov/gene/?term="
 searchURL_Ensembl <- "https://ensembl.org/Multi/Search/Results?q="
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
-  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter) %>%
+  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter_DEGs) %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 

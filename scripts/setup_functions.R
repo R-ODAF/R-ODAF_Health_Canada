@@ -111,7 +111,6 @@ set_up_platform_params <-function(params){
     count_data_file <- file.path(paths$processed, "count_table.tsv")
     params$count_data_file <- count_data_file
     params$sampledata_sep = "\t"
-    params$linear_fc_filter <- params$linear_fc_filter_DEGs    
   # set some additional parameters based on platform
   if (params$platform == "RNA-Seq") {
     params$MinCount <- 1
