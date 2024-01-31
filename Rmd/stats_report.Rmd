@@ -31,6 +31,8 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True  
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "Human_S1500_Surrogate_2.0_standardized.csv"
   KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
