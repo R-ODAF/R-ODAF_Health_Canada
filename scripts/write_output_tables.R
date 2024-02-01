@@ -248,7 +248,7 @@ write_tables <- function(facet) {
   ### All results in one table
   wb2 <- createWorkbook()
   modifyBaseFont(wb2, fontSize = 10, fontName = "Arial Narrow")
-  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter))
+  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter_DEGs))
   freezePane(wb2, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
   writeDataTable(wb2,
                  sheet = 1,
