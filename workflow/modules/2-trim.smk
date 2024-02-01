@@ -77,7 +77,7 @@ rule fastp_pe:
         '''
         fastp \
         -i {input.R1} \
-        --in2 {input.R2} \
+        -I {input.R2} \
         --out1 {output.R1} \
         --out2 {output.R2} \
         --json {output.json} \
