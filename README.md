@@ -58,12 +58,14 @@ Note that R Studio Server has a built-in terminal in which unix commands can be 
 ## Dependencies
 
 - conda
-- snakemake > 6.0, < 8.0 (see note below)
+- snakemake > 6.0 (see note on versions below)
 - R
 
 We recommend installing snakemake within its own conda environment to avoid conflicts.
 
-**NOTE on Snakemake versions** : This workflow was created prior to the release of Snakemake 8.0, which introduced significant changes. The code in this repo and instructions in this readme are written for Snakemake v7.32.4. 
+**NOTE on Snakemake versions** : Snakemake v8.0 and above introduced changes to the snakemake command used to run the workflow. The commands given in this README apply to v8.0 and above. If you are using an earlier version of Snakemake, replace `--software-deployment-method conda` with `--use-conda`
+For more information: https://snakemake.readthedocs.io/en/stable/project_info/history.html#detailed-breaking-changes 
+
 
 If you do not yet have mamba, install it.
 
@@ -73,7 +75,7 @@ Follow the installation steps provided in the snakemake documentation https://sn
 
 ```
 conda activate base
-mamba create -c conda-forge -c bioconda -n snakemake snakemake=7.32.4
+mamba create -c conda-forge -c bioconda -n snakemake snakemake
 ```
 
 To activate this environment:
@@ -87,11 +89,11 @@ Other dependencies are managed by snakemake via the creation of conda environmen
 ## Installing environments
 Environments must be installed *prior* to running the workflow because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the workflow without first installing and fixing the environments, the workflow will not run to completion.
 
-
+**NOTE on Snakemake versions** : Snakemake v8.0 and above introduced changes to the snakemake command used to run the workflow. The commands given in this README apply to v8.0 and above. If you are using an earlier version of Snakemake, replace `--software-deployment-method conda` with `--use-conda`
 
 From inside the repo top-level directory, run:
 
-`snakemake --cores 32 --use-conda --conda-create-envs-only`
+`snakemake --cores 32 --software-deployment-method conda --conda-create-envs-only`
 
 *Choose the number of cores according to what is available in your system.*
 
@@ -107,9 +109,9 @@ For example, the code below installs the environments in ~/snakemake_envs. Using
 ```
 mkdir ~/snakemake_envs #Place and name this directory as you wish, and use correctly later with --conda-prefix
 
-snakemake --cores 32 --use-conda --conda-create-envs-only --conda-prefix ~/snakemake_envs/
+snakemake --cores 32 --software-deployment-method conda --conda-create-envs-only --conda-prefix ~/snakemake_envs/
 
-conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml//) Rscript ../RODAF-test2/R-ODAF_Health_Canada/install.R
+conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml//) Rscript install.R
 ```
 
 *When running the workflow, remember to use the --conda-prefix flag.*
@@ -146,19 +148,22 @@ For paired-end sequencing: *{sample_ID}*.R1.fastq.gz and *{sample_ID}*.R2.fastq.
 
 ![pipeline_image](pipeline_figure.png)
 
+
+**NOTE on Snakemake versions** : Snakemake v8.0 and above introduced changes to the snakemake command used to run the workflow. The commands given in this README apply to v8.0 and above. If you are using an earlier version of Snakemake, replace `--software-deployment-method conda` with `--use-conda`
+
 ## Performing a dry run
 We strongly recommend using snakemake's dry run functionality to check for errors before beginning an actual run. (See https://snakemake.readthedocs.io/en/v7.32.2/executing/cli.html).
 
 Use the flags `--dry-run`, or `-n`
 
 For example,
-`snakemake -s ./workflow/Snakefile --cores 32 --use-conda -n`
+`snakemake -s ./workflow/Snakefile --cores 32 --software-deployment-method conda -n`
 
 ## Running the workflow
 
 To run the whole pipeline:
 
-`snakemake -s ./workflow/Snakefile --use-conda --cores 32`
+`snakemake -s ./workflow/Snakefile --software-deployment-method conda --cores 32`
 
 Choose the number of cores according to what is available in your system.
 
@@ -171,23 +176,23 @@ This workflow is modularized, so you can run (or re-run) some sections independe
 #### Preprocessing only
 To run only the preprocessing steps and get a count table for TempO-Seq datasets:
 
-`snakemake -s ./workflow/modules/4-preprocess_temposeq.smk --use-conda --cores 32`
+`snakemake -s ./workflow/modules/4-preprocess_temposeq.smk --software-deployment-method conda --cores 32`
 
 To run preprocessing steps and get a count table for RNA-Seq datasets:
 
-`snakemake -s ./workflow/modules/4-preprocess_rnaseq.smk --use-conda --cores 32`
+`snakemake -s ./workflow/modules/4-preprocess_rnaseq.smk --software-deployment-method conda --cores 32`
 
 #### Quality control
 
 Once the preprocessing steps are complete, you can run (or re-run) the quality control steps. These apply the R-ODAF filters on all samples and produce a multiQC report, a study-wide report on quality control filters according to R-ODAF criteria, and a filtered metadata file.
 
-`snakemake -s ./workflow/modules/5-qc.smk --use-conda --cores 32`
+`snakemake -s ./workflow/modules/5-qc.smk --software-deployment-method conda --cores 32`
 
 #### Differential analysis
 
 Once the preprocessing and quality control steps are complete, you can run (or re-run) differential analysis via DESeq2 and production of DEG reports. This will produce DEG lists, exploratory reports, and interactive gene expression reports that incorporate DEG filtering according to R-ODAF criteria.
 
-`snakemake -s ./workflow/modules/6-diffexp.smk --use-conda --cores 32`
+`snakemake -s ./workflow/modules/6-diffexp.smk --software-deployment-method conda --cores 32`
 
 **Note that you will have to delete dummy output file "reports_complete" from your top-level directory to re-run this step**
 

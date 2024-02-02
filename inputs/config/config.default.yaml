@@ -72,6 +72,8 @@ DESeq2:
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
   wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True  
   # "wikipathways-20210810-gmt-Mus_musculus.gmt"
   # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
   nBestFeatures: 20              # The number of best features to make plots of their counts

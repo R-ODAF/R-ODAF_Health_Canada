@@ -101,7 +101,10 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
 
         compte <- Counts[Filter[,1] == 1,]
         Filter <- Filter[rownames(Filter) %in% rownames(compte), , drop = F]
-
+        
+        #save all genes that are present regardless of counts 
+        dfGenes <- data.frame(Ensembl_Gene_ID = rownames(Counts))
+        
         intitial_count <- nrow(dds)
         num_relevance_filtered <- nrow(dds) - nrow(Filter)
         message(paste0("Relevance filtering removed ", num_relevance_filtered,
@@ -180,10 +183,10 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
 
         # Extract the final list of DEGs
         
-        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter))
+        message(paste0("Filtering by linear fold-change: linear FC needs to be above ", params$linear_fc_filter_DEGs))
         
         allCounts_all_filters <- res[rowSums(Filter) == 3 ,]
-        DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter) ,]
+        DECounts_real <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter_DEGs) ,]
         DECounts_no_quant <- DEsamples[Filter[, 2] == 0 ,] # save these to output later 
         DECounts_spike <- DEsamples[Filter[, 3] == 0 ,] # save these to output later
         #TODO: output quantile rule failing and spike failing genes
@@ -219,7 +222,7 @@ get_DESeq_results <- function(dds, exp_metadata, contrasts, design, params, curr
     resListDEGs <- resListDEGs[!sapply(resListDEGs, is.null)]
     
     mergedDEGs <- unique(mergedDEGs)
-    return(list(resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
+    return(list(dfGenes=dfGenes,resListAll=resListAll, resListFiltered=resListFiltered, resListDEGs=resListDEGs, mergedDEGs=mergedDEGs, filtered_table=filtered_table))
 }
 
 
@@ -270,9 +273,7 @@ annotate_deseq_table <- function(deseq_results_list, params, filter_results = F,
       ## FILTERS ##
       if (biosets_filter == T) {
         # for biosets, filter on unadjusted p-value
-        deg_table <- deg_table[!is.na(deg_table$pval) & deg_table$pval < params$alpha & abs(deg_table$linearFoldChange) > params$linear_fc_filter, ]
-      }else if (filter_results == T) {
-        deg_table <- deg_table[!is.na(deg_table$padj) & deg_table$padj < params$alpha & abs(deg_table$linearFoldChange) > params$linear_fc_filter, ]
+        deg_table <- deg_table[!is.na(deg_table$pval) & deg_table$pval < params$alpha & abs(deg_table$linearFoldChange) > params$linear_fc_filter_biosets, ]
       }
       annotated_results[[i]] <- deg_table %>% dplyr::distinct()
     }
