@@ -26,8 +26,8 @@ rule multiqc:
     shell:
         '''
         multiqc \
-        --cl_config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
-        --cl_config "sample_names_replace_exact: True" \
+        --cl-config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+        --cl-config "sample_names_replace_exact: True" \
         --filename MultiQC_Report.html \
         --interactive \
         --sample-names {metadata_file} \

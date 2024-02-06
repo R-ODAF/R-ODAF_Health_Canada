@@ -31,12 +31,15 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
   # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
   wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
   # "wikipathways-20210810-gmt-Mus_musculus.gmt"
   # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
   nBestFeatures: 20              # The number of best features to make plots of their counts
@@ -56,7 +59,6 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: 0.05
-  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -117,7 +119,7 @@ searchURL_NCBI <- "http://www.ncbi.nlm.nih.gov/gene/?term="
 searchURL_Ensembl <- "https://ensembl.org/Multi/Search/Results?q="
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
-  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter) %>%
+  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter_DEGs) %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 

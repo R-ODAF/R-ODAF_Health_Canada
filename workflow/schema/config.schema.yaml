@@ -148,7 +148,12 @@ properties:
         items:
           type: string
       intgroup_to_plot:
-        type: string
+        type: 
+          - string
+          - 'null'
+          - array
+        items:
+          type: string
       formula_override:
         type:
           - string
@@ -206,6 +211,12 @@ properties:
         type:
           - string
           - 'null'
+      linear_fc_filter_DEGs:
+        type: number
+        minimum: 0
+      linear_fc_filter_biosets:
+        type: number
+        minimum: 0      
       nBestFeatures:
         type: integer
         minimum: 1
@@ -258,6 +269,8 @@ properties:
       - run_pathway_analysis
       - wikipathways_directory
       - wikipathways_filename
+      - linear_fc_filter_DEGs
+      - linear_fc_filter_biosets
       - nBestFeatures
       - nBest
       - nHeatmap

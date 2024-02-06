@@ -5,14 +5,12 @@ services:
           #restart: "unless-stopped"
     container_name: R-ODAF
     volumes:
-      - ./analysis:/home/R-ODAF/R-ODAF_Health_Canada/analysis
-      - ./metadata:/home/R-ODAF/R-ODAF_Health_Canada/data/metadata
-      - ./config:/home/R-ODAF/R-ODAF_Health_Canada/config
-      - ./raw-data:/home/R-ODAF/R-ODAF_Health_Canada/data/raw
-      - ./reference:/home/R-ODAF/R-ODAF_Health_Canada/reference
-      - ./wikipathways-20210810-gmt-Homo_sapiens.gmt:/home/R-ODAF/R-ODAF_Health_Canada/wikipathways-20210810-gmt-Homo_sapiens.gmt
-      - ./Human_S1500_1.2_standardized.csv:/home/R-ODAF/R-ODAF_Health_Canada/Human_S1500_1.2_standardized.csv 
-    image: mattjmeier/r-odaf-hc:latest
+      - ./inputs:/home/R-ODAF/R-ODAF_Health_Canada/inputs
+      - ./output:/home/R-ODAF/R-ODAF_Health_Canada/output
+      #- ./reference:/home/R-ODAF/R-ODAF_Health_Canada/reference
+      #- ./wikipathways-20210810-gmt-Homo_sapiens.gmt:/home/R-ODAF/R-ODAF_Health_Canada/wikipathways-20210810-gmt-Homo_sapiens.gmt
+      #- ./Human_S1500_1.2_standardized.csv:/home/R-ODAF/R-ODAF_Health_Canada/Human_S1500_1.2_standardized.csv 
+    image: r-odaf:latest
     # command: /bin/bash -l
     environment:
       - HOST_UID=10007

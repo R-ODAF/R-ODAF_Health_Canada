@@ -141,7 +141,7 @@ if(!is.na(params$group_facet)){
       filter(!(solvent_control==TRUE)) %>%
       pull(params$group_facet) %>% 
       unique()
-  }
+    }
 } else {
   facets <- NA
 }
@@ -171,6 +171,7 @@ if(is.na(params$group_facet)){
     rld <- regularize_data(dds, original_design, covariates, params$batch_var)
     DESeq_results <- get_DESeq_results(dds, exp_metadata, contrasts, design_to_use, params, NA, paths$DEG_output)
     ddsList[['all']] <- dds
+    overallAllGenes <- DESeq_results$dfGenes
     overallResListAll[['all']] <- DESeq_results$resListAll
     overallResListFiltered[['all']] <- DESeq_results$resListFiltered
     overallResListDEGs[['all']] <- DESeq_results$resListDEGs

@@ -86,7 +86,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
 # filter the regularized data a couple ways for different displays    
 rld_DEGs <- rld[row.names(assay(rld)) %in% mergedDEGs]
 
-rv = rowVars(assay(rld))
+rv = rowVars(assay(rld), useNames = FALSE)
 select = order(rv, decreasing = TRUE)[1:params$nBest]
 rld_top <- rld[select,]
 select_heatmap = order(rv, decreasing = TRUE)[1:params$nHeatmapDEGs]
