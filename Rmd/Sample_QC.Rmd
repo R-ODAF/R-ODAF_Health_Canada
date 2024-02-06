@@ -86,7 +86,7 @@ library(dendextend)
 library(dendsort)
 library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
-library(lemon)
+library(ggh4x)
 ```
 
 
@@ -1187,7 +1187,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
         axis.ticks = element_blank(),
         panel.spacing = unit(2, "lines")) +
   scale_x_discrete(position = "top") +
- {if (!is.na(batch_var))  facet_rep_wrap(paste0("~",batch_var), scales='free', repeat.tick.labels = 'left', ncol = 2)}
+ {if (!is.na(batch_var))  facet_wrap2(paste0("~",batch_var), scales = "free", axes = "all", ncol = 2)}
 ```
 
 
