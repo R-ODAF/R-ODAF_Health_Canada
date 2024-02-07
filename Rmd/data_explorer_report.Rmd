@@ -234,7 +234,8 @@ counts_by_group <- counts_by_group %>%
   dplyr::select(gene,Sample,'Normalized Counts',group,Gene_Symbol)
 
 # Create "shared" data object - this is for enabling live filtering
-counts_by_group_shared <- SharedData$new(counts_by_group)
+counts_by_group_shared <- SharedData$new(counts_by_group %>%
+  mutate(group = factor(group, levels = mixedsort(unique(group)))))
 
 # Make an initial filter using the top gene
 top_gene = genesToSelect[["Feature_ID"]][1]
