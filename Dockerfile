@@ -78,7 +78,7 @@ RUN /bin/bash -c "tree inputs.bak && \
                   mv inputs.bak inputs"
 # Move test files
 USER root
-RUN mv ./tests /opt/tests
+RUN rm -r ./tests
 
 ########################################################
 ## Build R-ODAF container for transcriptomic analysis ##
