@@ -22,12 +22,16 @@ RUN apt-get update && apt-get -y install \
 	libcairo2-dev \
 	libxt-dev \
 	tree \
-        gosu \
+      gosu \
 	vim && \
       mamba install -y -c conda-forge -c bioconda -n base snakemake && \
       rm -rf /var/lib/apt/lists/* && \
-      gosu nobody true 
-      # last line is to verify that gosu works
+      gosu nobody true  && \
+      df -h && \
+      apt-get clean && \
+      df -h
+      # verify that gosu works
+      # free up disk space on runner
 
 RUN mkdir -p /home/R-ODAF/R-ODAF_Health_Canada
 WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
@@ -38,10 +42,11 @@ RUN mv inputs inputs.bak
 
 RUN git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data \
 && mv test-data/${PLATFORM}/* ./ \
-&& wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
+&& wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv \
+&& df -h
 
 # Build environments with Snakemake
-RUN /bin/bash -c "snakemake --cores ${BUILD_CORES} --use-conda --conda-create-envs-only"
+RUN /bin/bash -c "snakemake --cores ${BUILD_CORES} --use-conda --conda-create-envs-only && conda clean -y -a && df -h"
 
 # Install extra dependency for reports
 RUN /bin/bash -c "conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R"
@@ -60,20 +65,21 @@ USER R-ODAF
 FROM base as tests
 
 # Run tests
-RUN /bin/bash -c "snakemake --cores 8 --use-conda"
+RUN /bin/bash -c "df -h && snakemake --cores 8 --use-conda"
 
 # Clean up files
 FROM tests as cleanup
 
 # Clean up directories
-RUN mkdir ./tests && \
-    mv output \
-       test-data \
-       truth_checksums \
-       wikipathways-20210810-gmt-Homo_sapiens.gmt \
-       Human_S1500_1.2_standardized.csv \
-       inputs \
-       ./tests/
+RUN df -h &&\
+      mkdir ./tests && \
+      mv output \
+      test-data \
+      truth_checksums \
+      wikipathways-20210810-gmt-Homo_sapiens.gmt \
+      Human_S1500_1.2_standardized.csv \
+      inputs \
+      ./tests/
 RUN /bin/bash -c "tree inputs.bak && \
                   mv inputs.bak inputs"
 # Move test files
