@@ -20,10 +20,18 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Disk space before build
+        run: df -h
       - name: Build and push container image to GHCR
         uses: docker/build-push-action@v5
         with:
           push: true
           tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
           file: ./Dockerfile
-          
+          cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
+          cache-to: type=inline
+      - name: Disk space after build
+        run: df -h
+      - name: Find large files and directories
+        run: |
+          du -ah . | sort -rh | head -n 20
