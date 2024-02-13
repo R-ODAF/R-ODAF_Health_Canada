@@ -38,8 +38,7 @@ jobs:
       - name: Install linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libcairo2-dev
-          sudo apt-get install libxt-dev
+          sudo apt-get -y install libcairo2-dev libxt-dev
       - name: Set up python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
