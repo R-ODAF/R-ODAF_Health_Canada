@@ -9,7 +9,7 @@ permissions:
   packages: write
 jobs:
   build:
-    runs-on: self-hosted # ubuntu-latest
+    runs-on: ubuntu-latest # self-hosted # 
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
