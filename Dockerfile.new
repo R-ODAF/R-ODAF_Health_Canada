@@ -33,7 +33,7 @@ FROM debian:stable-slim
 USER root
 # Install runtime dependencies that are necessary for your application
 RUN apt-get update \
-      && apt-get install -y --no-install-recommends bash gosu wget \
+      && apt-get install -y --no-install-recommends bash gosu  \
       && gosu nobody true \
       && rm -rf /var/lib/apt/lists/* \
       && apt-get clean \
@@ -43,9 +43,9 @@ RUN apt-get update \
 RUN useradd -ms /bin/bash R-ODAF
 
 COPY --from=base /home/R-ODAF /home/R-ODAF
-COPY --from=base /usr/local/bin /usr/local/bin
+#COPY --from=base /usr/local/bin /usr/local/bin
 COPY --from=base /opt/conda /opt/conda
-COPY --from=base /usr/bin /usr/bin
+#COPY --from=base /usr/bin /usr/bin
 
 # Set the working directory and user
 WORKDIR /home/R-ODAF/R-ODAF_Health_Canada
