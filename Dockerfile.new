@@ -28,7 +28,8 @@ RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda --conda-
 RUN mamba run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R
 
 # Final cleanup stage using Debian slim image
-FROM debian:stable-slim
+FROM alpine:3.19.1
+#debian:stable-slim
 
 USER root
 # Install runtime dependencies that are necessary for your application
