@@ -27,7 +27,7 @@ jobs:
         with:
           push: true
           tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
-          file: ./Dockerfile
+          file: ./Dockerfile.new
           cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
           cache-to: type=inline
       - name: Disk space after build
