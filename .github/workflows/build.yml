@@ -20,7 +20,6 @@ jobs:
           sudo rm -rf /var/cache/debconf/*
           sudo rm -rf /var/cache/fontconfig/*
           sudo rm -rf /var/cache/gdm/*
-          sudo rm
           df -h
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx

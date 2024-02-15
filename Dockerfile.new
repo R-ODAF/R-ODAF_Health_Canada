@@ -3,7 +3,7 @@
 ########################################################
 # Mamba base image
 #FROM mambaorg/micromamba:1.5.6-focal as base
-FROM snakemake/snakemake:v8.4.7 as base
+FROM snakemake/snakemake:v8.4.8
 
 # Required to avoid interactive prompts
 ARG DEBIAN_FRONTEND=noninteractive
@@ -21,23 +21,9 @@ RUN mv inputs inputs.bak \
       && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv \
       && rm latest.tar.gz
 
-# Build environments with Snakemake
-RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda --conda-create-envs-only 
-
-# Install extra dependency for reports
-RUN mamba run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R 
-RUN mamba install conda-pack 
-RUN ./scripts/utilities/pack_envs.sh && ls >&2
-RUN rm -rf ./.snakemake/conda
-
-# Final cleanup stage using Debian slim image
-# Final cleanup stage using Debian slim image
-FROM debian:stable-slim
-
-USER root
 # Install runtime dependencies that are necessary for your application
 RUN apt-get update \
-      && apt-get install -y --no-install-recommends bash gosu wget \
+      && apt-get install -y --no-install-recommends gosu  \
       && gosu nobody true \
       && rm -rf /var/lib/apt/lists/* \
       && apt-get clean \
@@ -45,26 +31,20 @@ RUN apt-get update \
 
 # Create a user for running; -m creates home directory, -s sets default shell
 RUN useradd -ms /bin/bash R-ODAF
-
-COPY --from=base /home/R-ODAF /home/R-ODAF
-COPY --from=base /usr/local/bin /usr/local/bin
-COPY --from=base /opt/conda /opt/conda
-COPY --from=base /usr/bin /usr/bin
-
-# Set the working directory and user
-WORKDIR /home/R-ODAF/R-ODAF_Health_Canada
-RUN chown -R R-ODAF:R-ODAF /home/R-ODAF && df -h
+#RUN chown -R R-ODAF:R-ODAF /home/R-ODAF && df -h
 USER R-ODAF
 
-# Run tests
-ARG BUILD_CORES=8
-# Add conda to the system path
-RUN ./scripts/utilities/unpack_envs.sh && ls >&2
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV PATH="/opt/conda/envs/snakemake/condabin/:${PATH}"
-RUN /opt/conda/envs/snakemake/bin/activate && \
-   /opt/conda/envs/snakemake/bin/snakemake --cores ${BUILD_CORES} --software-deployment-method conda && \
-   df -h
+# Build environments with Snakemake
+RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda --conda-create-envs-only 
+
+# Install extra dependency for reports
+RUN mamba run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R 
+
+RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda \
+      && df -h \
+      && mkdir ./tests \
+      && mv output test-data truth_checksums wikipathways-20210810-gmt-Homo_sapiens.gmt Human_S1500_1.2_standardized.csv inputs ./tests/ && \
+      && /bin/bash -c "tree inputs.bak && mv inputs.bak inputs"
 
 USER root
 # Set the entrypoint for the container
