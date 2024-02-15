@@ -14,4 +14,6 @@ for ENV_PATH in $ENV_PATHS; do
     ENV_NAME=$(basename $ENV_PATH)
     # Pack the environment
     conda-pack --ignore-missing-files -p $ENV_PATH -o ./env_pack.${ENV_NAME}.tar.gz
+    # Remove the environment using full path to save disk space
+    conda env remove -p $ENV_PATH -y
 done
