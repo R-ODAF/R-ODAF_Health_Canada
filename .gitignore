@@ -1,21 +1,18 @@
-# History files
+# R History files
 .Rhistory
-.Rapp.history
-# Session Data files
-*.RData
-*.Rdata
-# User-specific files
+.Rapp.history 
+# R User-specific files
 .Ruserdata
 # Example code in package build process
-*-Ex.R
+*-Ex.R # Should remove?
 # Output files from R CMD build
 /*.tar.gz
 # Output files from R CMD check
-/*.Rcheck/
+/*.Rcheck/ # Should remove?
 # RStudio files
 .Rproj.user/
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
+.httr-oauth # Should remove?
 # knitr and R markdown default cache directories
 *_cache/
 /cache/
@@ -46,19 +43,14 @@
 *metadata.txt
 *contrasts.txt
 *config.yaml
+*.gmt
+*remove.txt
 
 ## Outputs
-output/
-count_table*.csv
+output*/
+*.csv
 *metadata.QC_applied.txt
-/logs/
-*.pdf
-*.html
 
-TODO.txt
-
-run.sh
-preprocessing.txt
 
 ## Misc
 *Log.out
@@ -70,9 +62,8 @@ preprocessing.txt
 *.cnt
 *_table.txt
 .~lock*
-
-extra_stats_report.html
-output/*.png
+*.bak
+unify_temposeq_manifests/
 
 # Snakemake dummy files
 genome.loaded
@@ -80,11 +71,5 @@ genome.removed
 analysis_complete
 reports_complete
 
-*.bak
-*remove.txt
-data/raw/run_folders.txt
-c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt
-reference/
-wikipathways-20210810-gmt-Homo_sapiens.gmt
-unify_temposeq_manifests/
-data/
+
+
