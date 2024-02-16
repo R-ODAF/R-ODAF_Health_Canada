@@ -5,7 +5,7 @@ library("ToxicR")
 library("dplyr")
 library("PMCMRplus")
 library(parallel)
-library(progress)
+library("pbmcapply")
 #bmdoutput <- read.table("~/storage/biomarker_input_.txt",
 #                        header=FALSE, sep = "\t", row.names = 1)
 bmdoutput <- read.table("~/storage/ToxicR mod/data for BMDExpress log2 CPM Males.txt",
@@ -20,6 +20,7 @@ bmdoutput[-1] <- lapply(bmdoutput[-1], function(x) {
 })
 
 dose_column <-as.numeric(bmdoutput[,1]) 
+start.time <- Sys.time()
 Func <- function(resp_bygene_column){ 
   trendtestres<- williamsTest(resp_bygene_column ~ dose_column, alternative = c("greater", "less"))
   trendestresdf <- data_frame("pass/fail value" = trendtestres$crit.value[,1] - trendtestres$statistic[,1]) 
@@ -38,14 +39,13 @@ Func <- function(resp_bygene_column){
   }
 }
 
-pb <- progress_bar$new(total = ncol(bmdoutput))
-result <- lapply(bmdoutput[,2:ncol(bmdoutput)], function(col) {
-  pb$tick()  
+result <- pbmclapply(bmdoutput[,2:ncol(bmdoutput)], function(col) {
   return(Func(col))
 })
-pb$close()
 
 #structuring of results to remove NULLs and have rows for output
 signficant_BMD_table <- t(as.data.frame(Filter(Negate(is.null), result)))
-
+end.time <- Sys.time()
+time.taken <- round(end.time - start.time,2)
+time.taken
 write.table(signficant_BMD_table, file ="~/storage/toxicR output.txt", sep=" ", col.names = TRUE)
