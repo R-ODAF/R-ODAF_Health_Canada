@@ -69,6 +69,7 @@ output:
     code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
+runtime: shiny
 ---
 
 
@@ -104,7 +105,9 @@ server <- function(input, output) {
   # Render the selected column of significant_BMD_table as text
   model <- reactive({
     selected_gene <- input$select
-    single_continuous_fit(dose_column, bmdoutput[, selected_gene])
+    single_continuous_fit(dose_column, 
+                          bmdoutput[, selected_gene],
+                          model_type=significant_BMD_table[significant_BMD_table$Gene==selected_gene,"Modeltype"])
   })
   output$plot <- renderPlot({
     # Plot the model
