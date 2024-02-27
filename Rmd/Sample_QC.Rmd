@@ -86,6 +86,7 @@ library(dendextend)
 library(dendsort)
 library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
+library(ggh4x)
 ```
 
 
@@ -1186,13 +1187,7 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(!!ensym(colname)),
         axis.ticks = element_blank(),
         panel.spacing = unit(2, "lines")) +
   scale_x_discrete(position = "top") +
-  {if (!is.na(batch_var))  facet_wrap(paste0("~",batch_var), ncol = 2)}
-#  {if (!is.na(batch_var))  facet_rep_wrap(paste0("~",batch_var), repeat.tick.labels = T)}
-# The facet_rep_wrap function doesn't actually seem to produce the intended effect.
-# Probably broken by something in ggplot.
-# Need a better way to add row and column labels. Free axes in ggplot don't
-# currently support showing on all facets: https://github.com/tidyverse/ggplot2/issues/4064
-# There is a PR in ggplot to fix this: https://github.com/tidyverse/ggplot2/pull/4467
+ {if (!is.na(batch_var))  facet_wrap2(paste0("~",batch_var), scales = "free", axes = "all", ncol = 2)}
 ```
 
 

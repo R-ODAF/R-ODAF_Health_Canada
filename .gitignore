@@ -46,6 +46,8 @@
 *metadata.txt
 *contrasts.txt
 *config.yaml
+inputs/reference/*
+*.gmt
 
 ## Outputs
 output/
@@ -54,6 +56,10 @@ count_table*.csv
 /logs/
 *.pdf
 *.html
+
+#Checksums
+checksum*
+truth_checksums/*
 
 TODO.txt
 
