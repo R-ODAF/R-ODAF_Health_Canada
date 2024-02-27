@@ -9,8 +9,18 @@ permissions:
   packages: write
 jobs:
   build:
-    runs-on: self-hosted # ubuntu-latest
+    runs-on: ubuntu-latest # self-hosted # 
     steps:
+      # add a step to reduce disk space on the runner
+      - name: Reduce disk space
+        run: |
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo rm -rf /var/cache/apt/*
+          sudo rm -rf /var/cache/debconf/*
+          sudo rm -rf /var/cache/fontconfig/*
+          sudo rm -rf /var/cache/gdm/*
+          df -h
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -27,7 +37,7 @@ jobs:
         with:
           push: true
           tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
-          file: ./Dockerfile
+          file: ./Dockerfile.new
           cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
           cache-to: type=inline
       - name: Disk space after build
