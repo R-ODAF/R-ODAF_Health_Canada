@@ -226,6 +226,9 @@ genesAlphabetized <- genesToSelect %>%
   dplyr::arrange(-abs(log2FoldChange)) %>%
   dplyr::arrange(Gene_Symbol)
 
+# Make sure genes are unique to avoid replicated rows and points in plot
+genesAlphabetized <- genesAlphabetized %>%
+  dplyr::distinct(Feature_ID, .keep_all = TRUE)
 
 # Get the data 
 counts_by_group <- counts_by_group %>%
