@@ -190,6 +190,7 @@ properties:
         items:
           type: string
       exclude_groups:
+        type:  
           - string
           - array
           - 'null'
