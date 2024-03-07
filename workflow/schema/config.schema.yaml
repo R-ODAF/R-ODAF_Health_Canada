@@ -184,12 +184,17 @@ properties:
         type: boolean
       exclude_samples:
         type:
+          - string
           - array
           - 'null'
+        items:
+          type: string
       exclude_groups:
-        type:
+          - string
           - array
           - 'null'
+        items:
+          type: string
       include_only_column:
         type:
           - string
