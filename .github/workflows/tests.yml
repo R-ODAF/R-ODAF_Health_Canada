@@ -85,6 +85,23 @@ jobs:
         run: |
          conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | \
          sed s/\.yaml//) Rscript install.R
+      - name: Print env names
+        run: |
+          for yaml in .snakemake/conda/*.yaml; do
+            echo "$yaml:"
+            head -n 1 "$yaml"
+          done
+      - name: Print contents of Conda environments
+        run: |
+          for env in .snakemake/conda/*; do
+            if [ -d "$env" ]; then
+              echo "Contents of $env:"
+              conda activate $env
+              conda list
+              conda deactivate
+            fi
+          done
+        shell: bash -l {0}
       - name: Run workflow
         run: |
           snakemake --cores 8 --use-conda
