@@ -36,6 +36,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
+          output: true
           tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
           file: ./Dockerfile.new
           cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
