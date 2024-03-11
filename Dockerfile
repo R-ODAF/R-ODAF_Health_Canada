@@ -52,12 +52,15 @@ RUN /bin/bash -c "snakemake --cores ${BUILD_CORES} --use-conda --conda-create-en
 RUN /bin/bash -c "conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R"
 
 # Print conda environment packages
-RUN for env in .snakemake/conda/*; do \
-    if [ -d "$env" ]; then \
-      echo "Contents of $env:"; \
-      $env/bin/conda list; \
+RUN /bin/bash -c "\
+  for env in .snakemake/conda/*; do \
+    if [ -d \"$env\" ]; then \
+      echo \"Contents of $env:\"; \
+      source activate $env; \
+      conda list; \
+      conda deactivate; \
     fi; \
-  done
+  done"
 
 # Change ownership of files
 USER root
