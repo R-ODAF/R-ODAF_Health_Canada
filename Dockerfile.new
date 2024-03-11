@@ -48,7 +48,9 @@ RUN /bin/bash -c "\
       conda list; \
       conda deactivate; \
     fi; \
-  done"
+  done" > /home/R-ODAF/conda_envs.txt
+
+RUN cat /home/R-ODAF/conda_envs.txt
 
 RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda \
       && df -h \
