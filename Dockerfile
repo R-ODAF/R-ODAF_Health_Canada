@@ -51,6 +51,14 @@ RUN /bin/bash -c "snakemake --cores ${BUILD_CORES} --use-conda --conda-create-en
 # Install extra dependency for reports
 RUN /bin/bash -c "conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R"
 
+# Print conda environment packages
+RUN for env in .snakemake/conda/*; do \
+    if [ -d "$env" ]; then \
+      echo "Contents of $env:"; \
+      $env/bin/conda list; \
+    fi; \
+  done
+
 # Change ownership of files
 USER root
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF
