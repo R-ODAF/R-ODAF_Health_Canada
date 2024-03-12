@@ -4,7 +4,9 @@
 # Mamba base image
 # snakemake image is based on mambaorg/micromamba
 # mambaorg/micromamba in turn is based on debian:bookworm-slim
-FROM snakemake/snakemake:v8.4.8
+FROM snakemake/snakemake:stable
+# v
+# v8.4.8
 
 
 # Required to avoid interactive prompts
