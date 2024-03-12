@@ -389,12 +389,12 @@ In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the 
 `r if (!is.null(remove)) { print(remove) }`
 
 ```{r}
-
-cytotoxic %>%
-  kable(caption = "Samples removed manually before this report was generated.") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-
+if (nrow(cytotoxic) >= 1)) {
+  cytotoxic %>%
+    kable(caption = "Samples removed manually before this report was generated.") %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+    scroll_box(width = "100%", height = "480px")
+}
 ```
 
 ## Dendrogram and distance based filtering
