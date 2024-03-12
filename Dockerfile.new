@@ -3,7 +3,7 @@
 ########################################################
 # Mamba base image
 #FROM mambaorg/micromamba:1.5.6-focal as base
-FROM snakemake/snakemake:v8.4.8
+FROM snakemake/snakemake:v8.4.8 # based on mambaorg/micromamba, in turn based on debian:bookworm-slim
 
 # Required to avoid interactive prompts
 #ARG DEBIAN_FRONTEND=noninteractive
