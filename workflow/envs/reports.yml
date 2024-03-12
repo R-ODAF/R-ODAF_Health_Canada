@@ -1,6 +1,7 @@
 name: R-ODAF_reports
 channels:
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - conda-forge::pandoc=2.19.2
