@@ -2,8 +2,10 @@
 ## Build R-ODAF container for transcriptomic analysis ##
 ########################################################
 # Mamba base image
-#FROM mambaorg/micromamba:1.5.6-focal as base
-FROM snakemake/snakemake:v8.4.8 # based on mambaorg/micromamba, in turn based on debian:bookworm-slim
+# snakemake image is based on mambaorg/micromamba
+# mambaorg/micromamba in turn is based on debian:bookworm-slim
+FROM snakemake/snakemake:v8.4.8
+
 
 # Required to avoid interactive prompts
 #ARG DEBIAN_FRONTEND=noninteractive
