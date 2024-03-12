@@ -22,7 +22,7 @@ jobs:
     strategy:
       matrix:
         include: 
-          - os:  ['ubuntu-20.04','ubuntu-22.04'] ## self-hosted 
+          - os:  'ubuntu-20.04'  ## self-hosted 
             label: linux-64
             prefix: /usr/share/miniconda3/envs/base
         r-version: ['4.3.1']
