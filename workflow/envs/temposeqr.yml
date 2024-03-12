@@ -1,6 +1,7 @@
 name: R-ODAF_temposeqr
 channels:
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - bioconda::samtools=1.16.1
