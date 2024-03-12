@@ -14,6 +14,7 @@ dependencies:
   - conda-forge::r-tidyverse=1.3.2
   - conda-forge::r-yaml=2.3.6
   - conda-forge::r-plotly=4.10.1
+  - conda-forge::r-ggplot2=3.4.0
   - conda-forge::r-data.table=1.14.6
   - conda-forge::r-cluster=2.1.4
   - conda-forge::r-cairo=1.6_0

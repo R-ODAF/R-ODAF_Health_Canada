@@ -414,7 +414,7 @@ message(paste0("The treatment variable is: ", treatment_var))
 ############################################################################
 # Re-order the data by group
 ############################################################################
-flag_order <- order(d[treatment_var])
+flag_order <- order(d[,treatment_var])
 d <- d[flag_order,]
 count_data <- count_data[,d$original_names]
 ############################################################################
@@ -922,6 +922,7 @@ cor_plot <- ggplot(cor_distribution_all, aes(!!ensym(treatment_var), mean)) +
   geom_boxplot(outlier.shape = NA, outlier.color = NA) +
   geom_jitter(size = 0.5) +
   theme(axis.text = element_text(angle = 90))
+ggsave("File", device = "pdf")
 ggplotly(cor_plot)
 # Ok, there's a bug that prevents outliers from being hidden, but whatever.
 # https://github.com/plotly/plotly.R/issues/1114
