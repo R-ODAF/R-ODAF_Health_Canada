@@ -43,17 +43,6 @@ RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda --conda-
 # Install extra dependency for reports
 RUN mamba run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R 
 
-# Print conda environment packages
-RUN /bin/bash -c "\
-  for env in .snakemake/conda/*; do \
-    if [ -d \"$env\" ]; then \
-      echo \"Contents of $env:\"; \
-      source activate $env; \
-      conda list; \
-      conda deactivate; \
-    fi; \
-  done" > /home/R-ODAF/conda_envs.txt
-
 RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda \
       && df -h \
       && mkdir ./tests \
