@@ -78,8 +78,7 @@ library('flextable')
 library('vsn')
 library('RColorBrewer')
 library('pheatmap')
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
-source(here::here("scripts","data_functions.R"), local = TRUE)
+library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 # Put flextables on the left by default
@@ -370,5 +369,5 @@ vsn::meanSdPlot(assay(sd_log))
 ```
 
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
 ```

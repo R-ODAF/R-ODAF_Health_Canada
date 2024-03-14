@@ -77,8 +77,7 @@ library('DT')
 library('plotly')
 library('crosstool')
 library('crosstalk')
-
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
+library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
@@ -286,5 +285,5 @@ bscols(widths = c(2,NA),
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
 ```

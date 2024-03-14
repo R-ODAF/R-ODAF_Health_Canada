@@ -26,7 +26,6 @@ assignInNamespace("clean_tmpfiles", clean_tmpfiles_mod, ns = "rmarkdown")
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
 
-
 # Check if at least one argument is provided
 if (length(args) > 0) {
   # Assume the first argument is the new location
@@ -38,7 +37,6 @@ if (length(args) > 0) {
 } else {
   message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
-
 
 source(here::here("scripts","setup_functions.R"))
 
@@ -54,7 +52,6 @@ if (is.na(projectdir)) {
   projectdir <- here::here()
   params$projectdir <- projectdir
 }
-
 
 paths <- set_up_paths(params)
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
@@ -81,22 +78,6 @@ exp_metadata <- read.delim(exp_metadata_file,
                           row.names = 1) # Column must have unique IDs!!
 exp_metadata$original_names <- rownames(exp_metadata)
 
-
-# Generic function to build and filter facets
-get_facets <- function(metadata = exp_metadata,
-                       exclude = params$exclude_groups,
-                       display_facet = params$display_group_facet,
-                       skip_extra = "DMSO") {
-  facets <- metadata %>%
-    filter(!(!!sym(display_facet)) %in%
-             c(exclude, skip_extra)) %>%
-    pull(display_facet) %>% 
-    unique()
-  message(paste0("Making multiple reports based on ",
-                 display_facet ,"..."))
-  return(facets)
-}
-
 # Determine whether facets are needed
 # And if so, what they should be
 # Case 1: no facet, no display facet
@@ -121,125 +102,13 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
 }
 
-
-
 paths <- set_up_paths_3(paths,params,display_facets)
-
 
 # Make directory for DESeq2 Reports
 report_dir <- file.path(paths$results, "DEG_reports")
 deglist_dir <- file.path(paths$results, "DEG_lists")
 if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
 if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
-
-render_report <- function(report_in, report_out, render_pars) {
-  message("Generating report...")
-  random_tmp <- file.path("/tmp",paste0("intermediates_", stringi::stri_rand_strings(1, 10)))
-  rmarkdown::render(input = report_in,
-                    encoding = "UTF-8",
-                    output_file = report_out,
-                    #output_dir = random_tmp,
-                    params = render_pars,
-                    envir = new.env(),
-                    clean = TRUE,
-                    run_pandoc = TRUE,
-                    intermediates_dir = random_tmp)
-  system(paste0("rm -rf ", random_tmp))
-}
-
-
-# Determine filename prefix based on existing parameters
-get_prefix <- function(prefix_pars, prefix_facet) {
-  pars <- prefix_pars
-  facet <- prefix_facet
-  # Are there ways this logic might break?
-  if (is.na(pars$display_group_facet)) {
-    message("Writing a single report for whole experiment.")
-    prefix <- paste0(pars$platform, "_",
-                     pars$project_title, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  } else if (any(!is.na(pars$display_group_filter))) {
-    message(paste0("The group(s) of interest is (are) ",
-                   paste(pars$display_group_filter, collapse = " and "),".\n",
-                   "Writing a single report for that (those) groups."))
-    prefix <- paste0(pars$platform, "_",
-                     pars$project_title, "_",
-                     paste(pars$display_group_filter, collapse = "_"), "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  } else {
-    message(paste0("Building report for ", facet, "..."))
-    prefix <- paste0(pars$platform, "_",
-                     pars$project_title, "_",
-                     facet, "_",
-                     format(Sys.time(),'%d-%m-%Y.%H.%M'))
-  }
-  prefix <- gsub(" ", "_", prefix)
-  prefix <- fs::path_sanitize(prefix)
-  return(prefix)
-}
-
-# Write the reports
-# These are the functions that run in parallel
-# Necessary to run them per-facet and get the file prefix within each instance
-make_main_reports <- function(pars, facet) {
-  if(facet == single_facet_constant){
-    pars$display_group_filter <- NULL
-  } else {
-    pars$display_group_filter <- facet
-  }
-  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
-  if(pars$generate_main_report){
-    main_report <- file.path(projectdir, "Rmd", "DESeq2_report_new.Rmd")
-    main_file <- file.path(report_dir, paste0(prefix,".html"))
-    render_report(main_report, main_file, pars)
-  }
-}
-
-make_stats_reports <- function(pars, facet) {
-  if(facet == single_facet_constant){
-    pars$display_group_filter <- NULL
-  } else {
-    pars$display_group_filter <- facet
-  }
-  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
-  if(pars$generate_stats_report){
-    message("Generating stats report")
-    stats_report <- file.path(projectdir, "Rmd", "stats_report.Rmd")
-    stats_file <- file.path(report_dir, paste0("stats_",prefix,".html"))
-    options(pandoc.stack.size = "128m")
-    render_report(stats_report, stats_file, pars)
-  }
-}
-
-make_data_reports <- function(pars, facet) {
-  if(facet == single_facet_constant){
-    pars$display_group_filter <- NULL
-  } else {
-    pars$display_group_filter <- facet
-  }
-  prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
-  if(pars$generate_data_explorer_report){
-    message("Generating data explorer report")
-    data_explorer_report <- file.path(projectdir, "Rmd", "data_explorer_report.Rmd")
-    data_explorer_file <- file.path(report_dir, paste0("data_explorer_",prefix,".html"))  
-    render_report(data_explorer_report, data_explorer_file, pars)
-  }
-}
-
-make_pathway_reports <- function(pars, facet)  {
-  if(facet == single_facet_constant){
-    pars$display_group_filter <- NULL
-  } else {
-    pars$display_group_filter <- facet
-  }
-  prefix <- get_prefix(prefix_pars = pars, prefix_facet = facet)
-  if(pars$generate_go_pathway_report){
-    message("Generating GO and pathway analysis report")
-    go_pathway_report <- file.path(projectdir, "Rmd", "go_pathway_report.Rmd")
-    go_pathway_file <- file.path(report_dir, paste0("go_pathway_",prefix,".html"))
-    render_report(go_pathway_report, go_pathway_file, pars)
-  }
-}
 
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
