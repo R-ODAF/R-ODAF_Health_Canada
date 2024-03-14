@@ -4,7 +4,7 @@ library(edgeR)
 library(tidyr)
 
 
-if(is.na(params$group_facet)){
+if(is.na(params$deseq_facet)){
   facets <- c('all') 
 }
 
@@ -121,7 +121,7 @@ write_tables <- function(facet) {
   CPMddsDF <- CPMddsDF[, c(1, colPositionsToPrependSTART:ncol(CPMddsDF), 2:colPositionsOfData)]
   
   
-  if(is.na(params$group_facet)){
+  if(is.na(params$deseq_facet)){
     output_folder <- paths$DEG_output
     biosets_folder <- paths$biosets_output
   } else{

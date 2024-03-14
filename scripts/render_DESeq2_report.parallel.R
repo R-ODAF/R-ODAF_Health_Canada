@@ -81,15 +81,15 @@ exp_metadata$original_names <- rownames(exp_metadata)
 # Determine whether facets are needed
 # And if so, what they should be
 # Case 1: no facet, no display facet
-if(is.na(params$group_facet) && is.na(params$reports_facet)){
+if(is.na(params$deseq_facet) && is.na(params$reports_facet)){
   display_facets <- single_facet_constant
   # Case 2: no facet, yes display facet
-} else if(is.na(params$group_facet) && !is.na(params$reports_facet)){
+} else if(is.na(params$deseq_facet) && !is.na(params$reports_facet)){
   display_facets <- get_facets()
   # Case 3: yes facet, yes display facet
-} else if(!is.na(params$group_facet) && !is.na(params$reports_facet)){
-  if(params$group_facet != params$reports_facet) {
-    stop("Error: reports_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
+} else if(!is.na(params$deseq_facet) && !is.na(params$reports_facet)){
+  if(params$deseq_facet != params$reports_facet) {
+    stop("Error: reports_facet must match deseq_facet, otherwise DESeq2 results get mixed and matched.")
   }
   display_facets <- get_facets()
   # Which facets have DEGs?
@@ -133,7 +133,7 @@ if (params$parallel){
 }
 
 # Add back after troubleshooting above code...
-if (!is.na(params$group_facet)) {
+if (!is.na(params$deseq_facet)) {
   source(here::here(file.path("scripts","summarize_across_facets.R")))
 }
 

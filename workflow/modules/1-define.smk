@@ -13,9 +13,9 @@ common_config = config["common"]
 pipeline_config = config["pipeline"]
 deseq_config = config["DESeq2"]
 
-# Check that group_facet is not in intgroup_to_plot
-if deseq_config['group_facet'] in deseq_config['intgroup_to_plot']:
-    sys.exit(f"Error! 'group_facet' should not be in 'intgroup_to_plot' elements.")
+# Check that deseq_facet is not in intgroup_to_plot
+if deseq_config['deseq_facet'] in deseq_config['intgroup_to_plot']:
+    sys.exit(f"Error! 'deseq_facet' should not be in 'intgroup_to_plot' elements.")
 
 # Set up input directories
 main_dir = common_config["projectdir"]

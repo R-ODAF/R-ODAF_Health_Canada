@@ -17,10 +17,10 @@ exp_metadata_original <- exp_metadata
 sample_count_metadata <- sample_count_metadata
 detach()
 
-# reformat data based on group_facet and reports_facet
+# reformat data based on deseq_facet and reports_facet
 
 # case 1: no facet, no display facet
-if(is.na(params$group_facet) && is.na(params$reports_facet)){
+if(is.na(params$deseq_facet) && is.na(params$reports_facet)){
   dds <- ddsList[['all']]
   resultsListAll <- overallResListAll[['all']]
   resultsListDEGs <- overallResListDEGs[['all']]
@@ -31,7 +31,7 @@ if(is.na(params$group_facet) && is.na(params$reports_facet)){
   contrasts_subset<-contrasts
   
   # case 2: no facet, yes display facet
-} else if(is.na(params$group_facet) && !is.na(params$reports_facet)){
+} else if(is.na(params$deseq_facet) && !is.na(params$reports_facet)){
   # the data isn't already faceted but we need to extract the facet we need
   display_group_filter <- params$display_group_filter
   
@@ -62,9 +62,9 @@ if(is.na(params$group_facet) && is.na(params$reports_facet)){
   # TODO: add some tests here to make sure everything worked properly
   
   # case 3: yes facet, yes display facet
-} else if(!is.na(params$group_facet) && !is.na(params$reports_facet)){
-  if(params$group_facet != params$reports_facet) {
-    stop("Error: reports_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
+} else if(!is.na(params$deseq_facet) && !is.na(params$reports_facet)){
+  if(params$deseq_facet != params$reports_facet) {
+    stop("Error: reports_facet must match deseq_facet, otherwise DESeq2 results get mixed and matched.")
   }
   display_group_filter <- params$display_group_filter
   dds <- ddsList[[display_group_filter]]

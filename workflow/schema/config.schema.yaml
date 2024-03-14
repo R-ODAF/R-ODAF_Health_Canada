@@ -158,7 +158,7 @@ properties:
         type:
           - string
           - 'null'
-      group_facet:
+      deseq_facet:
         type:
           - string
           - 'null'
@@ -248,7 +248,7 @@ properties:
       - intgroup
       - intgroup_to_plot
       - formula_override
-      - group_facet
+      - deseq_facet
       - group_filter
       - reports_facet
       - display_group_filter

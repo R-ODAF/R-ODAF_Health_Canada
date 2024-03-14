@@ -132,21 +132,21 @@ sample_count_metadata$samples_filtered <- nrow(exp_metadata)
 
 # set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
-if(!is.na(params$group_facet)){
+if(!is.na(params$deseq_facet)){
   if(!is.na(params$group_filter)){
     facets <- params$group_filter
   }else {
     facets <- exp_metadata %>%
-      filter(!(params$group_facet) %in% c(params$exclude_groups)) %>%
+      filter(!(params$deseq_facet) %in% c(params$exclude_groups)) %>%
       filter(!(solvent_control==TRUE)) %>%
-      pull(params$group_facet) %>% 
+      pull(params$deseq_facet) %>% 
       unique()
     }
 } else {
   facets <- NA
 }
 
-stopifnot((is.na(params$group_facet) || length(facets) > 0))
+stopifnot((is.na(params$deseq_facet) || length(facets) > 0))
 
 
 # set up the rest of the output paths (requires facets)
@@ -162,7 +162,7 @@ rldList <- list()
 mergedDEGsList <- list()
 filtered_table <- data.frame()
 
-if(is.na(params$group_facet)){
+if(is.na(params$deseq_facet)){
     message("### Learning a single model for the whole experiment. ###")
     if(params$write_additional_output){
       write_additional_output(count_data, exp_metadata, design_to_use, params)
@@ -183,7 +183,7 @@ if(is.na(params$group_facet)){
 } else {
     for (current_filter in facets) {
         message(paste0("### Learning model for ", current_filter, ". ###"))
-        metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$group_facet, current_filter)
+        metadata_subset <- subset_metadata(exp_metadata, design_to_use, contrasts, params$deseq_facet, current_filter)
         exp_metadata_subset <- metadata_subset$exp_metadata
         contrasts_subset <- metadata_subset$contrasts
         count_data_subset <- subset_data(count_data, exp_metadata_subset)
@@ -207,7 +207,7 @@ if(is.na(params$group_facet)){
 }
 
 summary_counts <- data.frame()
-if(is.na(params$group_facet)){
+if(is.na(params$deseq_facet)){
     resList <- overallResListDEGs[['all']]
     comparisons <- names(resList)
     for(comp in comparisons){ # by comparison
