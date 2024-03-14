@@ -1,3 +1,5 @@
+import os
+
 
 ################################
 ### Alignment of reads: STAR ###
@@ -64,6 +66,14 @@ rule STAR_load:
         '''
         STAR --genomeLoad LoadAndExit --genomeDir {params.index}
         '''
+
+
+if os.path.exists(align_dir):
+    print("Directory exists before rule STAR is run")
+else:
+    print("Directory does not exist before rule STAR is run")
+
+
 # Run STAR. Depends on config settings.
 if pipeline_config["mode"] == "se":
     rule STAR:
@@ -82,11 +92,18 @@ if pipeline_config["mode"] == "se":
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
+            alignment_dir = align_dir,
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         threads: num_threads
         shell:
             '''
+                    if test -d "{params.alignment_dir}"; then
+                        echo "Directory {params.alignment_dir} exists."
+                    else
+                        echo "Directory {params.alignment_dir} does not exist."
+                    fi
+
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
                 --alignEndsType EndToEnd \
@@ -129,6 +146,9 @@ if pipeline_config["mode"] == "pe":
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
+
+            
+
             STAR \
             --genomeLoad LoadAndKeep \
             --runThreadN {threads} \
@@ -140,6 +160,11 @@ if pipeline_config["mode"] == "pe":
             --outTmpDir /tmp/{params.folder} \
             --outSAMtype BAM SortedByCoordinate
             '''
+
+if os.path.exists(align_dir):
+    print("Directory exists after rule STAR is run")
+else:
+    print("Directory does not exist after rule STAR is run")
 
 # Unload STAR index from shared memory
 # Delete unnecessary log files made by STAR
