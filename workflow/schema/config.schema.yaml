@@ -166,7 +166,7 @@ properties:
         type:
           - string
           - 'null'
-      display_group_facet:
+      reports_facet:
         type:
           - string
           - 'null'
@@ -250,7 +250,7 @@ properties:
       - formula_override
       - group_facet
       - group_filter
-      - display_group_facet
+      - reports_facet
       - display_group_filter
       - sortcol
       - lenient_contrasts

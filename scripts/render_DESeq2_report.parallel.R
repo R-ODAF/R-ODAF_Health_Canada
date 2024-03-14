@@ -81,15 +81,15 @@ exp_metadata$original_names <- rownames(exp_metadata)
 # Determine whether facets are needed
 # And if so, what they should be
 # Case 1: no facet, no display facet
-if(is.na(params$group_facet) && is.na(params$display_group_facet)){
+if(is.na(params$group_facet) && is.na(params$reports_facet)){
   display_facets <- single_facet_constant
   # Case 2: no facet, yes display facet
-} else if(is.na(params$group_facet) && !is.na(params$display_group_facet)){
+} else if(is.na(params$group_facet) && !is.na(params$reports_facet)){
   display_facets <- get_facets()
   # Case 3: yes facet, yes display facet
-} else if(!is.na(params$group_facet) && !is.na(params$display_group_facet)){
-  if(params$group_facet != params$display_group_facet) {
-    stop("Error: display_group_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
+} else if(!is.na(params$group_facet) && !is.na(params$reports_facet)){
+  if(params$group_facet != params$reports_facet) {
+    stop("Error: reports_facet must match group_facet, otherwise DESeq2 results get mixed and matched.")
   }
   display_facets <- get_facets()
   # Which facets have DEGs?
@@ -99,7 +99,7 @@ if(is.na(params$group_facet) && is.na(params$display_group_facet)){
   display_facets <- display_facets[display_facets %in% hasDEGs]
   # Case 4: yes facet, no display facet, this one doesn't make sense
 } else {
-  stop("Making a single report for faceted data not supported. Did you forget to set display_group_facet?")
+  stop("Making a single report for faceted data not supported. Did you forget to set reports_facet?")
 }
 
 paths <- set_up_paths_3(paths,params,display_facets)
