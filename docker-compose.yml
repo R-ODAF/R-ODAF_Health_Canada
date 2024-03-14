@@ -10,7 +10,7 @@ services:
       #- ./reference:/home/R-ODAF/R-ODAF_Health_Canada/reference
       #- ./wikipathways-20210810-gmt-Homo_sapiens.gmt:/home/R-ODAF/R-ODAF_Health_Canada/wikipathways-20210810-gmt-Homo_sapiens.gmt
       #- ./Human_S1500_1.2_standardized.csv:/home/R-ODAF/R-ODAF_Health_Canada/Human_S1500_1.2_standardized.csv 
-    image: r-odaf:latest
+    image: ghcr.io/r-odaf/r-odaf_health_canada:latest
     # command: /bin/bash -l
     environment:
       - HOST_UID=10007
