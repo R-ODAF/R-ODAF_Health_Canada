@@ -279,7 +279,7 @@ write_tables <- function(facet) {
   wb3 <- createWorkbook()
   modifyBaseFont(wb3, fontSize = 10, fontName = "Arial Narrow")
   
-  short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2)
+  short_contrast_names <- paste(exp_contrasts$V1, "v.", exp_contrasts$V2)
   short_contrast_names <- stringr::str_trunc(short_contrast_names,
                                              31,
                                              side = "right",
