@@ -17,9 +17,9 @@ params:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than on
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
+  reports_facet: null #  
   display_group_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -31,8 +31,6 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
-  linear_fc_filter_DEGs: 1.5 # Default 1.5
-  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
@@ -59,6 +57,7 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: 0.05
+  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -78,8 +77,7 @@ library('DT')
 library('plotly')
 library('crosstool')
 library('crosstalk')
-
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
+library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
@@ -119,7 +117,7 @@ searchURL_NCBI <- "http://www.ncbi.nlm.nih.gov/gene/?term="
 searchURL_Ensembl <- "https://ensembl.org/Multi/Search/Results?q="
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
-  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter_DEGs) %>%
+  dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter) %>%
   dplyr::filter(padj < params$alpha) %>%
   arrange(-abs(linearFoldChange))
 
@@ -226,9 +224,6 @@ genesAlphabetized <- genesToSelect %>%
   dplyr::arrange(-abs(log2FoldChange)) %>%
   dplyr::arrange(Gene_Symbol)
 
-# Make sure genes are unique to avoid replicated rows and points in plot
-genesAlphabetized <- genesAlphabetized %>%
-  dplyr::distinct(Feature_ID, .keep_all = TRUE)
 
 # Get the data 
 counts_by_group <- counts_by_group %>%
@@ -237,8 +232,7 @@ counts_by_group <- counts_by_group %>%
   dplyr::select(gene,Sample,'Normalized Counts',group,Gene_Symbol)
 
 # Create "shared" data object - this is for enabling live filtering
-counts_by_group_shared <- SharedData$new(counts_by_group %>%
-  mutate(group = factor(group, levels = mixedsort(unique(group)))))
+counts_by_group_shared <- SharedData$new(counts_by_group)
 
 # Make an initial filter using the top gene
 top_gene = genesToSelect[["Feature_ID"]][1]
@@ -291,5 +285,5 @@ bscols(widths = c(2,NA),
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
 ```

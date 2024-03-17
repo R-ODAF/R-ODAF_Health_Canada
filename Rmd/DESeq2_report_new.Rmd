@@ -17,9 +17,9 @@ params:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
+  reports_facet: null #  
   display_group_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -31,8 +31,6 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
-  linear_fc_filter_DEGs: 1.5 # Default 1.5
-  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
@@ -59,6 +57,7 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: 0.05
+  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -85,6 +84,7 @@ library('crosstalk')
 library('crosstool')
 library('plotly')
 library('tidytext')
+library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
@@ -92,8 +92,6 @@ db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
 
 
 ```{r load_functions, include=F}
-
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
 has_description <- !is.na(params$project_description)
 description_text <- paste("Purpose of report:", params$project_description)
@@ -175,7 +173,7 @@ volcano_df <-  as.data.frame(allResults) %>%
     distinct()
 volcano_df_sig <- as.data.frame(significantResults)
 
-volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter_DEGs)
+volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter)
 volcano_status_passed <- "Passed all filters"
 volcano_status_RODAF <- "Filtered by R-ODAF criteria"
 volcano_status_FDR <- paste0("FDR >= ", params$alpha)
@@ -183,9 +181,9 @@ volcano_status_FDR <- paste0("FDR >= ", params$alpha)
 volcano_df <- volcano_df %>%
   mutate(
     sig_group = case_when(
-      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter_DEGs                                             ~ volcano_status_FC,
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter_DEGs & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter_DEGs & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ volcano_status_FC,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
       TRUE                                                                                                               ~ volcano_status_FDR
     )
   )
@@ -470,7 +468,7 @@ for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
 Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. Note that there is a similar paragraph at the end of the sequencing quality control report.
 
 
-  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC was imported into R for statistical analysis. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type`. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter_DEGs` and adjusted p-value of `r params$alpha`.
+  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC was imported into R for statistical analysis. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type`. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter` and adjusted p-value of `r params$alpha`.
 
 
 ## References {-}
@@ -488,5 +486,5 @@ nocite: '@*'
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
 ```

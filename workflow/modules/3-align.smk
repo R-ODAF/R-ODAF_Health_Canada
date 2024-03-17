@@ -1,10 +1,3 @@
-import os
-
-# Set STAR parameter based on running on Azure Batch vs locally
-if "AZ_BATCH_IS_CURRENT_NODE_MASTER" in os.environ:
-    star_load_mode = "NoSharedMemory"
-else:
-    star_load_mode = "LoadAndKeep"
 
 ################################
 ### Alignment of reads: STAR ###
@@ -56,49 +49,21 @@ rule STAR_make_index:
         --sjdbGTFfeatureExon {params.sjdbGTFfeatureExon}
         '''
 
-# Check if running on Azure Batch
-# If not, load STAR index into shared memory
-if "AZ_BATCH_IS_CURRENT_NODE_MASTER" not in os.environ:
-    rule STAR_load:
-        input:
-            genome_dir / "STAR_index"
-        output:
-            touch("genome.loaded")
-        conda:
-            "../envs/preprocessing.yml"
-        params:
-            index = STAR_index
-        benchmark: log_dir / "benchmark.STAR_load.txt"
-        shell:
-            '''
-            STAR --genomeLoad LoadAndExit --genomeDir {params.index}
-            '''
-    # After STAR is run, unload the STAR index from shared memory
-    # Delete unnecessary log files made by STAR
-    rule STAR_unload:
-        input:
-            idx = "genome.loaded",
-            bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
-        output:
-            touch("genome.removed")
-        conda:
-            "../envs/preprocessing.yml"
-        params:
-            genome_dir = STAR_index
-        shell:
-            '''
-            STAR --genomeLoad Remove --genomeDir {params.genome_dir}
-            rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam
-            '''
-
-
-
-if os.path.exists(align_dir):
-    print("Directory exists before rule STAR is run")
-else:
-    print("Directory does not exist before rule STAR is run")
-
-
+# Load STAR index into shared memory
+rule STAR_load:
+    input:
+        genome_dir / "STAR_index"
+    output:
+        touch("genome.loaded")
+    conda:
+        "../envs/preprocessing.yml"
+    params:
+        index = STAR_index
+    benchmark: log_dir / "benchmark.STAR_load.txt"
+    shell:
+        '''
+        STAR --genomeLoad LoadAndExit --genomeDir {params.index}
+        '''
 # Run STAR. Depends on config settings.
 if pipeline_config["mode"] == "se":
     rule STAR:
@@ -117,23 +82,15 @@ if pipeline_config["mode"] == "se":
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            alignment_dir = align_dir,
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
-            load_mode = star_load_mode
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         threads: num_threads
         shell:
             '''
-                    if test -d "{params.alignment_dir}"; then
-                        echo "Directory {params.alignment_dir} exists."
-                    else
-                        echo "Directory {params.alignment_dir} does not exist."
-                    fi
-
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
                 --alignEndsType EndToEnd \
-                --genomeLoad {params.load_mode} \
+                --genomeLoad LoadAndKeep \
                 --runThreadN {threads} \
                 --genomeDir {params.index} \
                 --readFilesIn {input.R1} \
@@ -164,8 +121,7 @@ if pipeline_config["mode"] == "pe":
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
-            load_mode = star_load_mode
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
@@ -173,11 +129,8 @@ if pipeline_config["mode"] == "pe":
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
-
-            
-
             STAR \
-            --genomeLoad {params.load_mode} \
+            --genomeLoad LoadAndKeep \
             --runThreadN {threads} \
             --genomeDir {params.index} \
             --readFilesIn {input.R1} {input.R2} \
@@ -188,11 +141,22 @@ if pipeline_config["mode"] == "pe":
             --outSAMtype BAM SortedByCoordinate
             '''
 
-if os.path.exists(align_dir):
-    print("Directory exists after rule STAR is run")
-else:
-    print("Directory does not exist after rule STAR is run")
-
-
+# Unload STAR index from shared memory
+# Delete unnecessary log files made by STAR
+rule STAR_unload:
+    input:
+        idx = "genome.loaded",
+        bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
+    output:
+        touch("genome.removed")
+    conda:
+        "../envs/preprocessing.yml"
+    params:
+        genome_dir = STAR_index
+    shell:
+        '''
+        STAR --genomeLoad Remove --genomeDir {params.genome_dir}
+        rm Log.progress.out Log.final.out Log.out SJ.out.tab Aligned.out.sam
+        '''
 
 

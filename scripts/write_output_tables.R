@@ -4,7 +4,7 @@ library(edgeR)
 library(tidyr)
 
 
-if(is.na(params$group_facet)){
+if(is.na(params$deseq_facet)){
   facets <- c('all') 
 }
 
@@ -121,7 +121,7 @@ write_tables <- function(facet) {
   CPMddsDF <- CPMddsDF[, c(1, colPositionsToPrependSTART:ncol(CPMddsDF), 2:colPositionsOfData)]
   
   
-  if(is.na(params$group_facet)){
+  if(is.na(params$deseq_facet)){
     output_folder <- paths$DEG_output
     biosets_folder <- paths$biosets_output
   } else{
@@ -248,7 +248,7 @@ write_tables <- function(facet) {
   ### All results in one table
   wb2 <- createWorkbook()
   modifyBaseFont(wb2, fontSize = 10, fontName = "Arial Narrow")
-  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter_DEGs))
+  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter))
   freezePane(wb2, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
   writeDataTable(wb2,
                  sheet = 1,
@@ -279,7 +279,7 @@ write_tables <- function(facet) {
   wb3 <- createWorkbook()
   modifyBaseFont(wb3, fontSize = 10, fontName = "Arial Narrow")
   
-  short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2)
+  short_contrast_names <- paste(exp_contrasts$V1, "v.", exp_contrasts$V2)
   short_contrast_names <- stringr::str_trunc(short_contrast_names,
                                              31,
                                              side = "right",

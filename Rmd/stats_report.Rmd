@@ -17,9 +17,9 @@ params:
   intgroup: ["Group"]            # experimental group of interest plus covariates; can be more than one
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "Chemical_S9"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
+  deseq_facet: "Chemical_S9"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
   group_filter:  null        # Which group will this report be done on?
-  display_group_facet: "chemical_timepoint" #  
+  reports_facet: "chemical_timepoint" #  
   display_group_filter:  "estradiol 10d" # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -31,8 +31,6 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
-  linear_fc_filter_DEGs: 1.5 # Default 1.5
-  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True  
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "Human_S1500_Surrogate_2.0_standardized.csv"
   KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
@@ -59,6 +57,7 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: null
+  linear_fc_filter: null
   feature_id: null
   biospyder: null
 output:
@@ -79,8 +78,7 @@ library('flextable')
 library('vsn')
 library('RColorBrewer')
 library('pheatmap')
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
-source(here::here("scripts","data_functions.R"), local = TRUE)
+library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 # Put flextables on the left by default
@@ -371,5 +369,5 @@ vsn::meanSdPlot(assay(sd_log))
 ```
 
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
 ```

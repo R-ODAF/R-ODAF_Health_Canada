@@ -29,12 +29,6 @@ properties:
     type: number
     minimum: 0
     description: Chemical dose given
-  I7_Index_ID:
-    type: string
-    description: The I7 index identifier. Column name is case-sensitive (otherwise Sample_QC will fail)
-  I5_Index_ID:
-    type: string
-    description: The I5 index identifier. Column name is case-sensitive (otherwise Sample_QC will fail)
   
 
 required:

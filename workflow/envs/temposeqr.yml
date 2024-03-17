@@ -1,11 +1,9 @@
 name: R-ODAF_temposeqr
 channels:
   - conda-forge
-  - bioconda
   - defaults
 dependencies:
   - bioconda::samtools=1.16.1
   - bioconda::bioconductor-quasr=1.38.0
   - bioconda::bioconductor-rtracklayer=1.58.0
   - bioconda::bioconductor-genomicfeatures=1.50.2
-  
