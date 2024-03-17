@@ -143,10 +143,6 @@ properties:
           - hamster
       design:
         type: string
-      intgroup:
-        type: array
-        items:
-          type: string
       intgroup_to_plot:
         type: 
           - string
@@ -245,7 +241,6 @@ properties:
     required:
       - species
       - design
-      - intgroup
       - intgroup_to_plot
       - formula_override
       - deseq_facet
