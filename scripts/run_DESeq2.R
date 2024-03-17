@@ -6,77 +6,40 @@ suppressMessages(library('DESeq2'))
 suppressMessages(library('gtools'))
 suppressMessages(library('biomaRt'))
 suppressMessages(library('BiocParallel'))
-
-source(here::here("scripts","setup_functions.R"))
-source(here::here("scripts","data_functions.R"))
-source(here::here("scripts","DESeq_functions.R"))
-
+suppressMessages(library('R.ODAF.utils'))
 
 # Parse command line arguments
 args <- commandArgs(trailingOnly = TRUE)
-
 
 # Check if at least one argument is provided
 if (length(args) > 0) {
   # Assume the first argument is the new location
   results_location_arg <- args[1]
-
   # Source functions and pass along analysis directory argument
   source(here::here("scripts","file_functions.R"))
-  
 } else {
   message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
 
-##############################################################################################
-# SETUP
-##############################################################################################
+# Load project parameters
+params <- R.ODAF.utils::get_params(context = "analysis")
 
-config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
-
-# Combine required params from config
-params <- c(config$common, config$DESeq2)
-# replace nulls in params with NA
-params <- replace_nulls_in_config(params)
-# If projectdir is not set, figure out current project root directory
-projectdir <- params$projectdir
-if (is.na(projectdir)) {
-  projectdir <- here::here()
-  params$projectdir <- projectdir
-}
-
-
-
-
-paths <- set_up_paths(params)
-
-get_analysis_id <- get_analysis_id(params)
-
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-params$species_data <- species_data
-# ensembl <- useMart("ensembl",
-#                    dataset = species_data$ensembl_species,
-#                    host = "useast.ensembl.org")
-
+# Set up project paths
+paths <- R.ODAF.utils::set_up_project_paths(params, results_location_arg)
 params <- set_up_platform_params(params)
-
-# Set this variable to be TRUE if you want to have separate plots of top genes as defined in the R-ODAF template
-params$R_ODAF_plots <- FALSE
-
-check_required_params(params)
 
 ##############################################################################################
 # DATA LOADING AND PROCESSING
 ##############################################################################################
 
 # Identify where metadata can be found
-MetadataFile <- file.path(paths$metadata, "metadata.QC_applied.txt")
-ContrastsFile <- file.path(paths$contrasts, "contrasts.txt")
+metadata_file <- file.path(paths$metadata, "metadata.QC_applied.txt")
+contrasts_file <- file.path(paths$contrasts, "contrasts.txt")
 
 sample_count_metadata <- list()
 
 # Read in metadata
-exp_metadata <- read.delim(MetadataFile,
+exp_metadata <- read.delim(metadata_file,
                           stringsAsFactors = FALSE,
                           sep = "\t",
                           header = TRUE,
@@ -89,7 +52,7 @@ exp_metadataAsRead <- exp_metadata
 sample_count_metadata$samples_postQC <- nrow(exp_metadata)
 
 # read in contrasts
-contrasts <- read.delim(ContrastsFile, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"", 
+contrasts <- read.delim(contrasts_file, stringsAsFactors = FALSE, sep = "\t", header = FALSE,  quote = "\"", 
                         colClasses = "character")
 # set interesting groups
 intgroup <- params$intgroup # "Interesting groups" - experimental group/covariates
@@ -120,7 +83,7 @@ if (length(intgroup) > 1){
 original_design <- params$design
 
 # load count data
-count_data <- load_count_data(params$count_data_file, params$sampledata_sep)
+count_data <- load_count_data(file.path(paths$processed, "count_table.tsv"), params$sampledata_sep) # TODO - let user define count table file path in config?
 
 
 processed <- process_data_and_metadata(count_data, exp_metadata, contrasts, intgroup, design_to_use, params)
