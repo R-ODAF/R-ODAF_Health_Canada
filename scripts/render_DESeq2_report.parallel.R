@@ -30,15 +30,9 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) > 0) {
   # Assume the first argument is the new location
   results_location_arg <- args[1]
-
-  # Source functions and pass along analysis directory argument
-  source(here::here("scripts","file_functions.R"))
-  
 } else {
   message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
-
-source(here::here("scripts","setup_functions.R"))
 
 config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
 
@@ -82,41 +76,36 @@ exp_metadata$original_names <- rownames(exp_metadata)
 # And if so, what they should be
 # Case 1: no facet, no display facet
 if(is.na(params$deseq_facet) && is.na(params$reports_facet)){
-  display_facets <- single_facet_constant
+  report_facets <- single_facet_constant
   # Case 2: no facet, yes display facet
 } else if(is.na(params$deseq_facet) && !is.na(params$reports_facet)){
-  display_facets <- get_facets()
+  report_facets <- get_facets()
   # Case 3: yes facet, yes display facet
 } else if(!is.na(params$deseq_facet) && !is.na(params$reports_facet)){
   if(params$deseq_facet != params$reports_facet) {
     stop("Error: reports_facet must match deseq_facet, otherwise DESeq2 results get mixed and matched.")
   }
-  display_facets <- get_facets()
+  report_facets <- get_facets()
   # Which facets have DEGs?
   hasDEGs <- names(which(sapply(X = mergedDEGsList,
                                 FUN = function(i) length(i)>=1),
                          arr.ind = T))
-  display_facets <- display_facets[display_facets %in% hasDEGs]
+  report_facets <- report_facets[report_facets %in% hasDEGs]
   # Case 4: yes facet, no display facet, this one doesn't make sense
 } else {
   stop("Making a single report for faceted data not supported. Did you forget to set reports_facet?")
 }
 
-paths <- set_up_paths_3(paths,params,display_facets)
+paths <- set_up_paths_3(paths,params,report_facets)
 
-# Make directory for DESeq2 Reports
-report_dir <- file.path(paths$results, "DEG_reports")
-deglist_dir <- file.path(paths$results, "DEG_lists")
-if (!dir.exists(report_dir)) {dir.create(report_dir, recursive = TRUE)}
-if (!dir.exists(deglist_dir)) {dir.create(deglist_dir, recursive = TRUE)}
 
 if (params$parallel){
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
-  BiocParallel::bpmapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
   if (params$generate_main_report == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
   if (params$generate_data_explorer_report  == T) {Sys.sleep(60)}
-  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
   if (params$generate_go_pathway_report  == T) {Sys.sleep(60)}
   # Why does this use so much memory!?
   # It is knitr::kable that is the problem.
@@ -124,12 +113,12 @@ if (params$parallel){
   #reduced_cpus <- round(params$cpus*0.5)
   #if (reduced_cpus < 1) { reduced_cpus = 1 }
   #biocluster <- BiocParallel::MulticoreParam(workers = reduced_cpus )
-  BiocParallel::bpmapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
 } else {
-  base::mapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_main_reports, facet = report_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_data_reports, facet = report_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_pathway_reports, facet = report_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_stats_reports, facet = report_facets, MoreArgs = list(pars = params))
 }
 
 # Add back after troubleshooting above code...
