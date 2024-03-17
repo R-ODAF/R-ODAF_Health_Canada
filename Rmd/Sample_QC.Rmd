@@ -94,7 +94,7 @@ exp_groups <- unname(params[["exp_groups"]]) # Include b/c of how things are add
 ############################################################################
 # File paths in project directory
 ############################################################################
-set_up_paths(params)
+paths <- R.ODAF.utils::set_up_project_paths(params)
 knitr::opts_knit$set(root.dir = paths[["projectdir"]])
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
@@ -184,8 +184,8 @@ d <- d[d$original_names %in% names(count_data),]
 exp_metadata <- d
 all(names(count_data) == d$original_names)
 # Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
-count_data <- count_data[,d$original_names]
-mu <- mu[d$original_names,]
+count_data <- count_data[, d$original_names]
+mu <- mu[d$original_names, ]
 
 ############################################################################
 #Remove samples from a list manually
@@ -196,19 +196,19 @@ cytotoxic <- data.frame()
 if (file.exists(remove_file)) {
   # How many groups in total are being input?
   exp_metadata %>% group_by(params[["treatment_var"]]) %>% dplyr::count()
-  
+
   # Manual removal of some groups (e.g., cytotoxicity?)
   remove <- read.table(remove_file, sep="\t", header = F) %>% pull()
   # This should be recorded somehow... Todo.
   length(remove)
-  
+
   # Best method is probably to use a list of unique sample IDs
   # By default, use the first column. This could be made more robust?
   # Should we add a parameter to specify the column to act on?  
   test <- exp_metadata %>% dplyr::filter(!.[[1]] %in% remove)
   cytotoxic <- exp_metadata %>% dplyr::filter(.[[1]] %in% remove)
   test %>% group_by(params[["treatment_var"]]) %>% dplyr::count()
-  
+
   # Once above is correct, go ahead and make final filtered metadata
   exp_metadata <- exp_metadata %>% dplyr::filter(!.[[1]] %in% remove)
   # If you've already done this, don't overwrite the backup!
@@ -249,7 +249,6 @@ count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
                                   by = c("rowname" = "Probe_Name")) %>%
   tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
                       names_to = "sample", values_to = "count") %>%
-  
   dplyr::mutate(GC_corrected_count = count/gc_content)
 
 
