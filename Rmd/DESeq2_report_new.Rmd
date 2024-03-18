@@ -59,7 +59,6 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: 0.05
-  linear_fc_filter: 1.5
   feature_id: null
   biospyder: null
 output:
@@ -175,7 +174,7 @@ volcano_df <-  as.data.frame(allResults) %>%
     distinct()
 volcano_df_sig <- as.data.frame(significantResults)
 
-volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter)
+volcano_status_FC <- paste0("Linear fold change < ",params$linear_fc_filter_DEGs)
 volcano_status_passed <- "Passed all filters"
 volcano_status_RODAF <- "Filtered by R-ODAF criteria"
 volcano_status_FDR <- paste0("FDR >= ", params$alpha)
@@ -183,9 +182,9 @@ volcano_status_FDR <- paste0("FDR >= ", params$alpha)
 volcano_df <- volcano_df %>%
   mutate(
     sig_group = case_when(
-      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter                                             ~ volcano_status_FC,
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
-      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
+      padj < params$alpha & abs(linearFoldChange) <= params$linear_fc_filter_DEGs                                             ~ volcano_status_FC,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter_DEGs & Feature_ID %in% volcano_df_sig$Feature_ID  ~ volcano_status_passed,
+      padj < params$alpha & abs(linearFoldChange) > params$linear_fc_filter_DEGs & !(Feature_ID %in% volcano_df_sig$Feature_ID)  ~ volcano_status_RODAF,
       TRUE                                                                                                               ~ volcano_status_FDR
     )
   )
@@ -470,7 +469,7 @@ for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
 Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. Note that there is a similar paragraph at the end of the sequencing quality control report.
 
 
-  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC was imported into R for statistical analysis. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type`. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter` and adjusted p-value of `r params$alpha`.
+  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC was imported into R for statistical analysis. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type`. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter_DEGs` and adjusted p-value of `r params$alpha`.
 
 
 ## References {-}
@@ -488,5 +487,5 @@ nocite: '@*'
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```
