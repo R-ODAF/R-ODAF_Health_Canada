@@ -31,6 +31,8 @@ params:
   cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
   run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
   wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
   biospyder_dbs: "./unify_temposeq_manifests/output_manifests"
   biospyder_manifest_file:  "Human_S1500_1.2_standardized.csv"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
@@ -57,7 +59,6 @@ params:
   sampledata_sep: null
   MinCount: null
   alpha: null
-  linear_fc_filter: null
   feature_id: null
   biospyder: null
 output:
@@ -508,5 +509,5 @@ for (i in seq_along(contrasts)) {
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths[["projectdir"]],'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
 ```
