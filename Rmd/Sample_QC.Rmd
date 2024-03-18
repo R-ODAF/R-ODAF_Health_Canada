@@ -1277,7 +1277,7 @@ QAQC_annotated %>%
 
 ```{r pass_fail_by_group}
 QAQC_annotated %>%
-  dplyr::group_by(dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]] %>%
+  dplyr::group_by(dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
   tally() %>%
   knitr::kable(caption = "Pass/fail results by group") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
@@ -1513,7 +1513,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*1.5}
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
-plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]], color = factor(.data[[params$dose]]))) +
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]], color = factor(.data[[params$dose]])))) +
   facet_wrap(paste0("~", params$treatment_var), scales = "free") +
   theme(legend.position = "none") + xlab("Dose") + # labs(color = dose) + 
   theme(axis.text.x = element_text(angle = 90))
