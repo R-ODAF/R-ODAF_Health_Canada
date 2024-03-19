@@ -37,7 +37,8 @@ exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, "contras
 original_design <- params$design
 
 # load count data
-count_data <- load_count_data(file.path(paths$processed, "count_table.tsv"), params$sampledata_sep) # TODO - let user define count table file path in config?
+count_data <- load_count_data(file.path(paths$processed, "count_table.tsv"), params$sampledata_sep)
+# TODO - let user define count table file path in config?
 
 processed <- process_data_and_metadata(count_data, exp_metadata, exp_contrasts, params)
 count_data <- processed$count_data
@@ -46,13 +47,16 @@ exp_contrasts <- processed$contrasts
 
 sample_count_metadata$samples_filtered <- nrow(exp_metadata)
 
-# set up facets if necessary
+# Set up facets if necessary
 # the facets array will be all facets if group_filter is not set, and the filter otherwise
 facets <- get_facets(exp_metadata, params)
 stopifnot((is.na(params$deseq_facet) || length(facets) > 0))
 
 # set up the rest of the output paths (requires facets)
-paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg, exp_metadata, make_deseq2_dirs = TRUE)
+paths <- R.ODAF.utils::set_up_filepaths(params,
+                                        results_location_arg,
+                                        exp_metadata,
+                                        make_deseq2_dirs = TRUE)
 
 ddsList <- list()
 designList <- list()
