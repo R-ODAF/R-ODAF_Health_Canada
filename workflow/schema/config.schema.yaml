@@ -158,7 +158,7 @@ properties:
         type:
           - string
           - 'null'
-      group_filter:
+      deseq_filter:
         type:
           - string
           - 'null'
@@ -166,7 +166,7 @@ properties:
         type:
           - string
           - 'null'
-      display_group_filter:
+      reports_filter:
         type:
           - string
           - 'null'
@@ -244,9 +244,9 @@ properties:
       - intgroup_to_plot
       - formula_override
       - deseq_facet
-      - group_filter
+      - deseq_filter
       - reports_facet
-      - display_group_filter
+      - reports_filter
       - sortcol
       - lenient_contrasts
       - strict_contrasts

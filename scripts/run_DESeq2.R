@@ -48,7 +48,7 @@ exp_contrasts <- processed$contrasts
 sample_count_metadata$samples_filtered <- nrow(exp_metadata)
 
 # Set up facets if necessary
-# the facets array will be all facets if group_filter is not set, and the filter otherwise
+# the facets array will be all facets if deseq_filter is not set, and the filter otherwise
 facets <- get_facets(exp_metadata, params)
 stopifnot((is.na(params$deseq_facet) || length(facets) > 0))
 
