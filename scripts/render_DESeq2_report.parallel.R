@@ -7,6 +7,7 @@
 # Set it in the terminal:
 # Sys.setenv(RSTUDIO_PANDOC="OUTPUT FROM ABOVE COMMAND")
 # Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio-server/bin/pandoc")
+# Sys.setenv(RSTUDIO_PANDOC = "/usr/lib/rstudio-server/bin/quarto/bin/tools/pandoc")
 
 library("BiocParallel")
 library("rmarkdown")
@@ -28,7 +29,7 @@ if (length(args) > 0) {
 } else {
   message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
-
+results_location_arg <- "analysis_default_20240319-1027"
 # Load project parameters
 params <- R.ODAF.utils::get_params(context = "analysis")
 
@@ -39,7 +40,7 @@ paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg)
 data_file <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
 data_env <- new.env()
 #load(dataFile) # metadata, contrasts, counts, resultsList
-load(dataFile, envir = data_env)
+load(data_file, envir = data_env)
 mergedDEGsList <- data_env$mergedDEGsList
 rm(data_env)
 gc()
@@ -57,15 +58,15 @@ paths <- R.ODAF.utils::set_up_filepaths(params,
 
 if (params$parallel) {
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus * 0.9))
-  BiocParallel::bpmapply(FUN = make_main_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_main_report == TRUE) {
     Sys.sleep(60)
   }
-  BiocParallel::bpmapply(FUN = make_data_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_data_explorer_report  == TRUE) {
     Sys.sleep(60)
   }
-  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_go_pathway_report  == TRUE) {
     Sys.sleep(60)
   }
@@ -75,12 +76,12 @@ if (params$parallel) {
   #reduced_cpus <- round(params$cpus*0.5)
   #if (reduced_cpus < 1) { reduced_cpus = 1 }
   #biocluster <- BiocParallel::MulticoreParam(workers = reduced_cpus )
-  BiocParallel::bpmapply(FUN = make_stats_reports, facet = report_facets, MoreArgs = list(pars = params), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
 } else {
-  base::mapply(FUN = make_main_reports, facet = report_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_data_reports, facet = report_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_pathway_reports, facet = report_facets, MoreArgs = list(pars = params))
-  base::mapply(FUN = make_stats_reports, facet = report_facets, MoreArgs = list(pars = params))
+  base::mapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
 }
 
 # Add back after troubleshooting above code...
