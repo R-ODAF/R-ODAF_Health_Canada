@@ -22,6 +22,7 @@ params:
   reports_facet: null #  
   reports_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
@@ -87,8 +88,7 @@ library('plotly')
 library('tidytext')
 library('R.ODAF.utils')
 
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 ```
 
 
@@ -126,10 +126,10 @@ Code sections are hidden by default but can be viewed by clicking the 'code' but
 
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"), local = TRUE)
+load_facet_data(paths, params, .GlobalEnv)
 
-if(params$platform == "TempO-Seq"){
-  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+if (params$platform == "TempO-Seq") {
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID = Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
 } else {
   id_table <- AnnotationDbi::select(db,
                                     columns = c("ENSEMBL", "SYMBOL"),
@@ -138,8 +138,6 @@ if(params$platform == "TempO-Seq"){
     mutate(Gene_Symbol = coalesce(SYMBOL, ENSEMBL)) %>%
     dplyr::select(Feature_ID = ENSEMBL, Ensembl_Gene_ID = ENSEMBL, Gene_Symbol)
 }
-
-
 ```
 
 # Volcano plots

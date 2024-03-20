@@ -29,6 +29,7 @@ if (length(args) > 0) {
 } else {
   message("Error: Missing argument. Provide the analysis directory name as an argument.\n")
 }
+results_location_arg <- "analysis_default_20240320-0720"
 # Load project parameters
 params <- R.ODAF.utils::get_params(context = "analysis")
 
