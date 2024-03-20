@@ -14,7 +14,7 @@ message("Writing QC report for all samples in the experiment.")
 filename <- paste0("Study-wide_Sample_QC_",
                    params$platform, "_",
                    params$project_title, "_",
-                   format(Sys.time(),'%d-%m-%Y.%H.%M'),
+                   format(Sys.time(), "%d-%m-%Y.%H.%M"),
                    ".html")
 out_dir <- file.path(params$projectdir, "output", "QC")
 if (!dir.exists(out_dir)) {
