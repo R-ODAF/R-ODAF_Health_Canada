@@ -34,12 +34,12 @@ skip_extra <- c("DMSO","water") # Remove DMSO controls as a facet
 
 # input data file
 dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(dataFile) # metadata, contrasts, counts, resultsList
+load(dataFile) # metadata, exp_contrasts, counts, resultsList
 
 allResultsUnfaceted <- data.frame()
 significantResultsUnfaceted <- data.frame()
 
-ordered_contrasts <- paste0(contrasts$V1, " vs ", contrasts$V2)
+ordered_contrasts <- paste0(exp_contrasts$V1, " vs ", exp_contrasts$V2)
 ordered_levels <- expand.grid(facets,ordered_contrasts) %>% arrange(Var1) %>% mutate(asdf = paste0(Var1, ": ", Var2)) %>% pull(asdf)
 
 for (f in facets){
@@ -96,7 +96,7 @@ if(length(facets) == 1){
         ylab("Number of DEGs") +
         xlab("Facet: contrast")
 }
-ggsave(file.path(report_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1,
+ggsave(file.path(paths$reports_dir,paste0(prefix,"_","DEG_summary_plot.png")),p1,
        width=plot_size, height=plot_size, units="in", dpi=300)
 
 
@@ -139,7 +139,7 @@ if(length(facets) == 1){
     xlab("Facet: contrast")
 }
   
-ggsave(file.path(report_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
+ggsave(file.path(paths$reports_dir,paste0(prefix,"_","filter_summary_plot.png")),p2,
        width=plot_size, height=plot_size, units="in", dpi=300)
 
 

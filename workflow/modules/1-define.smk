@@ -1,10 +1,9 @@
 import pandas as pd
 from pathlib import Path
 import os
-import sys
 from snakemake.utils import validate
 
-# Load and validate config 
+# load and validate config 
 configfile: "inputs/config/config.yaml"
 config_schema = "../schema/config.schema.yaml"
 validate(config, config_schema)
@@ -14,16 +13,16 @@ common_config = config["common"]
 pipeline_config = config["pipeline"]
 deseq_config = config["DESeq2"]
 
-
-# Check that group_facet is not in intgroup_to_plot
-if deseq_config['group_facet'] in deseq_config['intgroup_to_plot']:
-    sys.exit(f"Error! 'group_facet' should not be in 'intgroup_to_plot' elements.")
+# Check that deseq_facet is not in intgroup_to_plot
+if deseq_config['deseq_facet'] in deseq_config['intgroup_to_plot']:
+    sys.exit(f"Error! 'deseq_facet' should not be in 'intgroup_to_plot' elements.")
 
 # Set up input directories
 main_dir = common_config["projectdir"]
 if main_dir is None:
     main_dir = os.getcwd()
 main_dir = Path(main_dir)
+
 
 genome_dir = Path(pipeline_config["genomedir"])
 num_threads = pipeline_config["threads"]
@@ -70,7 +69,6 @@ if common_config["platform"] =="TempO-Seq":
 
     if check_manifest == False:
         sys.exit(f"Error! You are missing the expected biospyder manifest file: {biospyder_filepath}")
-
 
 # Set up output directories
 

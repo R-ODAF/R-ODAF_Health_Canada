@@ -272,7 +272,7 @@ ggplot(n_DEGs_data, aes(x=uv_dosage_2,y=n_DEGs)) +
 ```{r n_DEGs_heatmap}
 n_DEGs_mat <- n_DEGs_data %>%
   spread(Timepoint_2, n_DEGs, fill=NA) %>%
-  column_to_rownames(var="uv_dosage_2") %>%
+  tibble::column_to_rownames(var="uv_dosage_2") %>%
   as.matrix()
 
 # TODO: assign breaks in a reasonable way
@@ -308,7 +308,7 @@ data <- significantResultsUnfaceted %>%
   spread(key = contrast, value = log2FoldChange, fill=NA, drop=TRUE) %>%
   #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol) %>%
-  column_to_rownames(var="Feature_ID") %>%
+  tibble::(var="Feature_ID") %>%
   mutate(nonzero_count=rowSums(.!=0, na.rm = TRUE)) %>%
   arrange(desc(nonzero_count))
 
@@ -327,7 +327,7 @@ data_all <- allResultsUnfaceted %>%
   #pivot_wider(names_from="contrast",values_from = "log2FoldChange" ) %>%
   mutate(gene_label = paste(Feature_ID, Gene_Symbol)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Feature_ID) %>%
-  column_to_rownames(var="gene_label")
+  tibble::column_to_rownames(var="gene_label")
 
 
 data_all_mat <- as.matrix(data_all)
@@ -379,7 +379,7 @@ for(g in bestGenes){
     dplyr::select(log2FoldChange,uv_dosage_2,Timepoint_2) %>%
     unique() %>%
     spread(key = Timepoint_2, value = log2FoldChange, fill=NA) %>%
-    column_to_rownames(var="uv_dosage_2") %>%
+    tibble::column_to_rownames(var="uv_dosage_2") %>%
     as.matrix()
   
   highlight_significant <- function(j, i, x, y, width, height, fill) {
