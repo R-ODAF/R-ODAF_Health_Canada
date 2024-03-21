@@ -22,6 +22,7 @@ params:
   reports_facet: null #  
   reports_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
