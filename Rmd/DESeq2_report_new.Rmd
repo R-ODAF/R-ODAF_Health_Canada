@@ -87,6 +87,8 @@ library(crosstool)
 library(plotly)
 library(tidytext)
 library(DESeq2)
+library(dplyr)
+library(tibble)
 library(R.ODAF.utils)
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
@@ -196,7 +198,7 @@ volcano_contrasts <- unique(allResults$contrast)
 x <- list()
 y <- list()
 volcano_labs <- list()
-for(cont in volcano_contrasts){
+for (cont in volcano_contrasts) {
   x[[cont]] <- list(
     FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(log2FoldChange),
     FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(log2FoldChange),
@@ -355,7 +357,7 @@ plot_DEG_heatmap <- function(rld_data){
   mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Feature_ID)) %>%
   mutate(label = paste0(Gene_Symbol_2," : ",Feature_ID)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Gene_Symbol_2, -Feature_ID) %>%
-  column_to_rownames("label")
+  tibble::column_to_rownames("label")
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
     return(pheatmap(mat,

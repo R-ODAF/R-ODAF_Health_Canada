@@ -335,7 +335,7 @@ if(nrow(count_data) > 3000){
 
 annotation_col <- exp_metadata %>%
   dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
-  column_to_rownames("original_names")
+  tibble::column_to_rownames("original_names")
 
 pheatmap(count_data_is0,
          color = c("white", "black"),
