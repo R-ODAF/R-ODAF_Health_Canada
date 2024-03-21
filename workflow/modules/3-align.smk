@@ -1,7 +1,7 @@
 import os
 
 # Set STAR parameter based on running on Azure Batch vs locally
-if "AZ_BATCH_IS_CURRENT_NODE_MASTER" in os.environ:
+if "AZ_BATCH_POOL_ID" in os.environ:
     star_load_mode = "NoSharedMemory"
 else:
     star_load_mode = "LoadAndKeep"
@@ -58,7 +58,7 @@ rule STAR_make_index:
 
 # Check if running on Azure Batch
 # If not, load STAR index into shared memory
-if "AZ_BATCH_IS_CURRENT_NODE_MASTER" not in os.environ:
+if "AZ_BATCH_POOL_ID" not in os.environ:
     rule STAR_load:
         input:
             genome_dir / "STAR_index"
@@ -92,13 +92,6 @@ if "AZ_BATCH_IS_CURRENT_NODE_MASTER" not in os.environ:
             '''
 
 
-
-if os.path.exists(align_dir):
-    print("Directory exists before rule STAR is run")
-else:
-    print("Directory does not exist before rule STAR is run")
-
-
 # Run STAR. Depends on config settings.
 if pipeline_config["mode"] == "se":
     rule STAR:
@@ -124,11 +117,11 @@ if pipeline_config["mode"] == "se":
         threads: num_threads
         shell:
             '''
-                    if test -d "{params.alignment_dir}"; then
-                        echo "Directory {params.alignment_dir} exists."
-                    else
-                        echo "Directory {params.alignment_dir} does not exist."
-                    fi
+            if test -d "{params.alignment_dir}"; then
+                echo "Directory {params.alignment_dir} exists."
+            else
+                echo "Directory {params.alignment_dir} does not exist."
+            fi
 
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
@@ -188,10 +181,7 @@ if pipeline_config["mode"] == "pe":
             --outSAMtype BAM SortedByCoordinate
             '''
 
-if os.path.exists(align_dir):
-    print("Directory exists after rule STAR is run")
-else:
-    print("Directory does not exist after rule STAR is run")
+
 
 
 
