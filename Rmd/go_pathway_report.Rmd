@@ -80,8 +80,7 @@ library('clusterProfiler')
 library('enrichplot')
 library('R.ODAF.utils')
 
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -105,7 +104,7 @@ Report prepared for: `r params$project_name`
 This report contains Gene Ontology and pathway analysis.
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"), local = TRUE)
+load_facet_data(paths, params)
 ```
 
 
