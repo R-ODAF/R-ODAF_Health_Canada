@@ -126,7 +126,7 @@ Code sections are hidden by default but can be viewed by clicking the 'code' but
 
 
 ```{r load_facet_data, include=FALSE}
-load_facet_data(paths, params, .GlobalEnv)
+load_facet_data(paths, params)
 
 if (params$platform == "TempO-Seq") {
   id_table <- params$biospyder %>% dplyr::select(Feature_ID = Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
