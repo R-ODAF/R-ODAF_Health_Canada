@@ -107,7 +107,7 @@ Report prepared for: `r params$project_name`
 This report contains metadata, statistics, and plots related to the experiment.
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"), local = TRUE)
+load_facet_data(paths, params)
 ```
 
 # Metadata tables {.tabset .tabset-fade}
@@ -123,8 +123,6 @@ This should be reviewed carefully to ensure that samples are correctly identifie
 
 ```{r metadata-report, collapse=TRUE, eval=TRUE}
 # table of sample metadata
-
-
 set_flextable_defaults(
   font.family = "Arial", font.size = 10, 
   border.color = "gray")
