@@ -50,7 +50,7 @@ inputs/reference/*
 *.gmt
 
 ## Outputs
-output/
+output*/
 count_table*.csv
 *metadata.QC_applied.txt
 /logs/
