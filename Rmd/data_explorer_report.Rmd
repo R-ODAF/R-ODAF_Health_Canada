@@ -205,7 +205,7 @@ counts_by_group <- as.data.frame(counts_by_group)
 counts_by_group$gene <- row.names(counts_by_group)
 # Clean up table, make into long format for plotting
 counts_by_group <- counts_by_group %>%
-  pivot_longer(!gene,
+  tidyr::pivot_longer(!gene,
                names_to = "Sample",
                values_to = "Normalized Counts")
 
@@ -217,7 +217,7 @@ names(counts_by_group)[4] <- "group"
 
 # Filter by absolute fold change to include a reasonable number of genes
 genesToSelect <- allResults %>%
-  arrange(-abs(log2FoldChange)) %>%
+  dplyr::arrange(-abs(log2FoldChange)) %>%
   head(1000) # Seems to be a reasonable maximum...
 
 # Order by alphabet to help readability in dropdown menu
@@ -232,7 +232,7 @@ genesAlphabetized <- genesAlphabetized %>%
 # Get the data 
 counts_by_group <- counts_by_group %>%
   dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]]) %>%
-  left_join(genesAlphabetized, by=c(gene="Feature_ID")) %>%
+  dplyr::left_join(genesAlphabetized, by=c(gene="Feature_ID")) %>%
   dplyr::select(gene,Sample,'Normalized Counts',group,Gene_Symbol)
 
 # Create "shared" data object - this is for enabling live filtering
