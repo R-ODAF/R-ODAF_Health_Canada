@@ -217,14 +217,14 @@ flextable(summary_counts) %>%
 This section shows the number of reads obtained for sample groups included in the report.  
 
 ```{r nReads_boxplot, collapse=TRUE, eval=TRUE}
-df<-data.frame(colSums(counts(dds)))
+df <- data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
-df$original_names = rownames(df)
+df$original_names <- rownames(df)
 df2 <- df %>%
-    left_join(exp_metadata) %>%
-    dplyr::select(original_names,sym(design_to_use),nReads)
+    dplyr::left_join(exp_metadata) %>%
+    dplyr::select(original_names, rlang::sym(params$design), nReads)
 
-ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
+ggplot(df2, aes_string(x = params$design, y = "nReads") )+
     geom_boxplot() +
     geom_jitter(size = 0.3, alpha = 0.5, color = "blue") +
     coord_flip() +
