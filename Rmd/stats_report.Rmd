@@ -80,6 +80,7 @@ library('flextable')
 library('vsn')
 library('RColorBrewer')
 library('pheatmap')
+library('ggplot2')
 library('R.ODAF.utils')
 
 species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
@@ -356,15 +357,15 @@ This section shows how standard deviation changes across the range of counts.
 ### Regularized counts
 
 ```{r SD_plots_log, eval=TRUE}
-vsn::meanSdPlot(assay(rld))
+vsn::meanSdPlot(SummarizedExperiment::assay(rld))
 
 ```
 
 ### log2(n + 1) normalized counts
 
 ```{r SD_plots_rld, eval=TRUE}
-sd_log <- normTransform(dds)
-vsn::meanSdPlot(assay(sd_log))
+sd_log <- DESeq2::normTransform(dds)
+vsn::meanSdPlot(SummarizedExperiment::assay(sd_log))
 
 ```
 
