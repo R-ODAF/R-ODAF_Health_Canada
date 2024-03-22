@@ -180,7 +180,7 @@ flextable(contrasts_subset) %>%
 
 # table of #samples/group
 nSamples_table <- table(exp_metadata_subset %>% 
-                          mutate_all(list(~ str_c(.))) %>%
+                          mutate_all(list(~ stringr::str_c(.))) %>% # TODO mutate_all will be deprecated soon
                           dplyr::pull(!!sym(params$design)))
 
 flextable(as.data.frame(nSamples_table)) %>%
@@ -191,20 +191,20 @@ flextable(as.data.frame(nSamples_table)) %>%
 # table of #DEGs/contrast 
 summary_counts <- data.frame()
 comparisons <- names(resultsListDEGs)
-for(comp in comparisons){ # by comparison
+for (comp in comparisons) { # by comparison
     res <- resultsListDEGs[[comp]]
-    if(is.null(res)){
+    if (is.null(res)) {
       c <- 0
-    } else{
+    } else {
       c <- nrow(res)
     }
-    row <- data.frame(comparison=comp, DEG=c)
+    row <- data.frame(comparison = comp, DEG = c)
     summary_counts <- rbind(summary_counts, row)
 }
 
 # Does this spit out NA for contrasts where there are no DEGs? It should
 flextable(summary_counts) %>%
-  set_header_labels(comparison="Contrast", DEG="Number of DEGs") %>%
+  set_header_labels(comparison = "Contrast", DEG = "Number of DEGs") %>%
   add_footer_lines("Number of differentially expressed genes across each contrast")  %>%
   flextable::autofit()
 ```
