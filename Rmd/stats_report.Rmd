@@ -83,9 +83,8 @@ library('pheatmap')
 library('ggplot2')
 library('R.ODAF.utils')
 
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
 # Put flextables on the left by default
-knitr::opts_chunk$set(ft.align='left')
+knitr::opts_chunk$set(ft.align = 'left')
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -243,23 +242,25 @@ ggplot(df2, aes_string(x = params$design, y = "nReads") )+
 ### All genes
 ```{r sample-to-sample_heatmaps, fig.width = 10, fig.height = 10, eval=TRUE}
 
+message(params$intgroup)
+
 plot_sample_heatmap <- function(current_rld){
   ## Obtain the sample euclidean distances
   sampleDists <- stats::dist(t(SummarizedExperiment::assay(current_rld)))
   sampleDists <- dendextend::sort_dist_mat(sampleDists)
   sampleDistMatrix <- as.matrix(sampleDists)
-  
-  distances_df <- as.data.frame(SummarizedExperiment::colData(current_rld)[, params$intgroup, drop = F])
-  
+
+  distances_df <- as.data.frame(SummarizedExperiment::colData(current_rld)[, params$intgroup, drop = FALSE])
+
   ## Define colors to use for the heatmap
   colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
-  
+
   ## Make the heatmap
-  return( pheatmap(sampleDistMatrix,
-           clustering_distance_rows = sampleDists,
-           clustering_distance_cols = sampleDists,
-           color = colors,
-           annotation_col = distances_df) )
+  return(pheatmap(sampleDistMatrix,
+         clustering_distance_rows = sampleDists,
+         clustering_distance_cols = sampleDists,
+         color = colors,
+         annotation_col = distances_df))
 }
 # all genes
 plot_sample_heatmap(rld)
@@ -341,7 +342,7 @@ for (i in seq_along(resultsListAll)) {
     MA_title <- paste0('MA plot, alpha = ', metadata(resultsListAll[[i]])$alpha,', ', contrast)
     DESeq2::plotMA(resultsListAll[[i]],
                    alpha = metadata(resultsListAll[[i]])$alpha,
-                   main = str_wrap(MA_title, width = 40),
+                   main = stringr::str_wrap(MA_title, width = 40),
                    ylim = ylims_for_ma_plots)
     cat('  \n\n')
   }
