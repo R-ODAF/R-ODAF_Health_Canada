@@ -244,7 +244,7 @@ ggplot(df2, aes_string(x = params$design, y = "nReads") )+
 
 message(params$intgroup)
 
-plot_sample_heatmap <- function(current_rld){
+plot_sample_heatmap <- function(current_rld, params) {
   ## Obtain the sample euclidean distances
   sampleDists <- stats::dist(t(SummarizedExperiment::assay(current_rld)))
   sampleDists <- dendextend::sort_dist_mat(sampleDists)
@@ -263,20 +263,20 @@ plot_sample_heatmap <- function(current_rld){
          annotation_col = distances_df))
 }
 # all genes
-plot_sample_heatmap(rld)
+plot_sample_heatmap(rld, params)
 
 ```
 
 ### DEGs only
 ```{r sample-to-sample_heatmaps_DEGs, fig.width = 10, fig.height = 10, eval=TRUE}
 # DEGs only
-plot_sample_heatmap(rld_DEGs)
+plot_sample_heatmap(rld_DEGs, params)
 ```
 
 ### Most `r params$nBest` variable genes only
 ```{r sample-to-sample_most_variable, fig.width = 10, fig.height = 10, eval=TRUE}
 # 100 most variable genes
-plot_sample_heatmap(rld_top)
+plot_sample_heatmap(rld_top, params)
 ```
 
 ## P-value Distributions {.tabset .tabset-fade}
