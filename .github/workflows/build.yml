@@ -2,6 +2,7 @@ name: Build and push a container to GHCR
 on:
   push:
     branches:
+      - include_r_pkg
       - main
 
 permissions:
@@ -37,7 +38,7 @@ jobs:
         with:
           push: true
           output: true
-          tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
+          tags: ghcr.io/r-odaf/r-odaf_health_canada:r-pkg-test
           file: ./Dockerfile.new
           cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
           cache-to: type=inline
