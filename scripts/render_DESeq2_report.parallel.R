@@ -41,6 +41,10 @@ data_env <- new.env()
 #load(dataFile) # metadata, contrasts, counts, resultsList
 load(data_file, envir = data_env)
 mergedDEGsList <- data_env$mergedDEGsList
+overallResListAll <- data_env$overallResListAll
+overallResListDEGs <- data_env$overallResListDEGs
+exp_contrasts <- data_env$exp_contrasts
+filtered_table <-  data_env$filtered_table
 rm(data_env)
 gc()
 
@@ -84,8 +88,8 @@ if (params$parallel) {
 }
 
 # Add back after troubleshooting above code...
-if (!is.na(params$deseq_facet)) {
-  source(here::here(file.path("scripts", "summarize_across_facets.R")))
+if (!is.na(params$reports_facet)) {
+  summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
 }
 
 # NOTE Manually clean up temporary files
