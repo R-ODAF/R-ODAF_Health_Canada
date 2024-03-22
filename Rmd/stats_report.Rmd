@@ -217,14 +217,14 @@ flextable(summary_counts) %>%
 This section shows the number of reads obtained for sample groups included in the report.  
 
 ```{r nReads_boxplot, collapse=TRUE, eval=TRUE}
-df<-data.frame(colSums(counts(dds)))
+df <- data.frame(colSums(counts(dds)))
 names(df) <- c("nReads")
-df$original_names = rownames(df)
+df$original_names <- rownames(df)
 df2 <- df %>%
-    left_join(exp_metadata) %>%
-    dplyr::select(original_names,sym(design_to_use),nReads)
+    dplyr::left_join(exp_metadata) %>%
+    dplyr::select(original_names, rlang::sym(params$design), nReads)
 
-ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
+ggplot(df2, aes_string(x = params$design, y = "nReads") )+
     geom_boxplot() +
     geom_jitter(size = 0.3, alpha = 0.5, color = "blue") +
     coord_flip() +
@@ -244,14 +244,14 @@ ggplot(df2, aes_string(x=design_to_use, y="nReads") )+
 
 plot_sample_heatmap <- function(current_rld){
   ## Obtain the sample euclidean distances
-  sampleDists <- stats::dist(t(assay(current_rld)))
+  sampleDists <- stats::dist(t(SummarizedExperiment::assay(current_rld)))
   sampleDists <- dendextend::sort_dist_mat(sampleDists)
   sampleDistMatrix <- as.matrix(sampleDists)
   
-  distances_df <- as.data.frame(colData(current_rld)[, params$intgroup, drop = F])
+  distances_df <- as.data.frame(SummarizedExperiment::colData(current_rld)[, params$intgroup, drop = F])
   
   ## Define colors to use for the heatmap
-  colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+  colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
   
   ## Make the heatmap
   return( pheatmap(sampleDistMatrix,
