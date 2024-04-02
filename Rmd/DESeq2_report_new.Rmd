@@ -89,7 +89,6 @@ library(tidytext)
 library(DESeq2)
 library(dplyr)
 library(tibble)
-library(R.ODAF.utils)
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 ```

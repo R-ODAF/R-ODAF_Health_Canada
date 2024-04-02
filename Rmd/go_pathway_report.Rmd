@@ -79,7 +79,6 @@ startTime <- Sys.time()
 
 library('clusterProfiler')
 library('enrichplot')
-library('R.ODAF.utils')
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 

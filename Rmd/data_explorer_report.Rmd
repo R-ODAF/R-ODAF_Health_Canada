@@ -79,7 +79,6 @@ library('DT')
 library('plotly')
 library('crosstool')
 library('crosstalk')
-library('R.ODAF.utils')
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 

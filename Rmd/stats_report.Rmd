@@ -81,7 +81,6 @@ library('vsn')
 library('RColorBrewer')
 library('pheatmap')
 library('ggplot2')
-library('R.ODAF.utils')
 
 # Put flextables on the left by default
 knitr::opts_chunk$set(ft.align = 'left')

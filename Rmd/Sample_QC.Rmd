@@ -86,6 +86,10 @@ library(vtree) # Richard Webster and Nick Barrowman
 library(ggh4x)
 ```
 
+# print working directory for troubleshooting
+```{r}
+getwd()
+```
 
 ```{r params, include = FALSE, echo = FALSE, message = FALSE}
 exp_groups <- unname(params[["exp_groups"]]) # Include b/c of how things are addressed throughout.
