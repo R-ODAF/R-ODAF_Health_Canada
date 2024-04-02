@@ -3,7 +3,7 @@
 suppressMessages(library(dplyr))
 suppressMessages(library(DESeq2))
 suppressMessages(library(BiocParallel))
-suppressMessages(library(R.ODAF.utils))
+suppressMessages(devtools::load_all("./R.ODAF.utils"))
 
 # Parse command line arguments
 run_args <- commandArgs(trailingOnly = TRUE)

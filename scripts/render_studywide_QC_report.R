@@ -1,6 +1,10 @@
 #!/usr/bin/R
 # Custom parameters for the report
-library(R.ODAF.utils)
+
+# print working directory for troubleshooting
+getwd()
+
+devtools::load_all("./R.ODAF.utils")
 
 # Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
 

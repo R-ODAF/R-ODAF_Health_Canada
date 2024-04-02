@@ -11,7 +11,7 @@
 
 library("BiocParallel")
 library("rmarkdown")
-library("R.ODAF.utils")
+devtools::load_all("./R.ODAF.utils")
 
 clean_tmpfiles_mod <- function() {
   message("Calling clean_tmpfiles_mod()")
