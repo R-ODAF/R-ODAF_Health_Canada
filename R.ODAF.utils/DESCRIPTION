@@ -1,0 +1,39 @@
+Package: R.ODAF.utils
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    person("Matthew", "Meier", , "matthew.meier@hc-sc.gc.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-8199-8754"))
+    person("Cook", "Kate", , "kathleen.cook@hc-sc.gc.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-8199-8754"))
+Description: This package provides a set of functions to run workflows for differential gene expression and other analyses on high-throughput transcriptomic data. Primarily this is centered around the use of the R-ODAF pipeline, which is usually only applied in the context of a regulatory toxicology omics study.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports:
+    AnnotationDbi,
+    BiocParallel,
+    DESeq2,
+    edgeR,
+    data.table,
+    dplyr,
+    gtools,
+    magrittr,
+    matrixStats,
+    openxlsx,
+    yaml,
+    here,
+    rlang,
+    stringi,
+    stringr,
+    tidyr,
+    fs,
+    limma,
+    SummarizedExperiment
+Suggests:
+    knitr,
+    rmarkdown,
+    AnnotationHub
+VignetteBuilder:
+    knitr
