@@ -61,12 +61,13 @@ parse_facets <- function(metadata, params, skip_extra) {
   if (!is.na(params[["reports_facet"]])) {
     exclude_groups <- c(params[["exclude_groups"]], params[["solvent_control"]], skip_extra)
 
-    facets <- metadata %>%
-      dplyr::filter(
-        !(params[["reports_facet"]] %in% exclude_groups)
-      ) %>%
-      dplyr::pull(params[["reports_facet"]]) %>%
-      unique()
+	facets <- metadata %>%
+	  dplyr::filter(
+		!(params[["reports_facet"]] %in% exclude_groups),
+		solvent_control == FALSE
+	  ) %>%
+	  dplyr::pull(params[["reports_facet"]]) %>%
+	  unique()
 
     message(paste0("Facets will be based on ", params[["reports_facet"]], "."))
     return(facets)
