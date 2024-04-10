@@ -75,7 +75,7 @@ if (is.na(params$deseq_facet)){
   }
   dds <- learn_deseq_model(count_data, exp_metadata, params[["design"]], params)
   rld <- regularize_data(dds, original_design, covariates, params$batch_var)
-  DESeq_results <- get_DESeq_results(dds, exp_metadata, exp_contrasts, params[["design"]], params, NA, paths$DEG_output)
+  DESeq_results <- get_DESeq_results(dds, exp_metadata, exp_contrasts, params[["design"]], params, NA)
   ddsList[['all']] <- dds
   overallAllGenes <- DESeq_results$dfGenes
   overallResListAll[['all']] <- DESeq_results$resListAll
