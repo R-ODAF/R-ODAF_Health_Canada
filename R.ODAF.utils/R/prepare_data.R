@@ -25,7 +25,7 @@ prepare_data_case1 <- function(ddsList,
     rld = rldList[['all']],
     mergedDEGs = mergedDEGsList[['all']],
     exp_metadata_subset = exp_metadata,
-    contrasts_subset = contrasts
+    contrasts_subset = contrasts[['all']]
   )
   return(facet_data)
 }
