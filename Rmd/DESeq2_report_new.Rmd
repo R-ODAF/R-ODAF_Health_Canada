@@ -135,7 +135,7 @@ if (params$platform == "TempO-Seq") {
 } else {
   id_table <- AnnotationDbi::select(db,
                                     columns = c("ENSEMBL", "SYMBOL"),
-                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>%
+                                    keys = allResults$Feature_ID, keytype="ENSEMBL") %>%
     distinct() %>%
     mutate(Gene_Symbol = coalesce(SYMBOL, ENSEMBL)) %>%
     dplyr::select(Feature_ID = ENSEMBL, Ensembl_Gene_ID = ENSEMBL, Gene_Symbol)
