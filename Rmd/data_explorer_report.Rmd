@@ -123,10 +123,10 @@ res.df.dt <- allResults %>%
 
 descriptions <- AnnotationDbi::select(db,
                                       columns = c("ENSEMBL", "GENENAME"),
-                                      keys = res.df.dt$Ensembl_Gene_ID,
+                                      keys = res.df.dt$Feature_ID,
                                       keytype="ENSEMBL") %>%
   distinct()
-colnames(descriptions) <- c("Ensembl_Gene_ID","description")
+colnames(descriptions) <- c("Feature_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
 res.df.dt$URLs <- paste0('<a href="',
