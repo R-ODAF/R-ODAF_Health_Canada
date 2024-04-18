@@ -17,11 +17,12 @@ params:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
-  display_group_filter:  null # 
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
@@ -78,22 +79,22 @@ bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
 #### Record start time
 startTime <- Sys.time()
 
-library('kableExtra')
-library('pheatmap')
-library('here')
-library('crosstalk')
-library('crosstool')
-library('plotly')
-library('tidytext')
+library(kableExtra)
+library(pheatmap)
+library(here)
+library(crosstalk)
+library(crosstool)
+library(plotly)
+library(tidytext)
+library(DESeq2)
+library(dplyr)
+library(tibble)
 
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 ```
 
 
 ```{r load_functions, include=F}
-
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
 
 has_description <- !is.na(params$project_description)
 description_text <- paste("Purpose of report:", params$project_description)
@@ -127,20 +128,18 @@ Code sections are hidden by default but can be viewed by clicking the 'code' but
 
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"), local = TRUE)
+load_facet_data(paths, params)
 
-if(params$platform == "TempO-Seq"){
-  id_table <- params$biospyder %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
+if (params$platform == "TempO-Seq") {
+  id_table <- params$biospyder %>% dplyr::select(Feature_ID = Probe_Name, Gene_Symbol, Ensembl_Gene_ID)
 } else {
   id_table <- AnnotationDbi::select(db,
                                     columns = c("ENSEMBL", "SYMBOL"),
-                                    keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>%
+                                    keys = allResults$Feature_ID, keytype="ENSEMBL") %>%
     distinct() %>%
     mutate(Gene_Symbol = coalesce(SYMBOL, ENSEMBL)) %>%
     dplyr::select(Feature_ID = ENSEMBL, Ensembl_Gene_ID = ENSEMBL, Gene_Symbol)
 }
-
-
 ```
 
 # Volcano plots
@@ -198,7 +197,7 @@ volcano_contrasts <- unique(allResults$contrast)
 x <- list()
 y <- list()
 volcano_labs <- list()
-for(cont in volcano_contrasts){
+for (cont in volcano_contrasts) {
   x[[cont]] <- list(
     FDR = subset(volcano_df, contrast == cont & sig_group == volcano_status_FDR) %>% pull(log2FoldChange),
     FC = subset(volcano_df, contrast == cont & sig_group == volcano_status_FC) %>% pull(log2FoldChange),
@@ -276,14 +275,14 @@ fig
 
 plot_interactive_PCA <- function(rld_data, intgroup_to_plot, all_intgroups){
   ## Perform PCA analysis
-  data_pca <- plotPCA(rld_data, intgroup = all_intgroups, ntop = nrow(assay(rld_data)), returnData = TRUE)
+  data_pca <- plotPCA(rld_data, intgroup = all_intgroups, ntop = nrow(SummarizedExperiment::assay(rld_data)), returnData = TRUE)
   ## Get percent of variance explained
   percentVar <- round(100 * attr(data_pca, "percentVar"))
   ## Plot
   highlight_pca <- highlight_key(data_pca, ~group) # is this going to fail if the data doesn't have a "group" variable?
   # colour stuff
   colour_scheme <- "Set1"
-  if(  length(unique(colData(rld_data)[,intgroup_to_plot])) > 9 ){ # max for Set1
+  if (length(unique(SummarizedExperiment::colData(rld_data)[, intgroup_to_plot])) > 9 ) { # max for Set1
     colour_scheme <- "Spectral" # not my favourite but this plot isn't going to work for large numbers of colours anyway.
   }
   p <- plot_ly(data = highlight_pca,
@@ -351,17 +350,17 @@ for (g in params$intgroup_to_plot){
 # DEG heatmaps {.tabset .tabset-fade}
 ```{R heatmap_function}
 plot_DEG_heatmap <- function(rld_data){
-  mat <- assay(rld_data) %>%
+  mat <- SummarizedExperiment::assay(rld_data) %>%
   as_tibble(rownames="Feature_ID") %>%
   left_join(id_table, by="Feature_ID") %>%
   mutate(Gene_Symbol_2 = coalesce(Gene_Symbol, Feature_ID)) %>%
   mutate(label = paste0(Gene_Symbol_2," : ",Feature_ID)) %>%
   dplyr::select(-Ensembl_Gene_ID, -Gene_Symbol, -Gene_Symbol_2, -Feature_ID) %>%
-  column_to_rownames("label")
+  tibble::column_to_rownames("label")
   if (nrow(as.matrix(mat)) > 1) {
     mat <- mat - rowMeans(mat)
     return(pheatmap(mat,
-             annotation_col =  as.data.frame(colData(rld_DEGs)[, params$intgroup_to_plot, drop = F]),
+             annotation_col =  as.data.frame(SummarizedExperiment::colData(rld_DEGs)[, params$intgroup_to_plot, drop = F]),
              show_rownames = (nrow(rld_data) <= 50),
              border_color = NA,
              scale = "row"))

@@ -17,11 +17,12 @@ params:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than on
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in group_filter
-  group_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
-  display_group_filter:  null # 
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
   exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
@@ -79,10 +80,7 @@ library('plotly')
 library('crosstool')
 library('crosstalk')
 
-source(here::here("scripts","DESeq_functions.R"), local = TRUE)
-
-species_data <- load_species(params$species, params$wikipathways_filename, params$biospyder_manifest_file)
-db <- AnnotationDbi::loadDb(dbfile(get(species_data$orgdb)))
+db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 
 # now that we have all our params etc loaded, we can set the HTML title of our document 
 ```
@@ -105,7 +103,7 @@ Report prepared for: `r params$project_name`
 This report contains detailed tables of DEG data.
 
 ```{r load_facet_data, include=FALSE}
-source(here::here("scripts","load-facet-data.R"), local = TRUE)
+load_facet_data(paths, params)
 ```
 
 
@@ -128,7 +126,7 @@ descriptions <- AnnotationDbi::select(db,
                                       keys = res.df.dt$Ensembl_Gene_ID,
                                       keytype="ENSEMBL") %>%
   distinct()
-colnames(descriptions) <- c("Ensembl_Gene_ID","description")
+colnames(descriptions) <- c("Feature_ID","description")
 res.df.dt <- res.df.dt %>% left_join(descriptions)
 
 res.df.dt$URLs <- paste0('<a href="',
@@ -206,7 +204,7 @@ counts_by_group <- as.data.frame(counts_by_group)
 counts_by_group$gene <- row.names(counts_by_group)
 # Clean up table, make into long format for plotting
 counts_by_group <- counts_by_group %>%
-  pivot_longer(!gene,
+  tidyr::pivot_longer(!gene,
                names_to = "Sample",
                values_to = "Normalized Counts")
 
@@ -218,7 +216,7 @@ names(counts_by_group)[4] <- "group"
 
 # Filter by absolute fold change to include a reasonable number of genes
 genesToSelect <- allResults %>%
-  arrange(-abs(log2FoldChange)) %>%
+  dplyr::arrange(-abs(log2FoldChange)) %>%
   head(1000) # Seems to be a reasonable maximum...
 
 # Order by alphabet to help readability in dropdown menu
@@ -233,7 +231,7 @@ genesAlphabetized <- genesAlphabetized %>%
 # Get the data 
 counts_by_group <- counts_by_group %>%
   dplyr::filter(gene %in% genesAlphabetized[["Feature_ID"]]) %>%
-  left_join(genesAlphabetized, by=c(gene="Feature_ID")) %>%
+  dplyr::left_join(genesAlphabetized, by=c(gene="Feature_ID")) %>%
   dplyr::select(gene,Sample,'Normalized Counts',group,Gene_Symbol)
 
 # Create "shared" data object - this is for enabling live filtering

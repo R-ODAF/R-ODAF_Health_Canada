@@ -110,23 +110,15 @@ if pipeline_config["mode"] == "se":
             mismatch_nmax = STAR_mismatch_nmax,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            alignment_dir = align_dir,
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
-            load_mode = star_load_mode
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         threads: num_threads
         shell:
             '''
-            if test -d "{params.alignment_dir}"; then
-                echo "Directory {params.alignment_dir} exists."
-            else
-                echo "Directory {params.alignment_dir} does not exist."
-            fi
-
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
             STAR \
                 --alignEndsType EndToEnd \
-                --genomeLoad {params.load_mode} \
+                --genomeLoad LoadAndKeep \
                 --runThreadN {threads} \
                 --genomeDir {params.index} \
                 --readFilesIn {input.R1} \
@@ -157,8 +149,7 @@ if pipeline_config["mode"] == "pe":
             index = STAR_index,
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
-            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample),
-            load_mode = star_load_mode
+            bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         resources:
             load=100
         benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
@@ -166,11 +157,8 @@ if pipeline_config["mode"] == "pe":
         shell:
             '''
             [ -e /tmp/{params.folder} ] && rm -r /tmp/{params.folder}
-
-            
-
             STAR \
-            --genomeLoad {params.load_mode} \
+            --genomeLoad LoadAndKeep \
             --runThreadN {threads} \
             --genomeDir {params.index} \
             --readFilesIn {input.R1} {input.R2} \

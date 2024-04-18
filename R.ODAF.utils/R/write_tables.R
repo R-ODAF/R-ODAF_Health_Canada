@@ -1,15 +1,23 @@
-library(openxlsx)
-library(data.table)
-library(edgeR)
-library(tidyr)
+#' Write DESeq2 Results and Annotations to Files
+#'
+#' This function takes the results from `DESeq2` analysis, annotates them, and writes out several files
+#' including those necessary for downstream analysis and visualization.
+#'
+#' @param facet A character string indicating the current facet (subset of data) being processed.
+#' @importFrom dplyr left_join distinct mutate arrange filter group_by ungroup
+#' @importFrom data.table setDT setnames
+#' @importFrom openxlsx createWorkbook addWorksheet writeDataTable createStyle freezePane saveWorkbook modifyBaseFont mergeCells writeData conditionalFormatting setColWidths
+#' @importFrom AnnotationDbi loadDb dbfile
+#' @importFrom edgeR cpm
+#' @importFrom stats quantile median
+#' @importFrom tidyr pivot_wider
+#' @importFrom stringr str_trunc str_replace_all str_split
+#' @importFrom fs path_sanitize
+#' @importFrom DESeq2 counts
+#' @export
 
-
-if(is.na(params$group_facet)){
-  facets <- c('all') 
-}
-
-write_tables <- function(facet) {
-  db <- AnnotationDbi::loadDb(AnnotationDbi::dbfile(get(species_data$orgdb)))
+write_tables <- function(facet, params) {
+  db <- AnnotationDbi::loadDb(params$species_data$orgdb)
   current_filter <- facet
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
@@ -17,27 +25,25 @@ write_tables <- function(facet) {
   if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
-  
-  allResults <- annotate_deseq_table(resultsListAll, params, filter_results = F)
-  significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = F)
-  
+
+  allResults <- annotate_deseq_table(resultsListAll, params, filter_results = FALSE)
+  significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = FALSE)
+
   if(params$write_additional_output){
-    biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T)  %>%
+    biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE)  %>%
       dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
       arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
       distinct(Gene_Symbol, .keep_all=TRUE) 
     colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
   }
 
-  
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
-  
-  
+
   if(params$platform == "TempO-Seq"){
     descriptions <- AnnotationDbi::select(db, columns = c("ENSEMBL", "GENENAME"), keys = allResults$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(descriptions) <- c("Ensembl_Gene_ID","description")
-    id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID, description) # this is annoying: could select columns using contains("Gene_Symbol", ignore.case =T)
+    id_table <- params$biospyder %>% left_join(descriptions) %>% dplyr::select(Feature_ID=Probe_Name, Gene_Symbol, Ensembl_Gene_ID, description) # this is annoying: could select columns using contains("Gene_Symbol", ignore.case =TRUE)
   } else {
     id_table <- AnnotationDbi::select(db, columns = c("ENSEMBL", "SYMBOL", "GENENAME"), keys = overallAllGenes$Ensembl_Gene_ID, keytype="ENSEMBL") %>% distinct()
     colnames(id_table) <- c("Ensembl_Gene_ID","Gene_Symbol","description")
@@ -46,55 +52,50 @@ write_tables <- function(facet) {
   summaryTable <- allResults %>%
     dplyr::select(Feature_ID, baseMean) %>%
     distinct()
-  
+
   contrastsInSummary <- c()
-  
-  
+
   prefix <- paste0(params$platform, "_",
                    params$project_title, "_",
                    current_filter, "_",
                    format(Sys.time(),'%d-%m-%Y.%H.%M'))  
   prefix <- str_replace_all(prefix, " ", "_")
   prefix <- fs::path_sanitize(prefix)
-  
-  
-  for (i in 1:length(resultsListAll)) {
+
+  for (i in seq_along(resultsListAll)) {
     message(resultsListAll[[i]]@elementMetadata[[2]][2])
-    q <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", design_to_use, "\ "),
+    q <- gsub(pattern = paste0("log2\ fold\ change\ \\(MMSE\\):\ ", params$design, "\ "),
               replacement =  "",
               x = resultsListAll[[i]]@elementMetadata[[2]][2])
     toJoin <- as.data.frame(resultsListAll[[i]])
-    setDT(toJoin, keep.rownames = T)[]
+    setDT(toJoin, keep.rownames = TRUE)[]
     setnames(toJoin, 1, "Feature_ID")
     toJoin <- mutate(toJoin, linearFoldChange = ifelse(log2FoldChange > 0,
                                                        2 ^ log2FoldChange,
                                                        -1 / (2 ^ log2FoldChange)))
     toJoin <- toJoin[, c(1:3, 7, 4:6)]
     summaryTable <- dplyr::left_join(summaryTable, dplyr::select(toJoin, !c(baseMean, pvalue, lfcSE)), by = "Feature_ID")
-    
+
     names(summaryTable)[[ncol(summaryTable) - 2]] <- paste0("log2FoldChange_", i)
     names(summaryTable)[[ncol(summaryTable) - 1]] <- paste0("linearFoldChange_", i)
     names(summaryTable)[[ncol(summaryTable)]] <- paste0("FDR_", i)
     contrastsInSummary[i] <- q
     message(summaryTable %>% nrow())
   }
-  
-  
-  
+
   message("getting final output tables")
   maxFCs <- allResults %>%
     dplyr::group_by(Feature_ID) %>%
     dplyr::filter(abs(linearFoldChange) == max(abs(linearFoldChange))) %>%
     dplyr::ungroup() %>%
     dplyr::select(Feature_ID, linearFoldChange)
-  
+
   minPvals <- allResults %>%
     dplyr::group_by(Feature_ID) %>%
     dplyr::filter(padj == min(padj)) %>%
     dplyr::ungroup() %>%
     dplyr::select(Feature_ID, padj)
-  
-  
+
   summaryTable <- summaryTable %>%
     left_join(id_table, by = "Feature_ID") %>%
     left_join(maxFCs, by = "Feature_ID") %>%
@@ -103,7 +104,7 @@ write_tables <- function(facet) {
                   minFDR_pval = padj) %>%
     dplyr::distinct() %>%
     mutate(maxFoldChange = abs(maxFoldChange)) # This eliminates the direction of change: this way it's easy to sort.
-  
+
   numColsToPrepend <- ncol(summaryTable) - 3*length(resultsListAll) - 2 # Number of columns per contrast = 3. Subtract two for the baseMean and genes columns.
   colPositionsToPrependSTART <- ncol(summaryTable) - numColsToPrepend + 1
   colPositionsOfData <- ncol(summaryTable) - numColsToPrepend
@@ -112,24 +113,22 @@ write_tables <- function(facet) {
                                    colPositionsToPrependSTART:ncol(summaryTable),
                                    2:colPositionsOfData)]
   summaryTable <- summaryTable %>% dplyr::distinct() # Just in case duplicates snuck by
-  
-  CPMddsDF <- data.frame(genes = row.names(CPMdds), CPMdds, check.names = F)
+
+  CPMddsDF <- data.frame(genes = row.names(CPMdds), CPMdds, check.names = FALSE)
   CPMddsDF <- dplyr::left_join(CPMddsDF, id_table, by = c("genes" = "Feature_ID"))
   numColsToPrepend <- ncol(CPMddsDF) - ncol(CPMdds) - 1
   colPositionsToPrependSTART <- ncol(CPMddsDF) - numColsToPrepend + 1
   colPositionsOfData <- ncol(CPMddsDF) - numColsToPrepend
   CPMddsDF <- CPMddsDF[, c(1, colPositionsToPrependSTART:ncol(CPMddsDF), 2:colPositionsOfData)]
-  
-  
-  if(is.na(params$group_facet)){
+
+  if(is.na(params$deseq_facet)){
     output_folder <- paths$DEG_output
     biosets_folder <- paths$biosets_output
   } else{
     output_folder <- paths$DEG_output[[current_filter]]
     biosets_folder <- paths$biosets_output[[current_filter]]
   }
-  
-  
+
   #######################################
   ### Write results table from DESeq2
   #######################################
@@ -138,37 +137,35 @@ write_tables <- function(facet) {
   write.table(allResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix,"-DESeq_output_ALL.txt")),
-              quote = F, sep = '\t', col.names = NA)
+              quote = FALSE, sep = "\t", col.names = NA)
   write.table(significantResults %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_significant.txt")),
-              quote = F, sep = '\t', col.names = NA)
+              quote = FALSE, sep = "\t", col.names = NA)
   write.table(summaryTable %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-DESeq_output_all_genes.txt")),
-              quote = F, sep = '\t', col.names = NA)
+              quote = FALSE, sep = "\t", col.names = NA)
   write.table(CPMddsDF %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_CPM.txt")),
-              quote = F, sep = '\t', col.names = NA)
+              quote = FALSE, sep = "\t", col.names = NA)
   write.table(Counts %>% as.data.frame() %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_normalized_counts.txt")),
-              quote = F, sep = '\t', col.names = NA)
+              quote = FALSE, sep = "\t", col.names = NA)
   write.table(summary_counts,
               file = file.path(output_folder,
                                paste0(prefix, "-DEG_summary.txt")),
-              quote = F, sep = '\t', col.names = FALSE, row.names = FALSE)
-  
-  
-  
+              quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+
   if(params$write_additional_output){
-    filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = T, biosets_filter = T) 
-    resultsContrasts <- str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
+    filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE) 
+    resultsContrasts <- stringr::str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
     biosetsFilteredResults <- filteredResults %>%
       bind_cols(dose=resultsContrasts) %>%
       dplyr::select(Gene_Symbol, padj, linearFoldChange, dose)
-    
+
     all_doses <- unique(biosetsFilteredResults$dose)
     for(d in all_doses){
       bfr <- biosetsFilteredResults %>%
@@ -183,10 +180,8 @@ write_tables <- function(facet) {
 
       write.table(bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
                   file = file.path(biosets_folder,biosets_fname),
-                  quote = F, sep = '\t', col.names = NA)
+                  quote = FALSE, sep = "\t", col.names = NA)
     }
-    
-
   }
   ##########################
   ### Write results in Excel
@@ -203,7 +198,7 @@ write_tables <- function(facet) {
                      border = c("top", "bottom", "left", "right"),
                      fontColour = "black",
                      fgFill = "#C5D9F1")
-  
+
   ### Summary results - one gene per line, columns are contrasts
   wb1 <- createWorkbook()
   modifyBaseFont(wb1, fontSize = 10, fontName = "Arial Narrow")
@@ -211,18 +206,18 @@ write_tables <- function(facet) {
   for (j in 1:length(contrastsInSummary)) {
     myStartcol = 8 + ((j - 1) * 3)
     myEndcol = 10 + ((j - 1) * 3)
-    mergeCells(wb1,
+    openxlsx::mergeCells(wb1,
                sheet = 1,
                cols = myStartcol:myEndcol,
                rows = 1)
-    writeData(
+    openxlsx::writeData(
       wb1,
       sheet = 1,
       x = contrastsInSummary[j],
       startCol = myStartcol,
       startRow = 1)
   }
-  conditionalFormatting(wb1,
+  openxlsx::conditionalFormatting(wb1,
                         sheet = 1,
                         rows = 1,
                         cols = 1:ncol(summaryTable),
@@ -235,10 +230,10 @@ write_tables <- function(facet) {
                  startRow = 2,
                  x = summaryTable,
                  colNames = TRUE,
-                 rowNames = F,
+                 rowNames = FALSE,
                  tableStyle = "none",
                  headerStyle = hs1,
-                 keepNA = T,
+                 keepNA = TRUE,
                  na.string = "NA")
   setColWidths(wb1, sheet = 1, cols = 1:6, widths = "auto") # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
   setColWidths(wb1, sheet = 1, cols = 7:ncol(summaryTable), widths = 13) # This is hard-coded, so prone to error; will only impact auto adjustment of col widths.
@@ -248,16 +243,16 @@ write_tables <- function(facet) {
   ### All results in one table
   wb2 <- createWorkbook()
   modifyBaseFont(wb2, fontSize = 10, fontName = "Arial Narrow")
-  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter_DEGs))
+  addWorksheet(wb2, paste0("FDR", params$alpha, ".Linear.FC.", params$linear_fc_filter))
   freezePane(wb2, sheet = 1, firstRow = TRUE, firstActiveCol = 4)
   writeDataTable(wb2,
                  sheet = 1,
                  x = significantResults,
                  colNames = TRUE,
-                 rowNames = F,
+                 rowNames = FALSE,
                  tableStyle = "none",
                  headerStyle = hs1,
-                 keepNA = T,
+                 keepNA = TRUE,
                  na.string = "NA")
   setColWidths(wb2, sheet = 1, cols = 1:ncol(significantResults), widths = "auto")
   addWorksheet(wb2, "DESeq_all_results")
@@ -266,20 +261,20 @@ write_tables <- function(facet) {
                  sheet = 2,
                  x = allResults,
                  colNames = TRUE,
-                 rowNames = F,
+                 rowNames = FALSE,
                  tableStyle = "none",
                  headerStyle = hs1,
-                 keepNA = T,
+                 keepNA = TRUE,
                  na.string = "NA")
   setColWidths(wb2, sheet = 2, cols = 1:ncol(allResults), widths = "auto")
   fname2 <- file.path(output_folder, paste0("2.", prefix, "-DESeq_all.xlsx"))
   saveWorkbook(wb2, fname2, overwrite = TRUE)
-  
+
   ### All results with different tabs for each contrast
   wb3 <- createWorkbook()
   modifyBaseFont(wb3, fontSize = 10, fontName = "Arial Narrow")
-  
-  short_contrast_names <- paste(contrasts$V1, "v.", contrasts$V2)
+
+  short_contrast_names <- paste(exp_contrasts$V1, "v.", exp_contrasts$V2)
   short_contrast_names <- stringr::str_trunc(short_contrast_names,
                                              31,
                                              side = "right",
@@ -288,7 +283,7 @@ write_tables <- function(facet) {
   short_contrast_names <- gsub(pattern = ":",
                                replacement = ".",
                                x = short_contrast_names)
-  
+
   for (i in 1:length(levels(factor(allResults$contrast)))) {
     print(i)
     dataToWrite <- allResults[allResults$contrast == levels(factor(allResults$contrast))[i],]
@@ -298,16 +293,16 @@ write_tables <- function(facet) {
                    sheet = i,
                    x = dataToWrite,
                    colNames = TRUE,
-                   rowNames = F,
+                   rowNames = FALSE,
                    tableStyle = "none",
                    headerStyle = hs1,
-                   keepNA = T,
+                   keepNA = TRUE,
                    na.string = "NA")
     setColWidths(wb3, sheet = i, cols = 1:ncol(dataToWrite), widths = "auto")
   }
   fname3 <- file.path(output_folder, paste0("3.", prefix, "-DESeq_by_contrast.xlsx"))
   saveWorkbook(wb3, fname3, overwrite = TRUE)
-  
+
   ### CPM
   wb4 <- createWorkbook()
   modifyBaseFont(wb4, fontSize = 10, fontName = "Arial Narrow")
@@ -317,15 +312,15 @@ write_tables <- function(facet) {
                  sheet = 1,
                  x = as.data.frame(CPMddsDF),
                  colNames = TRUE,
-                 rowNames = F,
+                 rowNames = FALSE,
                  tableStyle = "none",
                  headerStyle = hs1,
-                 keepNA = T,
+                 keepNA = TRUE,
                  na.string = "NA")
   setColWidths(wb4, sheet = 1, cols = 1:ncol(CPMddsDF), widths = "auto")
   fname4 <- file.path(output_folder, paste0("4.", prefix, "-CPM.xlsx"))
   saveWorkbook(wb4, fname4, overwrite = TRUE)
-  
+
   ### IPA
   IPA <- allResults %>% 
     distinct() %>% 
@@ -338,22 +333,13 @@ write_tables <- function(facet) {
                  sheet = 1,
                  x = as.data.frame(IPA),
                  colNames = TRUE,
-                 rowNames = F,
+                 rowNames = FALSE,
                  tableStyle = "none",
                  headerStyle = hs1,
-                 keepNA = T,
+                 keepNA = TRUE,
                  na.string = "NA")
   setColWidths(wb5, sheet = 1, cols = 1:ncol(IPA), widths = "auto")
   fname5 <- file.path(output_folder, paste0("5.", prefix, "-IPA.xlsx"))
   saveWorkbook(wb5, fname5, overwrite = TRUE)
-  
   DBI::dbDisconnect(dbconn(db))
-  
-}
-if (params$parallel){
-  biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus*0.9))
-  BiocParallel::bpmapply(FUN = write_tables, facet = facets, BPPARAM = biocluster)
-  #parallel::mcmapply(FUN = write_tables, facet = facets, mc.cores = round(params$cpus*0.6))
-} else {
-  mapply(FUN = write_tables, facet = facets)
 }
