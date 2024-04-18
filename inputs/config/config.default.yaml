@@ -12,6 +12,7 @@ common:
   write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
   celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
+  solvent_control: "solvent_control"
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
   # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
@@ -57,9 +58,9 @@ DESeq2:
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
-  group_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
   deseq_filter:  null        # Which group will this report be done on?
-  display_group_facet: null #  
+  reports_facet: null #  
   reports_filter:  null # 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
