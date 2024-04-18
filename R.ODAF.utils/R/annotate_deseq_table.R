@@ -51,7 +51,7 @@ annotate_deseq_table <- function(deseq_results_list,
       dplyr::mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2^log2FoldChange, -1 / (2^log2FoldChange)),
         Gene_Symbol_2 = dplyr::coalesce(Gene_Symbol, Feature_ID)) %>%
       dplyr::select(Feature_ID,
-#        Ensembl_Gene_ID,
+        Ensembl_Gene_ID,
         Gene_Symbol = Gene_Symbol_2,
         baseMean,
         log2FoldChange,
