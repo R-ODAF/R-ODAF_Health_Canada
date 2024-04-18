@@ -40,6 +40,7 @@ annotate_deseq_table <- function(deseq_results_list,
         # Ensuring unique rows for annotations
         annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
         colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
+        deg_table <- deg_table %>%  dplyr::mutate(Ensembl_Gene_ID = Feature_ID) # duplicate columns to prevent erroring out on last chunk
         deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
       }, error = function(e) {
         message("Error during annotation: ", e$message)
