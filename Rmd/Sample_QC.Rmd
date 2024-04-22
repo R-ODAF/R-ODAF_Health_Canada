@@ -836,6 +836,10 @@ Click on the tabs below to see the robust PCA and Pearson correlations for all s
 ```{r group-correlation-setup}
 facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
 cor_list <- list()
+
+facet_tree_cutoff <- 0.11 # Ideally this should be a config parameter!
+# Do we also want a separate config from params$treatment_var for the within-group tree cutoff?
+# Or to use the deseq_facet?
 ```
 
 ```{r, fig.width = 11, fig.height = 10, results='asis'}
@@ -852,7 +856,50 @@ for (i in seq_along(facets)) {
   correlations <- cor(cpm_subset, method = "pearson")
   correlation_df <- exp_metadata %>%
     filter(original_names %in% colnames(correlations))
+
+  ### Filtering by within-group correlations ###
+  dendro_facet <- 1 - cor(cpm_subset, method = clust_method)
+  dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
+  dendro_facet <- as.dendrogram(dendro_facet)
+
+  facet_tree_groups <- cutree(dendro_facet, h = facet_tree_cutoff)
+  n_facet <- table(facet_tree_groups)
+  n_facet <- sort(n_facet, decreasing = T)
+
+  d_facet <- d %>% dplyr::filter(original_names %in% samples_in_facet)
+  if (!is.null(dim(n_facet))) {
+    n_facet <- n_facet[2:dim(n_facet)]
+
+    if (length(n_facet > 0)) {
+      flag_cluster_facet <- d_facet$original_names %in% names(facet_tree_groups[facet_tree_groups %in% as.integer(names(n_facet))])
+    }
+  } else {
+    flag_cluster_facet <- rep(FALSE, nrow(d_facet))
+  }
+
+  # Add clustering results column to dataframe
+  d_facet$flag_cluster_facet <- flag_cluster_facet
+
+  df_groupdendro_list[[i]] <- d_facet
+
+
+  # Output dendrograms per facet (currently it's by params$treatment_group!)
+  facet_dendro_filename = paste0("dendrogram_",facets[i],".pdf")
+  CairoPDF(file = file.path(paths$details, facet_dendro_filename),
+         width = 14,
+         height = 8.5,
+         family = "Courier")
   
+  par(cex = 0.75, mar = c(25, 4, 4, 2))
+  plot(dendro_facet %>%
+        dendextend::set("labels_cex", 1),
+      main = "log2 CPM",
+      horiz = F)
+  abline(h = facet_tree_cutoff, col = "red", lwd = 2)
+  invisible(dev.off())  
+
+
+### Make correlation robust PCA plots
   row.names(correlation_df) <- correlation_df$original_names
   correlation_df <- correlation_df[colnames(correlations),]
   correlation_df <- as.data.frame(correlation_df[unlist(exp_groups[[1]][1])])
@@ -873,6 +920,19 @@ for (i in seq_along(facets)) {
   cor_list[[i]] <- cor_distribution
   cat('  \n\n')
 }
+```
+
+
+```{r add_group_dendro_to_QCAC}
+df_groupdendro <- do.call(rbind, df_groupdendro_list)
+df_groupdendro <- df_groupdendro %>% 
+  dplyr::select(sample_ID, flag_cluster_facet) %>%
+  dplyr::rename(group_tree = flag_cluster_facet)
+df_groupdendro$group_tree <- ifelse(df_groupdendro$group_tree, "FAIL", "PASS")
+
+
+# Incorporate info into QAQC table
+QAQC <- merge(QAQC, df_groupdendro, by.x = "Sample", by.y = "sample_ID", all.x = TRUE)
 ```
 
 ## Distribution of correlations
@@ -1038,12 +1098,12 @@ QAQC_annotated$Any <- apply(QAQC_annotated,
 ```{r vtree}
 
 vtree(QAQC_annotated,
-      "Any dendrogram NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
+      "Any dendrogram grouped-dendro NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
       summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
       pngknit = FALSE) # This is not ideal - but the tmp files didn't work when rendering externally.
 
 vtree(QAQC_annotated,
-      "dendrogram NMR FMR Ncov5 Nsig80 Gini",
+      "dendrogram grouped-dendro NMR FMR Ncov5 Nsig80 Gini",
       summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
       pattern = T,
       pngknit = FALSE)
@@ -1270,7 +1330,7 @@ knitr::kable(QAQC_failed_kable,
 
 ```{r pass_fail_summary}
 QAQC_annotated %>%
-  dplyr::group_by(dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
+  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
   tally() %>%
   knitr::kable(caption = "Summary of pass/fail results") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
@@ -1281,7 +1341,7 @@ QAQC_annotated %>%
 
 ```{r pass_fail_by_group}
 QAQC_annotated %>%
-  dplyr::group_by(dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
+  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
   tally() %>%
   knitr::kable(caption = "Pass/fail results by group") %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
