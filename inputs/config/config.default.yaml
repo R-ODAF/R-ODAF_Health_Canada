@@ -34,6 +34,7 @@ pipeline:
 QC:
   clust_method: "spearman" # For clustering
   tree_height_cutoff: 0.1  # For clustering
+  treatmentvar_tree_height_cutoff: null # cluster by treatment_var groups and remove samples branching above this height. Can be set to null to skip this QC step
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
   gini_cutoff: 0.95
