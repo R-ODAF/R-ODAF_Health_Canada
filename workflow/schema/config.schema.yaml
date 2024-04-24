@@ -93,6 +93,10 @@ properties:
       tree_height_cutoff:
         type: number
         minimum: 0
+      treatmentvar_tree_height_cutoff:
+        type:
+          - number
+          - 'null'
       dendro_color_by:
         type: string
       align_threshold:
