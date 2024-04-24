@@ -5,8 +5,8 @@ params:
   project_name: "Your name here" 
   project_description: null # description of project for report, optional
   clust_method: "spearman" # For clustering
-  tree_height_cutoff: 0.1  # For clustering
-  treatmentvar_tree_height_cutoff: 0.2
+  studywide_tree_height_cutoff: 0.1  # For clustering
+  group_tree_height_cutoff: 0.2
   dendro_color_by: "group" # Specify how you would like to color the dendrograms
   nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
   align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
@@ -369,7 +369,7 @@ if (nrow(cytotoxic) >= 1) {
 
 ## Dendrogram and distance based filtering
 
-A tree height cutoff of `r params$tree_height_cutoff` is used to cut the tree and separate outliers.
+A tree height cutoff of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
 
 ### Dendrogram, all samples, prefiltering
 
@@ -428,7 +428,7 @@ plot(dendro_before_all_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat the plot so it appears in the HTML report
@@ -437,7 +437,7 @@ plot(dendro_before_all_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
@@ -506,7 +506,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
              main = "log2 CPM",
              horiz = F)
   )
-  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
   invisible(dev.off())
 
   # Repeat the plot so it appears in the HTML report
@@ -517,7 +517,7 @@ if (length(dendro_before_tech_ctrls) > 2) {
              main = "log2 CPM",
              horiz = F)
   )
-  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 }
 
 ```
@@ -564,7 +564,7 @@ plot(dendro_before_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat the plot so it appears in the HTML report
@@ -575,7 +575,7 @@ plot(dendro_before_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ############################################################################
 # Experimental Samples, Prefiltering, Colored by Dose
@@ -612,7 +612,7 @@ plot(dendro_before_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat the plot so it appears in the HTML report
@@ -622,7 +622,7 @@ plot(dendro_before_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
@@ -632,14 +632,14 @@ Click on the tabs below to view samples removed by each metric.
 
 ### Clustering Distance Cutoff
 
-A `r params$clust_method` distance of `r params$tree_height_cutoff` is used to cut the tree and separate outliers.
+A `r params$clust_method` distance of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
 
 ```{r filtering_dendrogram}
 ############################################################################
 # Filtering
 ############################################################################
 
-tree_groups <- cutree(dendro_before_all_samples, h = params$tree_height_cutoff)
+tree_groups <- cutree(dendro_before_all_samples, h = params$studywide_tree_height_cutoff)
 n <- table(tree_groups)
 n <- sort(n, decreasing = T)
 
@@ -895,12 +895,12 @@ for (i in seq_along(facets)) {
     filter(original_names %in% colnames(correlations))
 
   ### Filtering by within-group correlations ###
-  if(!is.na(params$treatmentvar_tree_height_cutoff)) {
+  if(!is.na(params$group_tree_height_cutoff)) {
     dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
     dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
     dendro_facet <- as.dendrogram(dendro_facet)
 
-    facet_tree_groups <- cutree(dendro_facet, h = params$treatmentvar_tree_height_cutoff)
+    facet_tree_groups <- cutree(dendro_facet, h = params$group_tree_height_cutoff)
     n_facet <- table(facet_tree_groups)
     n_facet <- sort(n_facet, decreasing = T)
 
@@ -933,7 +933,7 @@ for (i in seq_along(facets)) {
           dendextend::set("labels_cex", 1),
         main = "log2 CPM",
         horiz = F)
-    abline(h = params$treatmentvar_tree_height_cutoff, col = "red", lwd = 2)
+    abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
     invisible(dev.off())  
   }
 
@@ -963,7 +963,7 @@ for (i in seq_along(facets)) {
 
 
 ```{r add_group_dendro_to_QCAC}
-if(!is.na(params$treatmentvar_tree_height_cutoff)) {
+if(!is.na(params$group_tree_height_cutoff)) {
   df_groupdendro <- do.call(rbind, df_groupdendro_list)
   df_groupdendro <- df_groupdendro %>% 
     dplyr::select(sample_ID, flag_cluster_facet) %>%
@@ -1457,7 +1457,7 @@ plot(dendro_after_all_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat plot so it appears in the HTML report
@@ -1466,7 +1466,7 @@ plot(dendro_after_all_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 ### Dendrogram, technical control samples, postfiltering
@@ -1507,7 +1507,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
        dendextend::set("labels_cex", 0.3),
        main = "log2 CPM",
        horiz = F)
-  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
   invisible(dev.off())
 
   # Repeat plot so it appears in the HTML report
@@ -1516,7 +1516,7 @@ if (length(dendro_after_tech_ctrls) > 2) {
        dendextend::set("labels_cex", 0.3),
        main = "log2 CPM",
        horiz = F)
-  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 }
 ```
 
@@ -1560,7 +1560,7 @@ plot(dendro_after_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat the plot so it appears in the HTML report
@@ -1569,7 +1569,7 @@ plot(dendro_after_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
@@ -1613,7 +1613,7 @@ plot(dendro_after_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
 # Repeat the plot so it appears in the HTML report
@@ -1622,7 +1622,7 @@ plot(dendro_after_all_exp_samples %>%
        dendextend::set("labels_cex", 0.3),
      main = "log2 CPM",
      horiz = F)
-abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 

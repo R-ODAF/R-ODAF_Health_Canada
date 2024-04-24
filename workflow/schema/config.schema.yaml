@@ -90,10 +90,10 @@ properties:
     properties:
       clust_method:
         type: string
-      tree_height_cutoff:
+      studywide_tree_height_cutoff:
         type: number
         minimum: 0
-      treatmentvar_tree_height_cutoff:
+      group_tree_height_cutoff:
         type:
           - number
           - 'null'
@@ -124,7 +124,7 @@ properties:
         type: string
     required:
       - clust_method
-      - tree_height_cutoff
+      - studywide_tree_height_cutoff
       - dendro_color_by
       - align_threshold
       - gini_cutoff
