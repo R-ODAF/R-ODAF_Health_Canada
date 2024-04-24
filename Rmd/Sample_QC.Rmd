@@ -430,6 +430,15 @@ plot(dendro_before_all_samples %>%
      horiz = F)
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+plot(dendro_before_all_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+
 ```
 
 
@@ -499,6 +508,16 @@ if (length(dendro_before_tech_ctrls) > 2) {
   )
   abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
   invisible(dev.off())
+
+  # Repeat the plot so it appears in the HTML report
+  #par(cex = 0.4, mar = c(25, 4, 4, 2))
+  print(plot(dendro_before_tech_ctrls %>%
+               dendextend::set("labels", labels_to_use) %>%
+               dendextend::set("labels_cex", 0.3),
+             main = "log2 CPM",
+             horiz = F)
+  )
+  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 }
 
 ```
@@ -548,6 +567,16 @@ plot(dendro_before_all_exp_samples %>%
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
 
+# Repeat the plot so it appears in the HTML report
+
+#par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+
 ############################################################################
 # Experimental Samples, Prefiltering, Colored by Dose
 ############################################################################
@@ -585,6 +614,15 @@ plot(dendro_before_all_exp_samples %>%
      horiz = F)
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+#par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
@@ -1421,6 +1459,14 @@ plot(dendro_after_all_samples %>%
      horiz = F)
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
+
+# Repeat plot so it appears in the HTML report
+plot(dendro_after_all_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 ### Dendrogram, technical control samples, postfiltering
@@ -1463,6 +1509,14 @@ if (length(dendro_after_tech_ctrls) > 2) {
        horiz = F)
   abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
   invisible(dev.off())
+
+  # Repeat plot so it appears in the HTML report
+  plot(dendro_after_tech_ctrls %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+       main = "log2 CPM",
+       horiz = F)
+  abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 }
 ```
 
@@ -1508,6 +1562,15 @@ plot(dendro_after_all_exp_samples %>%
      horiz = F)
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+plot(dendro_after_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
+
 ```
 
 ### Dendrogram, experimental samples, postfiltering, colored by dose
@@ -1552,6 +1615,14 @@ plot(dendro_after_all_exp_samples %>%
      horiz = F)
 abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+plot(dendro_after_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 
