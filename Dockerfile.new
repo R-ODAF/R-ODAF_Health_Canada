@@ -46,7 +46,7 @@ RUN mamba run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.y
 RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda \
       && df -h \
       && mkdir ./tests \
-      && mv output test-data-latest truth_checksums wikipathways-20210810-gmt-Homo_sapiens.gmt Human_S1500_1.2_standardized.csv inputs ./tests/ \
+      && mv output test-data-main truth_checksums wikipathways-20210810-gmt-Homo_sapiens.gmt Human_S1500_1.2_standardized.csv inputs ./tests/ \
       && mv inputs.bak inputs \
       && rm -rf ./tests
 
