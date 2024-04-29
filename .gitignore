@@ -48,10 +48,15 @@
 *config.yaml
 inputs/reference/*
 *.gmt
+*.csv
+
+## Test data repo
+test-data/
 
 ## Outputs
 output*/
 count_table*.csv
+count_table*.tsv
 *metadata.QC_applied.txt
 /logs/
 *.pdf
