@@ -28,11 +28,11 @@ RUN mkdir -p /home/R-ODAF/R-ODAF_Health_Canada
 WORKDIR "/home/R-ODAF/R-ODAF_Health_Canada"
 COPY . .
 RUN mv inputs inputs.bak \
-      && wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/archive/refs/tags/latest.tar.gz \
-      && tar -zxvf latest.tar.gz \
-      && mv -f test-data-latest/${PLATFORM}/* ./ \
+      && wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/archive/master.tar.gz \
+      && tar -zxvf master.tar.gz \
+      && mv -f test-data-main/dev/${PLATFORM}/* ./ \
       && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv \
-      && rm latest.tar.gz
+      && rm master.tar.gz
 
 RUN chown -R R-ODAF:R-ODAF /home/R-ODAF && df -h
 USER R-ODAF
