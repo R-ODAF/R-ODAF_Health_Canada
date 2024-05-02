@@ -112,9 +112,9 @@ if (is.na(params$deseq_facet)){
     mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
     filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
   }
+  overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
+  overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]
 }
-overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
-overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]
 
 summary_counts <- data.frame()
 if (is.na(params$deseq_facet)) {
