@@ -61,6 +61,7 @@ paths <- R.ODAF.utils::set_up_filepaths(params,
 ddsList <- list()
 designList <- list()
 contrastsList <- list()
+overallAllGenesList <- list()
 overallResListAll <- list()
 overallResListFiltered <- list()
 overallResListDEGs <- list()
@@ -104,6 +105,7 @@ if (is.na(params$deseq_facet)){
     contrastsList[[current_filter]] <- contrasts_subset
     rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates = NA, params$batch_var)
     DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, params[["design"]], params, current_filter)
+    overallAllGenesList[[current_filter]] <- DESeq_results$dfGenes
     overallResListAll[[current_filter]] <- DESeq_results$resListAll
     overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
     overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
@@ -111,6 +113,8 @@ if (is.na(params$deseq_facet)){
     filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
   }
 }
+overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
+overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]
 
 summary_counts <- data.frame()
 if (is.na(params$deseq_facet)) {
