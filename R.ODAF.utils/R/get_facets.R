@@ -19,6 +19,11 @@ get_facets <- function(metadata,
     message("No metadata provided. Skipping facet extraction.")
     return(NA)
   }
+  if (!is.na(params$include_only_column) && !is.na(params$include_only_group)) {
+    metadata <- metadata %>%
+      dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
+  }
+
   # Case 1: DESeq2 on all samples; make reports for all samples.
   # Both "deseq_facet" and "reports_facet" are NA (unset).
   # (i.e., all groups and data in a single report)
