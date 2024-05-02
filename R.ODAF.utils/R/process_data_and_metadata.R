@@ -66,7 +66,7 @@ filter_metadata <- function(exp_metadata, params, exp_contrasts) {
     exp_metadata <- exp_metadata %>%
       dplyr::filter((!!sym(params$include_only_column)) %in% params$include_only_group)
     limit_contrasts <- exp_metadata %>%
-      pull(!!sym(design)) %>%
+      pull(!!sym(params$design)) %>%
       unique() %>%
       as.character()
     exp_contrasts <- exp_contrasts %>% dplyr::filter(V1 %in% limit_contrasts)
