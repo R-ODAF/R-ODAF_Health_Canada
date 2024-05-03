@@ -17,7 +17,7 @@ params:
       three: ["row", "column"]
     #4: ["batch"]
     #As many groups as desired...
-  batch_var: "temposeq_plate"          # "batch"
+  batch_var: "batch"          # "batch"
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
   treatment_var: "chemical"
   platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
@@ -29,8 +29,8 @@ params:
   write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
   celltype: "Some cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
-  biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file:  "Human_S1500_1.2_standardized.csv"
+  biospyder_dbs:  "/home/mmeier/shared/dbs/biospyder/unify_temposeq_manifests/output_manifests"
+  biospyder_manifest_file:  "Human_Whole_Transcriptome_2.0_standardized.csv"
 title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_title))`"
 subtitle: "`r paste(params$platform)`"
 output:
@@ -138,7 +138,7 @@ count_data_file <- file.path(paths$processed,"count_table.tsv")
 if (params$collapse_replicates == T) {
   collapse_reps <- function(filepath) {
   df <- read.table(file = filepath,
-                   sep = "\t",
+                   sep = ",",
                    header = T)
   names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
   df <- df %>% pivot_longer(cols = -c("X"),
@@ -157,13 +157,13 @@ if (params$collapse_replicates == T) {
               row.names = F)
   } else {
   count_data <- read.table(count_data_file,
-                           sep = "\t",
+                           sep = ",",
                            stringsAsFactors = FALSE,
                            header = TRUE,
                            quote = "\"",
                            row.names = 1,
                            check.names = FALSE)
-  multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+  multiQCFile <- file.path(paths$qc, "multiqc_data.zip")
   multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
@@ -412,7 +412,7 @@ message(paste0("The treatment variable is: ", treatment_var))
 ############################################################################
 # Re-order the data by group
 ############################################################################
-flag_order <- order(d[treatment_var])
+flag_order <- order(as.matrix(d[treatment_var]))
 d <- d[flag_order,]
 count_data <- count_data[,d$original_names]
 ############################################################################
@@ -1099,8 +1099,8 @@ QAQC_metadata_subset <- QAQC_annotated %>%
                   NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
 }
 
-QAQC_metadata_subset %>%
-    summarise_each(levels(as.factor(.))) %>% tally()
+# QAQC_metadata_subset %>%
+#     summarise_each(levels(as.factor(.))) %>% tally()
 
 potential_covariates <- QAQC_metadata_subset %>%
   dplyr::mutate_all(as.factor) %>%

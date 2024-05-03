@@ -1,0 +1,51 @@
+Symbol	EntrezGene ID	Description	Imported ID	Fold Change	Rank
+PRSS23	11098	protease, serine, 23	PRSS23	4.395	1
+EGR3	1960	early growth response 3	EGR3	4.0925	2
+PDZK1	5174	PDZ domain containing 1	PDZK1	3.5575	3
+RET	5979	ret proto-oncogene	RET	2.9875	4
+IGFBP4	3487	insulin-like growth factor binding protein 4	IGFBP4	2.8767	5
+RAB31	11031	RAB31, member RAS oncogene family	RAB31	2.7633	6
+GREB1	9687	growth regulation by estrogen in breast cancer 1	GREB1	2.675	7
+SNX24	28966	sorting nexin 24	SNX24	2.61	8
+ST8SIA4	7903	ST8 alpha-N-acetyl-neuraminide alpha-2,8-sialyltransferase 4	ST8SIA4	-2.6067	9
+PGR	5241	progesterone receptor	PGR	2.4667	10
+CXCL12	6387	chemokine (C-X-C motif) ligand 12	CXCL12	2.4275	11
+TPD52L1	7164	tumor protein D52-like 1	TPD52L1	2.3	12
+RAPGEFL1	51195	Rap guanine nucleotide exchange factor (GEF)-like 1	RAPGEFL1	2.295	13
+RHOBTB1	9886	Rho-related BTB domain containing 1	RHOBTB1	2.2067	14
+NRIP1	8204	nuclear receptor interacting protein 1	NRIP1	2.12	15
+NPY1R	4886	neuropeptide Y receptor Y1	NPY1R	2.06	16
+MPPED2	744	metallophosphoesterase domain containing 2	MPPED2	1.96	17
+FOS	2353	FBJ murine osteosarcoma viral oncogene homolog	FOS	1.89	18
+XBP1	7494	X-box binding protein 1	XBP1	1.8833	19
+FKBP5	2289	FK506 binding protein 5	FKBP5	1.845	20
+CA12	771	carbonic anhydrase XII	CA12	1.8275	21
+MYB	4602	v-myb myeloblastosis viral oncogene homolog (avian)	MYB	1.8233	22
+RASGRP1	10125	RAS guanyl releasing protein 1 (calcium and DAG-regulated)	RASGRP1	1.795	23
+GAB2	9846	GRB2-associated binding protein 2	GAB2	1.79	24
+ADCY9	115	adenylate cyclase 9	ADCY9	1.7533	25
+RAB27B	5874	RAB27B, member RAS oncogene family	RAB27B	-1.7375	26
+ZNF703	80139	zinc finger protein 703	ZNF703	1.7	27
+AREG	374	amphiregulin	AREG	1.65	28
+DEPTOR	64798	DEP domain containing MTOR-interacting protein	DEPTOR	1.6325	29
+LIMA1	51474	LIM domain and actin binding 1	LIMA1	-1.63	30
+NKAIN1	79570	Na+/K+ transporting ATPase interacting 1	NKAIN1	1.63	30
+RARA	5914	retinoic acid receptor, alpha	RARA	1.62	32
+PKP2	5318	plakophilin 2	PKP2	-1.61	33
+MYC	4609	v-myc myelocytomatosis viral oncogene homolog (avian)	MYC	1.5933	34
+EFNA1	1942	ephrin-A1	EFNA1	-1.5633	35
+RCL1	10171	RNA terminal phosphate cyclase-like 1	RCL1	1.56	36
+IL1R1	3554	interleukin 1 receptor, type I	IL1R1	-1.47	37
+TCF7L2	6934	transcription factor 7-like 2 (T-cell specific, HMG-box)	TCF7L2	-1.4467	38
+KLF10	7071	Kruppel-like factor 10	KLF10	1.44	39
+CD44	960	CD44 molecule (Indian blood group)	CD44	1.425	40
+TPBG	7162	trophoblast glycoprotein	TPBG	1.4133	41
+TSC22D3	1831	TSC22 domain family, member 3	TSC22D3	-1.4	42
+MAPT	4137	microtubule-associated protein tau	MAPT	1.39	43
+IER3	8870	immediate early response 3	IER3	1.36	44
+PIK3R1	5295	phosphoinositide-3-kinase, regulatory subunit 1 (alpha)	PIK3R1	1.315	45
+MYOF	26509	myoferlin	MYOF	1.3033	46
+ADCY1	107	adenylate cyclase 1 (brain)	ADCY1	1.29	47
+RAB26	25837	RAB26, member RAS oncogene family	RAB26	-1.26	48
+ATP2B1	490	ATPase, Ca++ transporting, plasma membrane 1	ATP2B1	-1.24	49
+BAMBI	25805	BMP and activin membrane-bound inhibitor homolog (Xenopus laevis)	BAMBI	-1.215	50
