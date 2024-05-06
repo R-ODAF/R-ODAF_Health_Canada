@@ -152,10 +152,10 @@ sort_contrasts <- function(exp_metadata, exp_contrasts, params, contrast_col = 1
   ordered_contrasts <- exp_contrasts %>%
     dplyr::slice(match(ordered_design, exp_contrasts[[contrast_col]])) %>%
     unique()
-  if(nrow(contrasts) == nrow(ordered_contrasts)) {
+  if(nrow(exp_contrasts) == nrow(ordered_contrasts)) {
     return(ordered_contrasts)
   } else {
-    return(contrasts)
+    return(exp_contrasts)
     warning("NOTE: Your contrasts will NOT be sorted, because the sortcol does not appear to have a one-to-one relationship with contrasts.")
   }
 }
