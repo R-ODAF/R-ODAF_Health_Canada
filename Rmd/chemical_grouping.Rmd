@@ -673,26 +673,26 @@ matrix_DEGs_all_scaled <- scale(matrix_DEGs_all, center=FALSE, scale=colSums(mat
 ```{r}
 # Originally...
 # hclust(dist(t(matrix_DEGs_all), method = dist_method ), method = link_method)
-clustered_DEGs_all <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_all_scaled),
+clustered_DEGs_all_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_all_scaled),
                                   method = dist_method)),
                               method = link_method)
 
 #dend_all <- as.dendrogram(clustered_DEGs_all)
-dend <- as.dendrogram(clustered_DEGs_all)
+dend_scaled <- as.dendrogram(clustered_DEGs_all_scaled)
 # Extract unique chemicals and assign colorblind-friendly palette
-unique_chemicals <- unique(sapply(colnames(matrix_DEGs_all_scaled), function(label) {
+unique_chemicals_scaled <- unique(sapply(colnames(matrix_DEGs_all_scaled), function(label) {
   parts <- unlist(strsplit(label, "_"))
   parts[1]  # Extract the chemical part
 }))
 
 # Generate a color palette with a different color for each unique chemical
-color_palette <- viridis(length(unique_chemicals))
+color_palette_scaled <- viridis(length(unique_chemicals_scaled))
 
 # Create a named vector mapping chemicals to colors
-chemical_colors <- setNames(color_palette, unique_chemicals)
+chemical_colors <- setNames(color_palette_scaled, unique_chemicals_scaled)
 
 # Customize dendrogram labels
-labels_colors <- sapply(labels(dend), function(label) {
+labels_colors_scaled <- sapply(labels(dend_scaled), function(label) {
   parts <- unlist(strsplit(label, "_"))
   chemical <- parts[1]
   color <- chemical_colors[chemical]
@@ -700,7 +700,7 @@ labels_colors <- sapply(labels(dend), function(label) {
 })
 
 # Set label attributes
-labels(dend) <-  gsub("_vs_DMSO.*", "", labels(dend))
+labels(dend_scaled) <-  gsub("_vs_DMSO.*", "", labels(dend_scaled))
 # Adjust text size
 
 # Plot the dendrogram
@@ -709,7 +709,7 @@ labels(dend) <-  gsub("_vs_DMSO.*", "", labels(dend))
 # labels_colors(dend) <- c(rep("red", 13), rep("blue", 16), "dark green")[order.dendrogram(dend)]
 
 par(mar = c(20, 4, 4, 4), cex = 0.5)
-plot(dend, horiz = F, main = "All doses")
+plot(dend_scaled, horiz = F, main = "All doses")
 
 
 ```
@@ -747,13 +747,16 @@ id <- matrix_DEGs_top$gene
 matrix_DEGs_top <- as.matrix(matrix_DEGs_top[, -1])
 rownames(matrix_DEGs_top) <- id
 matrix_DEGs_top[is.na(matrix_DEGs_top)] <- 0
-clustered_DEGs_top <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top),
+
+matrix_DEGs_top_scaled <- scale(matrix_DEGs_top, center=FALSE, scale=colSums(matrix_DEGs_top))
+
+clustered_DEGs_top_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_scaled),
                                   method = dist_method) ),
                          method = link_method)
-dend.top <- as.dendrogram(clustered_DEGs_top)
+dend.top_scaled <- as.dendrogram(clustered_DEGs_top_scaled)
 
 par(mar = c(20,4,4,4), cex = 0.5)
-plot(dend.top, horiz = F, main = "Top doses, normalized log2 fold changes")
+plot(dend.top_scaled, horiz = F, main = "Top doses, normalized log2 fold changes")
 
 
 
@@ -793,12 +796,15 @@ id <- matrix_DEGs_low$gene
 matrix_DEGs_low <- as.matrix(matrix_DEGs_low[, -1])
 rownames(matrix_DEGs_low) <- id
 matrix_DEGs_low[is.na(matrix_DEGs_low)] <- 0
-clustered_DEGs <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_low),
+
+matrix_DEGs_low_scaled <- scale(matrix_DEGs_low, center=FALSE, scale=colSums(matrix_DEGs_low))
+
+clustered_DEGs_low_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_low_scaled),
                                   method = dist_method)),
                          method = link_method)
 
 par(mar = c(20,4,4,4), cex = 0.5)
-plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Low doses, normalized log2 fold changes")
+plot(as.dendrogram(clustered_DEGs_low_scaled), horiz = F, main = "Low doses, normalized log2 fold changes")
 
 
 
