@@ -537,7 +537,7 @@ plot(dend.top.active_0.2, horiz = F, main = "Highest doses of bioactive chemical
 ### Bioactivity > 1%
 a <- prcomp(t(matrix_DEGs_bioactivity_gt_0.01), retx = TRUE, center = TRUE, scale. = TRUE)
 
-plotPCAcustom <- function(obj, trim_names = TRUE, ...) {
+plotPCAcustom <- function(obj, title = "", trim_names = TRUE, ...) {
   df <- cbind(obj$x[,1:2]) %>% as.data.frame()
   pattern <- "^(.*?)(?=_vs_)"
   if (trim_names) {
@@ -557,25 +557,26 @@ plotPCAcustom <- function(obj, trim_names = TRUE, ...) {
   }
   p1 <- ggplot(df, aes(PC1, PC2, colour = V3)) +
     geom_point(size = 3) + scale_color_manual(values = cbp1) +
+    labs(title = title) +  # add title here
     theme(...)
   return(p1)
 }
-plotPCAcustom(a)
+plotPCAcustom(a, title = "Bioactivity > 1%")
 
 
 ### Bioactivity > 2%
 b <- prcomp(t(matrix_DEGs_bioactivity_gt_0.02), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(b)
+plotPCAcustom(b, title = "Bioactivity > 2%")
 
 
 # PCA plots for inactive chemicals removed @ 1% bioactivity
 c <- prcomp(t(matrix_DEGs_top_bioactive_0.1), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(c)
+plotPCAcustom(c, title = "Bioactivity > 1%, inactive chemicals removed")
 
 
 # PCA plots for inactive chemicals removed @ 2% bioactivity
 d <- prcomp(t(matrix_DEGs_top_bioactive_0.2), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(d)
+plotPCAcustom(d, title = "Bioactivity > 2%, inactive chemicals removed")
 
 ```
 
