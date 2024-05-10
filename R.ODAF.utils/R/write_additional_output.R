@@ -88,5 +88,5 @@ write_additional_output <- function(count_data,
         col.names = TRUE)
     }
   }
-
+  return(biomarkers)
 }
