@@ -101,17 +101,17 @@ if (is.na(params$deseq_facet)){
     if (params$write_additional_output) {
       allBiomarkers[[current_filter]] <- write_additional_output(count_data_subset, exp_metadata_subset, params[["design"]], params)
     }
-    # ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, params[["design"]], params)
-    # designList[[current_filter]] <- exp_metadata_subset
-    # contrastsList[[current_filter]] <- contrasts_subset
-    # rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates = NA, params$batch_var)
-    # DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, params[["design"]], params, current_filter)
-    # overallAllGenesList[[current_filter]] <- DESeq_results$dfGenes
-    # overallResListAll[[current_filter]] <- DESeq_results$resListAll
-    # overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
-    # overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
-    # mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
-    # filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+    ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, params[["design"]], params)
+    designList[[current_filter]] <- exp_metadata_subset
+    contrastsList[[current_filter]] <- contrasts_subset
+    rldList[[current_filter]] <- regularize_data(ddsList[[current_filter]], original_design, covariates = NA, params$batch_var)
+    DESeq_results <- get_DESeq_results(ddsList[[current_filter]], designList[[current_filter]], contrasts_subset, params[["design"]], params, current_filter)
+    overallAllGenesList[[current_filter]] <- DESeq_results$dfGenes
+    overallResListAll[[current_filter]] <- DESeq_results$resListAll
+    overallResListFiltered[[current_filter]] <- DESeq_results$resListFiltered
+    overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
+    mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
+    filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
   }
   overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
   overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]
@@ -160,6 +160,7 @@ save(ddsList,
      paths,
      filtered_table,
      sample_count_metadata,
+     allBiomarkers,
      file = file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
 
 if (is.na(params$deseq_facet)) {
