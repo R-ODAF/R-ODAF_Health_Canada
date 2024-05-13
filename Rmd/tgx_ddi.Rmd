@@ -1,0 +1,313 @@
+---
+params:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_title: "Default"    # Change depending on your project name
+  project_name: "Your name here" 
+  project_description: null # description of project for report, optional
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
+  batch_var: "batch"          # For example, multiple plates
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
+  formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
+  lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
+  strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
+  exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
+  exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+  include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+  cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
+  wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
+  # "wikipathways-20210810-gmt-Mus_musculus.gmt"
+  # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+  nBestFeatures: 20              # The number of best features to make plots of their counts
+  nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
+  nHeatmap: 50                   # Number of most variable genes for heatmap
+  nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+  generate_main_report: TRUE
+  generate_stats_report: TRUE
+  generate_data_explorer_report: TRUE
+  generate_go_pathway_report: TRUE
+  generate_tgxddi_report: TRUE
+  output_digits: 5
+  parallel: FALSE
+  species_data: null
+  count_data_file: null
+  sampledata_sep: null
+  MinCount: null
+  alpha: 0.05
+  feature_id: null
+  biospyder: null
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
+
+---
+
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+library(tidyverse)
+library(cluster)
+library(Cairo)
+library(heatmap3)
+library(dendextend)
+library(ggplot2)
+library(pheatmap)
+library(viridis)
+#devtools::load_all("./R.ODAF.utils") # Remove - just for testing
+```
+
+
+---
+title: "`r params$platform` TGx-DDI biomarker report"
+---
+
+
+# `r params$project_title` - TGx-DDI biomarker analysis {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$project_bioinformatics_name`
+
+Report prepared for: `r params$project_name`
+
+***
+
+This report shows the results of the TGx-DDI biomarker analysis for the `r params$platform` platform. 
+This analysis was developed as a toxicogenomics signature for DNA damage-induction in human cells in culture (https://cebs.niehs.nih.gov/tgxddi/).
+It uses a classification tool generated from a training set of 28 chemicals: 13 of them DNA-damage inducing (DDI) and 15 non-DNA-damage inducing (NDDI). The probability that a tested chemical is DDI is calculated based on the similarity of its gene expression profile to the agents in the classifier.
+
+Three analyses are performed on test chemicals using the TGx-DDI biomarker:
+1. Nearest Shrunken Centroids (NSC) probability analysis, visualized by heatmaps
+2. Principal component analysis
+3. 2-dimensional hierarchical clustering
+
+The test chemical is condsidered DDI if it is positive in at least one of these analyses.
+
+```{r import_control_info}
+# Currently hard-coded, will be different when running from render_DESeq2_report.parallel.R
+#exp_contrasts <- R.ODAF.utils::get_contrasts("/home/bradford/storage/Pipeline_updates/Module_tgx-ddi/R-ODAF_Health_Canada/inputs/contrasts/contrasts.txt")
+message(paste("Facet is", facet))
+
+control <- exp_contrasts %>%
+    filter(grepl(facet, V1)) %>%
+    slice(1) %>%
+    pull(V2)
+
+
+
+```
+
+
+```{r import_data}
+df <- as.data.frame(allBiomarkers[[facet]])
+
+df <- df %>%
+  rename(ID = SampleID)
+
+# Collapse Duplicate IDs, taking the mean
+df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
+
+# Convert all columns except ID to numeric
+df <- df %>%
+  mutate(across(-ID, as.numeric))
+
+# Probes are already collapsed to genes in write_additional_output.R lines 30-32
+# So I don't think taking means here is necessary
+df <- df %>%
+	group_by(ID) %>%
+	summarise_all(mean)
+
+# Get the doses and average the dose replicates
+# Exclude the ID column
+df_no_id <- select(df, -ID)  
+
+# Get unique column names from df
+names(df_no_id) <- sub("_\\d$", "", names(df_no_id))
+
+# Calculate the row-wise mean for each unique base name, add ID column back on
+df_means <- df_no_id %>%
+	split.default(names(df_no_id)) %>%
+	map_df(rowMeans, na.rm = TRUE)
+df_means <- bind_cols(df["ID"], df_means)
+
+# Log2 ratios vs DMSO_0
+# NOTE: I'm going to need to generalize, or take in an argument about the control
+# Could get this from the contrast info in Rdata?
+log2ratios <- df_means
+log2ratios[,-1] <- sweep(log2ratios[,-1], 1, log2ratios[[control]], `-`)
+# Remove the control column
+log2ratios <- select(log2ratios, -one_of(control))
+
+log10ratios <- log2ratios %>%
+	mutate_at(vars(-ID), ~ log10(2^.))
+```
+
+```{r classifier}
+# Currently hard-coded
+# This will need to be included in the repo
+# Maybe in a "resources" folder?
+classifier <- read.delim("/home/bradford/storage/Pipeline_updates/Module_tgx-ddi/TgxDDI_code/Biomarker_TGx-DDI_Li_2015_Tk6_cells_with_PCA_and_training_set.txt", sep = "")
+
+colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin", "Cisplatin", "Etoposide", "Hydrogen Peroxide",
+	"Hydroxyurea", "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite", "X ray", "2 DG", "Apicidin",   
+    "Antimycin A", "Cadmium Chloride", "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%", "HC toxin", "Heat Shock",
+	"Oxamflatin", "Paclitaxel", "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine") 
+	
+  
+merged_log10 <- merge(classifier, log10ratios, by = "ID")
+
+# Calculate probabilities of DDI vs non-DDI
+my_pred <- data.frame(samples = names(merged_log10)[-c(1:10)], probG = 0, probNG = 0)
+for(k in 1:(ncol(merged_log10)-10)){
+  #k <- 1
+  G <- sum(((merged_log10[,k+10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
+  NG <- sum(((merged_log10[,k+10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
+  probG <- 1/(1 + exp(G/2 - NG/2))
+  probNG <- 1 - probG
+
+  my_pred[k,2] <- floor(100*probG)/100
+  my_pred[k,3] <- floor(100*probNG)/100
+}	
+```
+
+# Principal Component Analysis
+
+```{r PCA}
+# Done on log2 ratios
+
+# Save the ID column
+id_column <- merged_log10$ID
+
+# Transform from log10 to log2 and remove unnecessary columns
+merged_log2 <- merged_log10 %>%
+  select(-c(1:10)) %>%    
+  mutate_all(~ log2(10^.) ) 
+
+# Add the ID column back to merged_log2
+merged_log2 <- merged_log2 %>%
+  mutate(ID = id_column) %>%
+  select(ID, everything())
+
+# PCA
+pca <- prcomp(t(merged_log2[,-1]), scale = TRUE)
+df_pca <- as.data.frame(pca$x)
+
+# Set up labels and colours
+tdf_names <- colnames(merged_log2[,-1])
+df_pca$color <- c(rep("red", 13), rep("blue", 16), rep("darkgreen", nrow(df_pca) - 29))
+
+# Create a scatter plot of the first two principal components with labels and colors
+ggplot(df_pca, aes(PC1, PC2, color = color)) +
+  geom_point() +
+  geom_text(aes(label = tdf_names), vjust = 1, hjust = 1) +
+  scale_color_identity() +
+  theme_minimal()
+```
+
+```{r Dendrograms}
+# Done on log2 ratios
+
+# Dendrogram for each dose
+for(j in 31:ncol(merged_log2)){
+  dendro <- dist(t(merged_log2[,c(2:30,j)]))
+  dendro <- hclust(dendro, method = "average")
+  dendro <- as.dendrogram(dendro)
+  labels_colors(dendro) <- c(rep("red", 13), 
+                             rep("blue", 16), 
+                             "dark green")[order.dendrogram(dendro)]
+  plot(dendro, horiz=F, main = paste("Euclidean, Average Linkage (log2),", j))
+}
+```
+
+
+```{r heatmap}
+
+winsorize_sd <- function(x) {
+	mn <- mean(x)
+	sd <- sd(x)
+	x <- (x - mn) / sd
+	x[x > 3] <- 3
+	x[x < -3] <- -3
+	return(x)
+}
+
+# Standardize against PC.mn and PC.std from classifier, transform to log10
+standardized_log2 <- as.matrix(merged_log2[,-1])
+standardized_log2 <- (standardized_log2 - merged_log10$PC.mn)/merged_log10$PC.std
+
+rownames(standardized_log2) <- id_column
+
+standardized_log10 <- log10(2^standardized_log2)
+
+# Winsorize because temposeq data can be very bright on heatmap
+# What about RNA-seq data? Should I do a conditional? Should talk to Andrew
+std_win_log10 <- apply(standardized_log10, 2, winsorize_sd)
+
+
+# Calculate the color scale using the full data set
+breaks <- seq(min(std_win_log10, na.rm = TRUE), max(std_win_log10, na.rm = TRUE), length.out = 17)
+color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
+#color_scale <- viridis(17, option = "magma") #will play with colour scale
+
+# Add annotation bars based on predictions
+predDDI <- my_pred %>% 
+          select(samples, probG) %>%
+          rename(Prediction = probG)
+rownames(predDDI) <- predDDI$samples
+predDDI$samples <- NULL  
+  
+predDDI$Prediction <- factor(predDDI$Prediction, levels = c(0,1),
+labels = c("Non-DDI","DDI"))
+
+# Define the color mapping
+annotation_colors = list(
+  Prediction = c("Non-DDI" = "blue", "DDI" = "red"))
+
+# Create the heatmap with a gap between classifier and sample columns
+pheatmap(std_win_log10, 
+        cluster_cols = FALSE,
+        # cluster_rows = FALSE, 
+        gaps_col = 29, 
+        color = color_scale, 
+        breaks = breaks,
+        clustering_method = "average",
+        clustering_distance_rows = "correlation",
+        clustering_distance_cols = "correlation",
+        annotation_col = predDDI,
+        annotation_colors = annotation_colors)
+```
