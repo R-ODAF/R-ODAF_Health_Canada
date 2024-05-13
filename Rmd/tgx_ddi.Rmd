@@ -93,7 +93,7 @@ library(viridis)
 
 
 ---
-title: "`r params$platform` TGx-DDI biomarker report"
+title: "`r params$platform` TGx-DDI biomarker report: `r facet`"
 ---
 
 
@@ -236,26 +236,32 @@ ggplot(df_pca, aes(PC1, PC2, color = color)) +
   geom_point() +
   geom_text(aes(label = tdf_names), vjust = 1, hjust = 1) +
   scale_color_identity() +
-  theme_minimal()
+  theme_bw()
 ```
 
-```{r Dendrograms}
+# Hierarchical Clustering {.tabset .tabset-pills}
+```{r Dendrograms, results='asis'}
 # Done on log2 ratios
+
+# I would like to do a tabset thing (instead of the loop? In addition?)
 
 # Dendrogram for each dose
 for(j in 31:ncol(merged_log2)){
+  cat(paste0("## ", colnames(merged_log2)[j], "\n"))
   dendro <- dist(t(merged_log2[,c(2:30,j)]))
   dendro <- hclust(dendro, method = "average")
   dendro <- as.dendrogram(dendro)
   labels_colors(dendro) <- c(rep("red", 13), 
                              rep("blue", 16), 
                              "dark green")[order.dendrogram(dendro)]
-  plot(dendro, horiz=F, main = paste("Euclidean, Average Linkage (log2),", j))
+  plot(dendro, horiz=F, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
+  cat('\n\n')
 }
 ```
 
+# Heatmap
 
-```{r heatmap}
+```{r heatmap, fig.width=8, fig.height=10}
 
 winsorize_sd <- function(x) {
 	mn <- mean(x)
