@@ -45,6 +45,7 @@ overallResListAll <- data_env$overallResListAll
 overallResListDEGs <- data_env$overallResListDEGs
 exp_contrasts <- data_env$exp_contrasts
 filtered_table <-  data_env$filtered_table
+allBiomarkers <- data_env$allBiomarkers
 rm(data_env)
 gc()
 
@@ -86,6 +87,11 @@ if (params$parallel) {
   base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
   base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
 }
+
+if (params$generate_tgxddi_report) {
+  base::mapply(FUN = make_tgxddi_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+}
+
 
 # Add back after troubleshooting above code...
 if (!is.na(params$reports_facet)) {
