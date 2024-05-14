@@ -42,7 +42,8 @@ load_facet_data <- function(paths, params, facet_override = NA, filter_override 
       data_env$rldList,
       data_env$mergedDEGsList,
       data_env$exp_metadata,
-      data_env$contrastsList
+      data_env$contrastsList,
+      data_env$allBiomarkers
     )
   # Case 2: DESeq2 on all samples; but, make faceted reports.
   # "deseq_facet" is NA, but "reports_facet" is set.
@@ -72,7 +73,8 @@ load_facet_data <- function(paths, params, facet_override = NA, filter_override 
       data_env$rldList,
       data_env$mergedDEGsList,
       data_env$designList,
-      data_env$contrastsList
+      data_env$contrastsList,
+      data_env$allBiomarkers
     )
   # Case 4: DESeq2 is faceted, reports are not: this one doesn't make sense, since it could mislead end-users.
   } else {

@@ -17,7 +17,8 @@ prepare_data_case1 <- function(ddsList,
                                rldList,
                                mergedDEGsList,
                                exp_metadata,
-                               contrasts) {
+                               contrasts,
+                               allBiomarkers) {
   facet_data <- list(
     dds = ddsList[['all']],
     resultsListAll = overallResListAll[['all']],
@@ -25,7 +26,8 @@ prepare_data_case1 <- function(ddsList,
     rld = rldList[['all']],
     mergedDEGs = mergedDEGsList[['all']],
     exp_metadata_subset = exp_metadata,
-    contrasts_subset = contrasts[['all']]
+    contrasts_subset = contrasts[['all']],
+    allBiomarkers = allBiomarkers[['all']]
   )
   return(facet_data)
 }
@@ -76,6 +78,7 @@ prepare_data_case2 <- function(params,
       contrasts_subset = contrasts_subset
    )
    # TODO: add some tests here to make sure everything worked properly
+   # TODO: add allBiomarkers here
   return(facet_data)
 }
 
@@ -93,7 +96,8 @@ prepare_data_case3 <- function(params,
                                rldList,
                                mergedDEGsList,
                                designList,
-                               contrastsList) {
+                               contrastsList,
+                               allBiomarkers) {
    message("Prepare Data for Case 3: Yes Facet, Yes Display Facet")
    reports_filter <- params$reports_filter
    facet_data <- list(
@@ -103,7 +107,8 @@ prepare_data_case3 <- function(params,
       rld = rldList[[reports_filter]],
       mergedDEGs = mergedDEGsList[[reports_filter]],
       exp_metadata_subset = designList[[reports_filter]],
-      contrasts_subset = contrastsList[[reports_filter]]
+      contrasts_subset = contrastsList[[reports_filter]],
+      allBiomarkers = allBiomarkers[[reports_filter]]
   )
   return(facet_data)
 }
