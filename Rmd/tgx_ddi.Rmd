@@ -168,9 +168,7 @@ df_means <- df_no_id %>%
 	map_df(rowMeans, na.rm = TRUE)
 df_means <- bind_cols(df["ID"], df_means)
 
-# Log2 ratios vs DMSO_0
-# NOTE: I'm going to need to generalize, or take in an argument about the control
-# Could get this from the contrast info in Rdata?
+# Log2 ratios vs control (from contrasts)
 log2ratios <- df_means
 log2ratios[,-1] <- sweep(log2ratios[,-1], 1, log2ratios[[control]], `-`)
 # Remove the control column
@@ -181,10 +179,10 @@ log10ratios <- log2ratios %>%
 ```
 
 ```{r classifier}
-# Currently hard-coded
-# This will need to be included in the repo
-# Maybe in a "resources" folder?
-classifier <- read.delim("/home/bradford/storage/Pipeline_updates/Module_tgx-ddi/TgxDDI_code/Biomarker_TGx-DDI_Li_2015_Tk6_cells_with_PCA_and_training_set.txt", sep = "")
+
+classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-classifier_Li-2015.txt")
+
+classifier <- read.delim(classifier_path, sep = "\t")
 
 colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin", "Cisplatin", "Etoposide", "Hydrogen Peroxide",
 	"Hydroxyurea", "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite", "X ray", "2 DG", "Apicidin",   
