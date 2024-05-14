@@ -93,7 +93,7 @@ library(viridis)
 
 
 ---
-title: "`r params$platform` TGx-DDI biomarker report: `r facet`"
+title: "`r params$platform` TGx-DDI biomarker report: `r params$reports_filter`"
 ---
 
 
@@ -117,24 +117,27 @@ Three analyses are performed on test chemicals using the TGx-DDI biomarker:
 3. 2-dimensional hierarchical clustering
 
 The test chemical is condsidered DDI if it is positive in at least one of these analyses.
+```{r load_facet_data, include=FALSE}
+# Load facet data. Gets allBiomarkers and contrasts_subset for current facet
+load_facet_data(paths, params)
+```
 
 ```{r import_control_info}
-# Currently hard-coded, will be different when running from render_DESeq2_report.parallel.R
-#exp_contrasts <- R.ODAF.utils::get_contrasts("/home/bradford/storage/Pipeline_updates/Module_tgx-ddi/R-ODAF_Health_Canada/inputs/contrasts/contrasts.txt")
-message(paste("Facet is", facet))
+message(paste("Facet is", params$reports_filter))
 
-control <- exp_contrasts %>%
-    filter(grepl(facet, V1)) %>%
+# contrasts_subset # Uncomment for troubleshooting
+
+# Will this work if there's no reports_filter (aka reports_facet in config)?
+control <- contrasts_subset %>%
     slice(1) %>%
     pull(V2)
 
-
-
+control # Uncomment for troubleshooting
 ```
 
 
 ```{r import_data}
-df <- as.data.frame(allBiomarkers[[facet]])
+df <- as.data.frame(allBiomarkers)
 
 df <- df %>%
   rename(ID = SampleID)
@@ -259,7 +262,7 @@ for(j in 31:ncol(merged_log2)){
 }
 ```
 
-# Heatmap
+# Nearest Shrunken Centroid Prediction and Heatmap
 
 ```{r heatmap, fig.width=8, fig.height=10}
 
