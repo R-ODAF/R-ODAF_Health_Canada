@@ -88,6 +88,7 @@ library(dendextend)
 library(ggplot2)
 library(pheatmap)
 library(viridis)
+library(knitr)
 ```
 
 
@@ -203,6 +204,11 @@ for(k in 1:(ncol(merged_log10) - 10)){
   my_pred[k,2] <- floor(100*probG)/100
   my_pred[k,3] <- floor(100*probNG)/100
 }
+
+# Save prediction info for summary table
+pred <- my_pred[30:nrow(my_pred), ] %>%
+  dplyr::select(samples, probG) %>%
+  rename(ID = samples)
 ```
 
 # Principal Component Analysis
@@ -227,6 +233,11 @@ merged_log2 <- merged_log2 %>%
 pca <- prcomp(t(merged_log2[,-1]), scale = TRUE)
 df_pca <- as.data.frame(pca$x)
 
+pc1 <- df_pca[30:nrow(df_pca), ] %>% select(PC1) # Save PC1 for summary table
+pc1$ID <- rownames(pc1)
+rownames(pc1) <- NULL
+pc1 <- pc1 %>% select(ID, everything())
+
 # Set up labels and colours
 tdf_names <- colnames(merged_log2[,-1])
 df_pca$color <- c(rep("red", 13), rep("blue", 16), rep("darkgreen", nrow(df_pca) - 29))
@@ -242,8 +253,23 @@ ggplot(df_pca, aes(PC1, PC2, color = color)) +
 # Hierarchical Clustering {.tabset .tabset-pills}
 ```{r Dendrograms, results='asis'}
 # Done on log2 ratios
+DDI_chems <- c("5 FU",
+  "AraC",
+  "Bleomycin",
+  "Camptothecin",
+  "Cisplatin",
+  "Etoposide",
+  "Hydrogen Peroxide",
+  "Hydroxyurea",
+  "Methotrexate",
+  "MMS",
+  "Potassium Chromate VI",
+  "Sodium Arsenite",
+  "X ray"
+)
 
-# I would like to do a tabset thing (instead of the loop? In addition?)
+# Initialize a data frame to store the HC grouping results
+dendro_results <- data.frame(ID = character(), dendro_DDI = character(), stringsAsFactors = FALSE)
 
 # Dendrogram for each dose
 for (j in 31:ncol(merged_log2)){
@@ -256,7 +282,27 @@ for (j in 31:ncol(merged_log2)){
                              "dark green")[order.dendrogram(dendro)]
   plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
   cat("\n\n")
+
+  # Cut the dendrogram into 2 groups
+  dendro_groups <- cutree(dendro, k = 2)
+  test_sample_group <- dendro_groups[length(dendro_groups)]
+  
+  # Count the number of DDI chemicals that are in the same group as the test sample
+  same_group_count <- sum(dendro_groups[names(dendro_groups) %in% DDI_chems] == test_sample_group)
+
+  # Find if test sample is in the same group as all DDI chemicals
+  if (same_group_count == length(DDI_chems)) {
+    result <- "TRUE"
+  } else if (same_group_count > 0) {
+    result <- "UNCERTAIN"
+  } else {
+    result <- "FALSE"
+  }
+
+  # Save results for summary table
+  dendro_results <- rbind(dendro_results, data.frame(ID = colnames(merged_log2)[j], dendro_DDI = result, stringsAsFactors = FALSE))
 }
+
 ```
 
 # Nearest Shrunken Centroid Prediction and Heatmap
@@ -315,4 +361,30 @@ pheatmap(std_win_log10,
          clustering_distance_cols = "correlation",
          annotation_col = predDDI,
          annotation_colors = annotation_colors)
+```
+
+# Summary Table
+
+```{r summary}
+# Create a summary table
+summary_table1 <- pc1 %>%
+  merge(dendro_results, by = "ID") %>%
+  merge(pred, by = "ID") %>%
+  rename(PCA = PC1, HC = dendro_DDI, NSC = probG)
+
+summary_table2 <- summary_table1
+
+summary_table2$PCA <- cut(summary_table1$PCA,
+                          c(-Inf, 0, Inf),
+                          labels = c("DDI", "Non-DDI"), right = FALSE)
+
+summary_table2$HC <- ifelse(summary_table1$HC == TRUE, "DDI",
+                            ifelse(summary_table1$HC == "UNCERTAIN", "Inconclusive", "Non-DDI"))
+
+summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "non-DDI")
+
+summary_table2$Result <- apply(summary_table2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("DDI" %in% x, "DDI", "Non-DDI"))
+
+# Print formatted table
+kable(summary_table2, caption = "Summary Table")
 ```
