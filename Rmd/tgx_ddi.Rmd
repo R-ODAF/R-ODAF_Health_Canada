@@ -88,7 +88,6 @@ library(dendextend)
 library(ggplot2)
 library(pheatmap)
 library(viridis)
-#devtools::load_all("./R.ODAF.utils") # Remove - just for testing
 ```
 
 
@@ -112,11 +111,15 @@ This analysis was developed as a toxicogenomics signature for DNA damage-inducti
 It uses a classification tool generated from a training set of 28 chemicals: 13 of them DNA-damage inducing (DDI) and 15 non-DNA-damage inducing (NDDI). The probability that a tested chemical is DDI is calculated based on the similarity of its gene expression profile to the agents in the classifier.
 
 Three analyses are performed on test chemicals using the TGx-DDI biomarker:
-1. Nearest Shrunken Centroids (NSC) probability analysis, visualized by heatmaps
-2. Principal component analysis
-3. 2-dimensional hierarchical clustering
 
-The test chemical is condsidered DDI if it is positive in at least one of these analyses.
+1. Principal component analysis
+
+2. 2-dimensional hierarchical clustering
+
+3. Nearest Shrunken Centroids (NSC) probability analysis, visualized by heatmaps
+
+The test chemical is considered DDI if it is positive in at least one of these analyses.
+
 ```{r load_facet_data, include=FALSE}
 # Load facet data. Gets allBiomarkers and contrasts_subset for current facet
 load_facet_data(paths, params)
@@ -129,10 +132,10 @@ message(paste("Facet is", params$reports_filter))
 
 # Will this work if there's no reports_filter (aka reports_facet in config)?
 control <- contrasts_subset %>%
-    slice(1) %>%
-    pull(V2)
+  slice(1) %>%
+  pull(V2)
 
-control # Uncomment for troubleshooting
+# control # Uncomment for troubleshooting
 ```
 
 
@@ -152,30 +155,27 @@ df <- df %>%
 # Probes are already collapsed to genes in write_additional_output.R lines 30-32
 # So I don't think taking means here is necessary
 df <- df %>%
-	group_by(ID) %>%
-	summarise_all(mean)
+  group_by(ID) %>%
+  summarise_all(mean)
 
-# Get the doses and average the dose replicates
-# Exclude the ID column
-df_no_id <- select(df, -ID)  
-
-# Get unique column names from df
+# Average the dose replicates
+df_no_id <- select(df, -ID)
 names(df_no_id) <- sub("_\\d$", "", names(df_no_id))
 
 # Calculate the row-wise mean for each unique base name, add ID column back on
 df_means <- df_no_id %>%
-	split.default(names(df_no_id)) %>%
-	map_df(rowMeans, na.rm = TRUE)
+  split.default(names(df_no_id)) %>%
+  map_df(rowMeans, na.rm = TRUE)
 df_means <- bind_cols(df["ID"], df_means)
 
 # Log2 ratios vs control (from contrasts)
 log2ratios <- df_means
-log2ratios[,-1] <- sweep(log2ratios[,-1], 1, log2ratios[[control]], `-`)
+log2ratios[, -1] <- sweep(log2ratios[, -1], 1, log2ratios[[control]], `-`)
 # Remove the control column
 log2ratios <- select(log2ratios, -one_of(control))
 
 log10ratios <- log2ratios %>%
-	mutate_at(vars(-ID), ~ log10(2^.))
+  mutate_at(vars(-ID), ~ log10(2^.))
 ```
 
 ```{r classifier}
@@ -185,25 +185,24 @@ classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-
 classifier <- read.delim(classifier_path, sep = "\t")
 
 colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin", "Cisplatin", "Etoposide", "Hydrogen Peroxide",
-	"Hydroxyurea", "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite", "X ray", "2 DG", "Apicidin",   
-    "Antimycin A", "Cadmium Chloride", "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%", "HC toxin", "Heat Shock",
-	"Oxamflatin", "Paclitaxel", "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine") 
-	
-  
+  "Hydroxyurea", "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite", "X ray", "2 DG", "Apicidin",
+  "Antimycin A", "Cadmium Chloride", "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%", "HC toxin", "Heat Shock",
+  "Oxamflatin", "Paclitaxel", "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
+
 merged_log10 <- merge(classifier, log10ratios, by = "ID")
 
 # Calculate probabilities of DDI vs non-DDI
 my_pred <- data.frame(samples = names(merged_log10)[-c(1:10)], probG = 0, probNG = 0)
-for(k in 1:(ncol(merged_log10)-10)){
+for(k in 1:(ncol(merged_log10) - 10)){
   #k <- 1
-  G <- sum(((merged_log10[,k+10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
-  NG <- sum(((merged_log10[,k+10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
+  G <- sum(((merged_log10[,k + 10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5)
+  NG <- sum(((merged_log10[,k + 10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
   probG <- 1/(1 + exp(G/2 - NG/2))
   probNG <- 1 - probG
 
   my_pred[k,2] <- floor(100*probG)/100
   my_pred[k,3] <- floor(100*probNG)/100
-}	
+}
 ```
 
 # Principal Component Analysis
@@ -216,8 +215,8 @@ id_column <- merged_log10$ID
 
 # Transform from log10 to log2 and remove unnecessary columns
 merged_log2 <- merged_log10 %>%
-  select(-c(1:10)) %>%    
-  mutate_all(~ log2(10^.) ) 
+  select(-c(1:10)) %>%
+  mutate_all(~ log2(10^.))
 
 # Add the ID column back to merged_log2
 merged_log2 <- merged_log2 %>%
@@ -247,16 +246,16 @@ ggplot(df_pca, aes(PC1, PC2, color = color)) +
 # I would like to do a tabset thing (instead of the loop? In addition?)
 
 # Dendrogram for each dose
-for(j in 31:ncol(merged_log2)){
+for (j in 31:ncol(merged_log2)){
   cat(paste0("## ", colnames(merged_log2)[j], "\n"))
-  dendro <- dist(t(merged_log2[,c(2:30,j)]))
+  dendro <- dist(t(merged_log2[, c(2:30, j)]))
   dendro <- hclust(dendro, method = "average")
   dendro <- as.dendrogram(dendro)
-  labels_colors(dendro) <- c(rep("red", 13), 
-                             rep("blue", 16), 
+  labels_colors(dendro) <- c(rep("red", 13),
+                             rep("blue", 16),
                              "dark green")[order.dendrogram(dendro)]
-  plot(dendro, horiz=F, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
-  cat('\n\n')
+  plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
+  cat("\n\n")
 }
 ```
 
@@ -265,17 +264,17 @@ for(j in 31:ncol(merged_log2)){
 ```{r heatmap, fig.width=8, fig.height=10}
 
 winsorize_sd <- function(x) {
-	mn <- mean(x)
-	sd <- sd(x)
-	x <- (x - mn) / sd
-	x[x > 3] <- 3
-	x[x < -3] <- -3
-	return(x)
+  mn <- mean(x)
+  sd <- sd(x)
+  x <- (x - mn) / sd
+  x[x > 3] <- 3
+  x[x < -3] <- -3
+  return(x)
 }
 
 # Standardize against PC.mn and PC.std from classifier, transform to log10
 standardized_log2 <- as.matrix(merged_log2[,-1])
-standardized_log2 <- (standardized_log2 - merged_log10$PC.mn)/merged_log10$PC.std
+standardized_log2 <- (standardized_log2 - merged_log10$PC.mn) / merged_log10$PC.std
 
 rownames(standardized_log2) <- id_column
 
@@ -292,29 +291,28 @@ color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
 #color_scale <- viridis(17, option = "magma") #will play with colour scale
 
 # Add annotation bars based on predictions
-predDDI <- my_pred %>% 
-          select(samples, probG) %>%
-          rename(Prediction = probG)
+predDDI <- my_pred %>%
+  select(samples, probG) %>%
+  rename(Prediction = probG)
 rownames(predDDI) <- predDDI$samples
-predDDI$samples <- NULL  
-  
-predDDI$Prediction <- factor(predDDI$Prediction, levels = c(0,1),
-labels = c("Non-DDI","DDI"))
+predDDI$samples <- NULL
+
+predDDI$Prediction <- factor(predDDI$Prediction, levels = c(0, 1),
+                             labels = c("Non-DDI", "DDI"))
 
 # Define the color mapping
-annotation_colors = list(
-  Prediction = c("Non-DDI" = "blue", "DDI" = "red"))
+annotation_colors <- list(Prediction = c("Non-DDI" = "blue", "DDI" = "red"))
 
 # Create the heatmap with a gap between classifier and sample columns
-pheatmap(std_win_log10, 
-        cluster_cols = FALSE,
-        # cluster_rows = FALSE, 
-        gaps_col = 29, 
-        color = color_scale, 
-        breaks = breaks,
-        clustering_method = "average",
-        clustering_distance_rows = "correlation",
-        clustering_distance_cols = "correlation",
-        annotation_col = predDDI,
-        annotation_colors = annotation_colors)
+pheatmap(std_win_log10,
+         cluster_cols = FALSE,
+         # cluster_rows = FALSE,
+         gaps_col = 29,
+         color = color_scale,
+         breaks = breaks,
+         clustering_method = "average",
+         clustering_distance_rows = "correlation",
+         clustering_distance_cols = "correlation",
+         annotation_col = predDDI,
+         annotation_colors = annotation_colors)
 ```
