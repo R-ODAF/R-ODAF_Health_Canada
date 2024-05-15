@@ -73,7 +73,7 @@ allBiomarkers <- list()
 if (is.na(params$deseq_facet)){
   message("### Learning a single model for the whole experiment. ###")
   if(params$write_additional_output){
-    write_additional_output(count_data, exp_metadata, params[["design"]], params)
+    allBiomarkers[['all']] <- write_additional_output(count_data, exp_metadata, params[["design"]], params)
   }
   dds <- learn_deseq_model(count_data, exp_metadata, params[["design"]], params)
   rld <- regularize_data(dds, original_design, covariates, params$batch_var)

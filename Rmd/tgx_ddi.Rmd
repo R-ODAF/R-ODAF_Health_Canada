@@ -89,11 +89,12 @@ library(ggplot2)
 library(pheatmap)
 library(viridis)
 library(knitr)
+library(kableExtra)
 ```
 
 
 ---
-title: "`r params$platform` TGx-DDI biomarker report: `r params$reports_filter`"
+title: "`r params$platform` TGx-DDI biomarker report"
 ---
 
 
@@ -127,7 +128,7 @@ load_facet_data(paths, params)
 ```
 
 ```{r import_control_info}
-message(paste("Facet is", params$reports_filter))
+#message(paste("Facet is", params$reports_filter)) # Message doesn't work if reports_filter is NULL (case 1)
 
 # contrasts_subset # Uncomment for troubleshooting
 
@@ -190,6 +191,21 @@ colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin", "C
   "Antimycin A", "Cadmium Chloride", "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%", "HC toxin", "Heat Shock",
   "Oxamflatin", "Paclitaxel", "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
 
+DDI_chems <- c("5 FU",
+  "AraC",
+  "Bleomycin",
+  "Camptothecin",
+  "Cisplatin",
+  "Etoposide",
+  "Hydrogen Peroxide",
+  "Hydroxyurea",
+  "Methotrexate",
+  "MMS",
+  "Potassium Chromate VI",
+  "Sodium Arsenite",
+  "X ray"
+)
+
 merged_log10 <- merge(classifier, log10ratios, by = "ID")
 
 # Calculate probabilities of DDI vs non-DDI
@@ -233,7 +249,13 @@ merged_log2 <- merged_log2 %>%
 pca <- prcomp(t(merged_log2[,-1]), scale = TRUE)
 df_pca <- as.data.frame(pca$x)
 
-pc1 <- df_pca[30:nrow(df_pca), ] %>% select(PC1) # Save PC1 for summary table
+# The sign of principle components is arbitrary, so we need to know the sign of the DDI classifier chemicals
+# To figure out whether test chemicals are DDI or non-DDI
+ddi_pc1 <- df_pca[1:13, ] %>% select(PC1)  # Save PC1 of DDI classifier chemicals
+mean_ddi_sign <- sign(mean(ddi_pc1$PC1)) # Calculate the sign of the mean of the PC1 values for the DDI chemicals
+nddi_pc1 <- df_pca[14:29, ] %>% select(PC1)  # Save PC1 of non-DDI classifier chemicals
+
+pc1 <- df_pca[30:nrow(df_pca), ] %>% select(PC1) # Save PC1 of test chemicals for summary table
 pc1$ID <- rownames(pc1)
 rownames(pc1) <- NULL
 pc1 <- pc1 %>% select(ID, everything())
@@ -253,20 +275,6 @@ ggplot(df_pca, aes(PC1, PC2, color = color)) +
 # Hierarchical Clustering {.tabset .tabset-pills}
 ```{r Dendrograms, results='asis'}
 # Done on log2 ratios
-DDI_chems <- c("5 FU",
-  "AraC",
-  "Bleomycin",
-  "Camptothecin",
-  "Cisplatin",
-  "Etoposide",
-  "Hydrogen Peroxide",
-  "Hydroxyurea",
-  "Methotrexate",
-  "MMS",
-  "Potassium Chromate VI",
-  "Sodium Arsenite",
-  "X ray"
-)
 
 # Initialize a data frame to store the HC grouping results
 dendro_results <- data.frame(ID = character(), dendro_DDI = character(), stringsAsFactors = FALSE)
@@ -372,19 +380,27 @@ summary_table1 <- pc1 %>%
   merge(pred, by = "ID") %>%
   rename(PCA = PC1, HC = dendro_DDI, NSC = probG)
 
+# Initialize
 summary_table2 <- summary_table1
 
-summary_table2$PCA <- cut(summary_table1$PCA,
-                          c(-Inf, 0, Inf),
-                          labels = c("DDI", "Non-DDI"), right = FALSE)
+# Assign "DDI" or "Non-DDI" based on the comparison of the signs (because the sign of the PCA is arbitrary)
+summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == mean_ddi_sign, "DDI", "Non-DDI")
 
 summary_table2$HC <- ifelse(summary_table1$HC == TRUE, "DDI",
                             ifelse(summary_table1$HC == "UNCERTAIN", "Inconclusive", "Non-DDI"))
 
-summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "non-DDI")
+summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "Non-DDI")
 
 summary_table2$Result <- apply(summary_table2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("DDI" %in% x, "DDI", "Non-DDI"))
 
 # Print formatted table
-kable(summary_table2, caption = "Summary Table")
+# Color the cells
+color_cells <- function(x) {
+  ifelse(x == "DDI", cell_spec(x, "html", color = "red"), cell_spec(x, "html", color = "blue"))
+}
+summary_table2$Result <- sapply(summary_table2$Result, color_cells)
+
+# Print the formatted table
+kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
+  kable_styling("striped", full_width = F)
 ```
