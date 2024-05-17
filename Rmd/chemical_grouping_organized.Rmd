@@ -550,3 +550,127 @@ plot(dend.top.active_0.2, horiz = F, main = "Highest doses of bioactive chemical
 
 ```
 
+
+### PCA plots
+
+```{r }
+
+### Bioactivity > 1%
+a <- prcomp(t(matrix_DEGs_bioactivity_gt_0.01), retx = TRUE, center = TRUE, scale. = TRUE)
+
+plotPCAcustom <- function(obj, title = "", trim_names = TRUE, ...) {
+  df <- cbind(obj$x[,1:2]) %>% as.data.frame()
+  pattern <- "^(.*?)(?=_vs_)"
+  if (trim_names) {
+    rownames(df) <- rownames(df) %>% stringr::str_extract(pattern)
+  }
+  df$PC1 <- as.numeric(df$PC1) / (obj$sdev[1] * sqrt(length(obj$x)))
+  df$PC2 <- as.numeric(df$PC2) / (obj$sdev[2] * sqrt(length(obj$x)))
+  df$V3 <- as.factor(rownames(df))
+  
+  # ggplot method
+  # if more colors than in the cbp1, use more
+  cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+            "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+            "#000000", "#293352")
+  if (length(unique(df$V3)) > length(cbp1)) {
+    cbp1 <- viridis(length(unique(df$V3)))
+  }
+  p1 <- ggplot(df, aes(PC1, PC2, colour = V3)) +
+    geom_point(size = 3) + scale_color_manual(values = cbp1) +
+    labs(title = title) +  # add title here
+    theme(...)
+  return(p1)
+}
+plotPCAcustom(a, title = "Bioactivity > 1%")
+
+
+### Bioactivity > 2%
+b <- prcomp(t(matrix_DEGs_bioactivity_gt_0.02), retx = TRUE, center = TRUE, scale. = TRUE)
+plotPCAcustom(b, title = "Bioactivity > 2%")
+
+
+# PCA plots for inactive chemicals removed @ 1% bioactivity
+c <- prcomp(t(matrix_DEGs_top_bioactive_0.1), retx = TRUE, center = TRUE, scale. = TRUE)
+plotPCAcustom(c, title = "Bioactivity > 1%, inactive chemicals removed")
+
+
+# PCA plots for inactive chemicals removed @ 2% bioactivity
+d <- prcomp(t(matrix_DEGs_top_bioactive_0.2), retx = TRUE, center = TRUE, scale. = TRUE)
+plotPCAcustom(d, title = "Bioactivity > 2%, inactive chemicals removed")
+
+```
+
+
+### ER biomarker genes
+
+With ER biomarker fold changes included.
+Note that the project data should be transformed somehow to match the ER biomarker data format.
+Since it's not, the ER biomarker point clusters away on its own.
+So this plot is not very useful. But it's here for completeness.
+```{r}
+# biomarker genes
+
+#er_biomarker <- read.table("../data/er_biomarker.tsv", header = T, sep = "\t")
+# problems with working directories, ugh
+er_biomarker <- read.table(here::here("data","er_biomarker.tsv"), header = T, sep = "\t")
+
+
+results_selected_er_biomarker <- results_selected_all_processed %>%
+  dplyr::filter(gene %in% er_biomarker$Symbol)
+
+# Compare the results_selected_er_biomarker$log2FoldChange to er_biomarker$Fold.change
+
+matrix_biomarker_genes <- results_selected_er_biomarker %>%
+  dplyr::select(name, gene, log2FoldChange) %>%
+  spread(key = name, value = log2FoldChange)
+# join fold changes from biomarker to bisphenols data
+# make sure to use the same order of genes
+matrix_biomarker_genes_with_er <- merge(matrix_biomarker_genes,
+                                er_biomarker  %>% dplyr::select(Symbol, Fold.Change),
+                                by.x = "gene", by.y = "Symbol")
+# rename Fold.Change column to "ER_biomarker"
+matrix_biomarker_genes_with_er  <- matrix_biomarker_genes_with_er %>%
+  dplyr::rename(ER_biomarker = Fold.Change)
+id <- matrix_biomarker_genes_with_er$gene
+
+matrix_biomarker_genes_with_er  <- as.matrix(matrix_biomarker_genes_with_er[, -1])
+rownames(matrix_biomarker_genes_with_er ) <- id
+matrix_biomarker_genes_with_er[is.na(matrix_biomarker_genes_with_er)] <- 0
+
+# pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
+
+matrix_biomarker_genes_with_er  <- matrix_biomarker_genes_with_er [, c(colnames(matrix_DEGs_bioactivity_gt_0.01),"ER_biomarker")]
+
+hca_biomarker <- hclust( as.dist(1-cor(as.matrix(matrix_biomarker_genes_with_er ),
+                                  method = dist_method) ),
+                         method = link_method)
+hca_biomarker_dendro <- as.dendrogram(hca_biomarker)
+
+# plot dendrogram
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(hca_biomarker_dendro, horiz = F, main = "ER biomarker genes")
+
+# make a PCA of the matrix
+e <- prcomp(t(matrix_biomarker_genes_with_er ), retx = TRUE, center = TRUE, scale. = TRUE)
+# plot it
+plotPCAcustom(e, trim_names = F, legend.position = "right")
+
+```
+
+PCA of genes used in ER biomarker, but without including the ER biomarker itself.
+
+```{r}
+# pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
+
+matrix_biomarker_genes_bioactive0.01  <- matrix_biomarker_genes [, c(colnames(matrix_DEGs_bioactivity_gt_0.01))]
+matrix_biomarker_genes_bioactive0.01  <- as.matrix(matrix_biomarker_genes_bioactive0.01[, -1])
+rownames(matrix_biomarker_genes_bioactive0.01) <- id
+matrix_biomarker_genes_bioactive0.01[is.na(matrix_biomarker_genes_bioactive0.01)] <- 0
+
+# make a PCA of the matrix
+f <- prcomp(t(matrix_biomarker_genes_bioactive0.01), retx = TRUE, center = TRUE, scale. = TRUE)
+# plot it
+plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarker genes, Bioactivity > 1%")
+
+```
