@@ -2,10 +2,12 @@
 title: "Chemical Grouping"
 author: "Lauren M. Bradford"
 date: "2024"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 
-```{r libraries, include=FALSE}
+```{r libraries}
 library('tidyverse')
 library('devtools')
 library('DESeq2')
@@ -78,7 +80,7 @@ ordered_levels <- expand.grid(facets,ordered_contrasts) %>% arrange(Var1) %>% mu
 
 ```
 
-```{r facet_data}
+```{r facet_data, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
 
 for (f in facets){
   resultsListAll <- overallResListAll[[f]]
@@ -93,7 +95,9 @@ for (f in facets){
     significantResultsUnfaceted <- significantResults %>% mutate(facet=f) %>% rbind(significantResultsUnfaceted)
   }
 }
+```
 
+```{r process_data}
 prefix <- paste0(params$platform, "_",
                  params$project_title, "_",
                  paste(params$current_filter, collapse = "_"), "_",
@@ -649,16 +653,18 @@ hca_biomarker_dendro <- as.dendrogram(hca_biomarker)
 
 # plot dendrogram
 par(mar = c(20,4,4,4), cex = 0.75)
-plot(hca_biomarker_dendro, horiz = F, main = "ER biomarker genes")
+plot(hca_biomarker_dendro, horiz = F, main = "ER biomarker genes + ER biomarker data")
 
 # make a PCA of the matrix
 e <- prcomp(t(matrix_biomarker_genes_with_er ), retx = TRUE, center = TRUE, scale. = TRUE)
 # plot it
-plotPCAcustom(e, trim_names = F, legend.position = "right")
+plotPCAcustom(e, trim_names = F, legend.position = "right", title = "ER biomarker genes + ER biomarker data")
 
 ```
 
-PCA of genes used in ER biomarker, but without including the ER biomarker itself.
+
+
+HC and PCA of genes used in ER biomarker, but without including the ER biomarker itself.
 
 ```{r}
 # pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
@@ -668,9 +674,19 @@ matrix_biomarker_genes_bioactive0.01  <- as.matrix(matrix_biomarker_genes_bioact
 rownames(matrix_biomarker_genes_bioactive0.01) <- id
 matrix_biomarker_genes_bioactive0.01[is.na(matrix_biomarker_genes_bioactive0.01)] <- 0
 
+# Hierarchical clustering
+hca_biomarker_genes <- hclust( as.dist(1-cor(as.matrix(matrix_biomarker_genes_bioactive0.01),
+                                  method = dist_method) ),
+                         method = link_method)
+hca_biomarker_genes_dendro <- as.dendrogram(hca_biomarker_genes)
+
+# plot dendrogram
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(hca_biomarker_genes_dendro, horiz = F, main = "ER-biomarker genes, bioactivity > 1%, ER biomarker data not included")
+
 # make a PCA of the matrix
 f <- prcomp(t(matrix_biomarker_genes_bioactive0.01), retx = TRUE, center = TRUE, scale. = TRUE)
 # plot it
-plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarker genes, Bioactivity > 1%")
+plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarker genes, Bioactivity > 1%, ER biomarker data not included")
 
 ```
