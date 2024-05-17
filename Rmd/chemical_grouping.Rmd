@@ -1031,12 +1031,17 @@ id <- matrix_DEGs_bioactivity_gt_0.01$gene
 matrix_DEGs_bioactivity_gt_0.01 <- as.matrix(matrix_DEGs_bioactivity_gt_0.01[, -1])
 rownames(matrix_DEGs_bioactivity_gt_0.01) <- id
 matrix_DEGs_bioactivity_gt_0.01[is.na(matrix_DEGs_bioactivity_gt_0.01)] <- 0
-clustered_DEGs <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.01),
+
+
+matrix_DEGs_bioactivity_gt_0.01_scaled <- scale(matrix_DEGs_bioactivity_gt_0.01, center=FALSE, scale=colSums(matrix_DEGs_bioactivity_gt_0.01))
+
+
+clustered_DEGs_0.01_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.01_scaled),
                                   method = dist_method)),
                          method = link_method)
 
 par(mar = c(20,4,4,4), cex = 0.5)
-plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >1%, normalized log2 fold changes")
+plot(as.dendrogram(clustered_DEGs_0.01_scaled), horiz = F, main = "Bioactivity DEGs >1%, normalized log2 fold changes")
 
 
 
@@ -1079,12 +1084,17 @@ id <- matrix_DEGs_bioactivity_gt_0.02$gene
 matrix_DEGs_bioactivity_gt_0.02 <- as.matrix(matrix_DEGs_bioactivity_gt_0.02[, -1])
 rownames(matrix_DEGs_bioactivity_gt_0.02) <- id
 matrix_DEGs_bioactivity_gt_0.02[is.na(matrix_DEGs_bioactivity_gt_0.02)] <- 0
-clustered_DEGs_0.02 <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.02),
+
+matrix_DEGs_bioactivity_gt_0.02_scaled <- scale(matrix_DEGs_bioactivity_gt_0.02, center=FALSE, scale=colSums(matrix_DEGs_bioactivity_gt_0.02))
+
+
+
+clustered_DEGs_0.02_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioactivity_gt_0.02_scaled),
                                   method = dist_method)),
                          method = link_method)
 
 par(mar = c(20,4,4,4), cex = 0.75)
-plot(as.dendrogram(clustered_DEGs_0.02), horiz = F, main = "Bioactivity DEGs >2%, normalized log2 fold changes")
+plot(as.dendrogram(clustered_DEGs_0.02_scaled), horiz = F, main = "Bioactivity DEGs >2%, normalized log2 fold changes")
 
 
 
@@ -1105,13 +1115,16 @@ selected_names_0.1 <- sub("_.*", "", results_selected_bioactivity_gt_0.01$name)
 # NOTE This depends on the order of matrix_DEGs_top_names being the same. It should be.
 matrix_DEGs_top_bioactive_0.1 <- matrix_DEGs_top[, matrix_DEGs_top_names %in% selected_names_0.1]
 
-clustered_DEGs_top_bioactive_0.1 <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_bioactive_0.1),
+matrix_DEGs_top_bioactive_0.1_scaled <- scale(matrix_DEGs_top_bioactive_0.1, center=FALSE, scale=colSums(matrix_DEGs_top_bioactive_0.1 ))
+
+
+matrix_DEGs_top_bioactive_0.1_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_bioactive_0.1_scaled),
                                   method = dist_method) ),
                          method = link_method)
-dend.top.active_0.1 <- as.dendrogram(clustered_DEGs_top_bioactive_0.1)
+dend_top_bioactive_0.1_scaled <- as.dendrogram(matrix_DEGs_top_bioactive_0.1_scaled)
 
 par(mar = c(20,4,4,4), cex = 0.75)
-plot(dend.top.active_0.1, horiz = F, main = "Top doses of bioactive chemicals with a 1% threshold, normalized log2 fold changes")
+plot(dend_top_bioactive_0.1_scaled, horiz = F, main = "Top doses of bioactive chemicals with a 1% threshold, normalized log2 fold changes")
 
 ```
 ### Top doses with inactive chemicals removed @ 2% bioactivity
