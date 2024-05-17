@@ -709,7 +709,7 @@ labels(dend_scaled) <-  gsub("_vs_DMSO.*", "", labels(dend_scaled))
 # labels_colors(dend) <- c(rep("red", 13), rep("blue", 16), "dark green")[order.dendrogram(dend)]
 
 par(mar = c(20, 4, 4, 4), cex = 0.5)
-plot(dend_scaled, horiz = F, main = "All doses")
+plot(dend_scaled, horiz = F, main = "All doses, scaled")
 
 
 ```
