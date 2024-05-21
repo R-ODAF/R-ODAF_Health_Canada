@@ -127,6 +127,14 @@ The test chemical is considered DDI if it is positive in at least one of these a
 load_facet_data(paths, params)
 ```
 
+```{r cases, include=FALSE}
+# Have to deal with weird data setup in case2
+if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
+  allBiomarkers <- allBiomarkers[["all"]]
+}
+# in case1 and case3, allBiomarkers is fine as is
+```
+
 ```{r import_control_info}
 #message(paste("Facet is", params$reports_filter)) # Message doesn't work if reports_filter is NULL (case 1)
 
