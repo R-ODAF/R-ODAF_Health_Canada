@@ -90,6 +90,7 @@ library(pheatmap)
 library(viridis)
 library(knitr)
 library(kableExtra)
+library(plotly)
 ```
 
 
@@ -237,7 +238,7 @@ pred <- my_pred[30:nrow(my_pred), ] %>%
 
 # Principal Component Analysis
 
-```{r PCA}
+```{r PCA, warning=FALSE}
 # Done on log2 ratios
 
 # Save the ID column
@@ -269,15 +270,19 @@ rownames(pc1) <- NULL
 pc1 <- pc1 %>% select(ID, everything())
 
 # Set up labels and colours
-tdf_names <- colnames(merged_log2[,-1])
-df_pca$color <- c(rep("red", 13), rep("blue", 16), rep("darkgreen", nrow(df_pca) - 29))
+df_pca$color <- factor(c(rep("DDI", 13), rep("non-DDI", 16), rep("tested", nrow(df_pca) - 29)))
+df_pca$labels <- colnames(merged_log2[,-1])
 
 # Create a scatter plot of the first two principal components with labels and colors
-ggplot(df_pca, aes(PC1, PC2, color = color)) +
-  geom_point() +
-  geom_text(aes(label = tdf_names), vjust = 1, hjust = 1) +
-  scale_color_identity() +
+p <- ggplot(df_pca, aes(PC1, PC2, color = color)) +
+  geom_point(aes(shape = color, text = paste("ID:", labels)), size = 2) +  
+  scale_shape_manual(values = c("DDI" = 19, "non-DDI" = 19, "tested" = 18)) +  
+  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "tested" = "darkorange")) +
+  labs(color = "Group") +
   theme_bw()
+
+ggplotly(p, tooltip = "text")  # Hover text shows chemical names
+
 ```
 
 # Hierarchical Clustering {.tabset .tabset-pills}
@@ -295,7 +300,7 @@ for (j in 31:ncol(merged_log2)){
   dendro <- as.dendrogram(dendro)
   labels_colors(dendro) <- c(rep("red", 13),
                              rep("blue", 16),
-                             "dark green")[order.dendrogram(dendro)]
+                             "darkorange")[order.dendrogram(dendro)]
   plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
   cat("\n\n")
 
