@@ -57,7 +57,8 @@ load_facet_data <- function(paths, params, facet_override = NA, filter_override 
       data_env$mergedDEGsList,
       data_env$exp_metadata,
       data_env$designList, # Not in case 1
-      data_env$contrastsList
+      data_env$contrastsList,
+      data_env$allBiomarkers
     )
   # Case 3: DESeq2 is faceted; reports are faceted.
   # The two facets must match.

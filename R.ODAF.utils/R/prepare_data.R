@@ -50,7 +50,8 @@ prepare_data_case2 <- function(params,
                                mergedDEGsList,
                                exp_metadata,
                                designList,
-                               contrasts) {
+                               contrasts,
+                               biomarkers) {
    message("Prepare Data for Case 2: No DESeq2 Facet, Yes Report Facet")
    reports_filter <- params$reports_filter
    dds_all <- ddsList[['all']]
