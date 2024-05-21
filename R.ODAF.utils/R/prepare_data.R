@@ -52,11 +52,13 @@ prepare_data_case2 <- function(params,
                                designList,
                                contrasts) {
    message("Prepare Data for Case 2: No DESeq2 Facet, Yes Report Facet")
-   display_group_filter <- params$reports_filter
+   reports_filter <- params$reports_filter
    dds_all <- ddsList[['all']]
    resultsListAll_all <- overallResListAll[['all']]
    resultsListDEGs_all <- overallResListDEGs[['all']]
    rld_all <- rldList[['all']]
+   contrasts <- as.data.frame(contrasts)
+   contrasts <- contrasts %>% rename(V1 = 1, V2 = 2)
    metadata_subset <- subset_metadata(designList[['all']], params$design, contrasts, params$reports_facet, params$reports_filter)
    exp_metadata_subset <- metadata_subset$exp_metadata
    contrasts_subset <- metadata_subset$contrasts
