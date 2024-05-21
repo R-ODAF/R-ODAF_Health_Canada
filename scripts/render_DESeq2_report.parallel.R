@@ -94,9 +94,9 @@ if (params$generate_tgxddi_report) {
 
 
 # Add back after troubleshooting above code...
-if (!is.na(params$reports_facet)) {
-  summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
-}
+# if (!is.na(params$reports_facet)) {
+#   summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
+# }
 
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!
