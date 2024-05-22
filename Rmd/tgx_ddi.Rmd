@@ -179,6 +179,20 @@ df_means <- df_no_id %>%
   map_df(rowMeans, na.rm = TRUE)
 df_means <- bind_cols(df["ID"], df_means)
 
+# Subset dataframe to just the reports group in case2
+if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
+  # Just want columns for the report facet plus the control
+  filter_columns <- contrasts_subset[[1]]
+  filter_columns <- c("ID",filter_columns, control)
+  #Replace "." with "-" in filter_columns
+  filter_columns <- gsub("\\.", "-", filter_columns)
+
+
+  # Subset the columns from the formatted df
+  df_means <- df_means %>%
+    select(all_of(filter_columns))
+}
+
 # Log2 ratios vs control (from contrasts)
 log2ratios <- df_means
 log2ratios[, -1] <- sweep(log2ratios[, -1], 1, log2ratios[[control]], `-`)
