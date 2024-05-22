@@ -488,5 +488,5 @@ nocite: '@*'
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```
