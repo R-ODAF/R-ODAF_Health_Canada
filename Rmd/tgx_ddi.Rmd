@@ -71,7 +71,7 @@ output:
     code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
-bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
+bibliography: "`r file.path(params$projectdir, 'Rmd/tgx-ddi-references.bib')`"
 
 ---
 
@@ -109,9 +109,18 @@ Report prepared for: `r params$project_name`
 
 ***
 
+<span style="color:red;">
+WARNING: The TGx-DDI biomarker was developed using the TK6 cell line [@li2015development] and has been tested on HepaRG [@buick2020tgxddi_hepaRG].
+The results of this analysis may not be applicable to other cell lines or tissues.
+
+
+Cell line used in this study: `r params$celltype`
+</span>
+
 This report shows the results of the TGx-DDI biomarker analysis for the `r params$platform` platform. 
-This analysis was developed as a toxicogenomics signature for DNA damage-induction in human cells in culture (https://cebs.niehs.nih.gov/tgxddi/).
-It uses a classification tool generated from a training set of 28 chemicals: 13 of them DNA-damage inducing (DDI) and 15 non-DNA-damage inducing (NDDI). The probability that a tested chemical is DDI is calculated based on the similarity of its gene expression profile to the agents in the classifier.
+TGx-DDI was developed as a toxicogenomics signature for DNA damage-induction in human cells in culture ([@li2019review], https://cebs.niehs.nih.gov/tgxddi/).
+It uses a classification tool generated from a training set of 28 chemicals: 13 of them DNA-damage inducing (DDI) and 15 non-DNA-damage inducing (NDDI). 
+The probability that a tested chemical is DDI is calculated based on the similarity of its gene expression profile to the agents in the classifier.
 
 Three analyses are performed on test chemicals using the TGx-DDI biomarker:
 
@@ -121,7 +130,8 @@ Three analyses are performed on test chemicals using the TGx-DDI biomarker:
 
 3. Nearest Shrunken Centroids (NSC) probability analysis, visualized by heatmaps
 
-The test chemical is considered DDI if it is positive in at least one of these analyses.
+The test chemical is considered DNA-damage-inducing if it is positive in at least one of these analyses.
+Results of all three analyses are summarized in a table at the end of this report.
 
 ```{r load_facet_data, include=FALSE}
 # Load facet data. Gets allBiomarkers and contrasts_subset for current facet
@@ -431,3 +441,6 @@ summary_table2$Result <- sapply(summary_table2$Result, color_cells)
 kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
   kable_styling("striped", full_width = F)
 ```
+
+
+# References
