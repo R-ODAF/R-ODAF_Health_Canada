@@ -112,13 +112,13 @@ Report prepared for: `r params$project_name`
 <span style="color:red;">
 WARNING: The TGx-DDI biomarker was developed using the TK6 cell line [@li2015development] and has been tested on HepaRG [@buick2020tgxddi_hepaRG].
 The results of this analysis may not be applicable to other cell lines or tissues.
-
-
-Cell line used in this study: `r params$celltype`
 </span>
 
+<span style="color:red;">Cell line used in this study: `r params$celltype` </span>
+
+
 This report shows the results of the TGx-DDI biomarker analysis for the `r params$platform` platform. 
-TGx-DDI was developed as a toxicogenomics signature for DNA damage-induction in human cells in culture ([@li2019review], https://cebs.niehs.nih.gov/tgxddi/).
+TGx-DDI was developed as a toxicogenomics signature for DNA damage-induction in human cells in culture ([@li2019review], [@li2017development], https://cebs.niehs.nih.gov/tgxddi/).
 It uses a classification tool generated from a training set of 28 chemicals: 13 of them DNA-damage inducing (DDI) and 15 non-DNA-damage inducing (NDDI). 
 The probability that a tested chemical is DDI is calculated based on the similarity of its gene expression profile to the agents in the classifier.
 
@@ -262,6 +262,8 @@ pred <- my_pred[30:nrow(my_pred), ] %>%
 
 # Principal Component Analysis
 
+The PCA plot is interactive. Hover over the points on the PCA plot to see chemical names.
+
 ```{r PCA, warning=FALSE}
 # Done on log2 ratios
 
@@ -298,11 +300,11 @@ df_pca$color <- factor(c(rep("DDI", 13), rep("non-DDI", 16), rep("tested", nrow(
 df_pca$labels <- colnames(merged_log2[,-1])
 
 # Create a scatter plot of the first two principal components with labels and colors
-p <- ggplot(df_pca, aes(PC1, PC2, color = color)) +
-  geom_point(aes(shape = color, text = paste("ID:", labels)), size = 2) +  
+p <- ggplot(df_pca, aes(PC1, PC2)) +
+  geom_point(aes(color = color, shape = color, text = paste("ID:", labels)), size = 2) +  
   scale_shape_manual(values = c("DDI" = 19, "non-DDI" = 19, "tested" = 18)) +  
-  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "tested" = "darkorange")) +
-  labs(color = "Group") +
+  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "tested" = "darkorange"), name = "Group") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
   theme_bw()
 
 ggplotly(p, tooltip = "text")  # Hover text shows chemical names
@@ -325,8 +327,15 @@ for (j in 31:ncol(merged_log2)){
   labels_colors(dendro) <- c(rep("red", 13),
                              rep("blue", 16),
                              "darkorange")[order.dendrogram(dendro)]
+
+  # Increase the bottom margin to make room for x-axis labels
+  par(mar = c(10, 4, 4, 2))  # Default is c(5, 4, 4, 2) + 0.1
+
   plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
   cat("\n\n")
+
+  # Reset to default margins
+  par(mar = c(5, 4, 4, 2) + 0.1)
 
   # Cut the dendrogram into 2 groups
   dendro_groups <- cutree(dendro, k = 2)
@@ -444,3 +453,17 @@ kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
 
 
 # References
+
+---
+nocite: '@*'
+---
+
+
+<div id="refs"></div>
+
+
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
+```
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
