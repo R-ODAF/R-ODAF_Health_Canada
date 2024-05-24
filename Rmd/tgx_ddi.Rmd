@@ -279,7 +279,7 @@ merged_log2 <- merged_log10 %>%
   mutate_all(~ log2(10^.))
 
 # Calculate PCA using the classifier's mean and standard deviation
-pc_calc <- (merged_log2[,-1] - merged_log10$PC.mn)/merged_log10$PC.std
+pc_calc <- (merged_log2 - merged_log10$PC.mn)/merged_log10$PC.std
 rownames(pc_calc) <- id_column
 
 pc1mine <- as.vector(merged_log10$PC1) %*% as.matrix(pc_calc)
