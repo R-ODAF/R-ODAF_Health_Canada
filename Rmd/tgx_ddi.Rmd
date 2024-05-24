@@ -239,26 +239,29 @@ DDI_chems <- c("5 FU",
   "X ray"
 )
 
+NDDI_chems <- c("2 DG",
+  "Apicidin",
+  "Antimycin A",
+  "Cadmium Chloride",
+  "Colchicine",
+  "Docetaxel",
+  "EtOH 2%",
+  "EtOH 4%",
+  "HC toxin",
+  "Heat Shock",
+  "Oxamflatin",
+  "Paclitaxel",
+  "Thapsigargin",
+  "TSA",
+  "Tunicamysin",
+  "Vinblastine"
+)
+
 merged_log10 <- merge(classifier, log10ratios, by = "ID")
 
-# Calculate probabilities of DDI vs non-DDI
-my_pred <- data.frame(samples = names(merged_log10)[-c(1:10)], probG = 0, probNG = 0)
-for(k in 1:(ncol(merged_log10) - 10)){
-  #k <- 1
-  G <- sum(((merged_log10[,k + 10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5)
-  NG <- sum(((merged_log10[,k + 10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
-  probG <- 1/(1 + exp(G/2 - NG/2))
-  probNG <- 1 - probG
-
-  my_pred[k,2] <- floor(100*probG)/100
-  my_pred[k,3] <- floor(100*probNG)/100
-}
-
-# Save prediction info for summary table
-pred <- my_pred[30:nrow(my_pred), ] %>%
-  dplyr::select(samples, probG) %>%
-  rename(ID = samples)
 ```
+
+
 
 # Principal Component Analysis
 
@@ -275,40 +278,52 @@ merged_log2 <- merged_log10 %>%
   select(-c(1:10)) %>%
   mutate_all(~ log2(10^.))
 
+# Calculate PCA using the classifier's mean and standard deviation
+pc_calc <- (merged_log2[,-1] - merged_log10$PC.mn)/merged_log10$PC.std
+rownames(pc_calc) <- id_column
+
+pc1mine <- as.vector(merged_log10$PC1) %*% as.matrix(pc_calc)
+pc2mine <- as.vector(merged_log10$PC2) %*% as.matrix(pc_calc)
+
+df_pca <- data.frame(PC1 = t(pc1mine), PC2 = t(pc2mine))
+
+# Add group column
+df_pca <- df_pca %>% mutate(Group = case_when(
+  rownames(df_pca) %in% DDI_chems ~ "DDI",
+  rownames(df_pca) %in% NDDI_chems ~ "non-DDI",
+  TRUE ~ "Test"
+))
+
+# Add a new column with the row names
+df_pca$Label = rownames(df_pca)
+
+testchem_pc1 <- df_pca[30:nrow(df_pca), ] %>%
+  select(PC1, Label) %>%
+  rename(ID = Label)
+
+# Plot
+p <- ggplot(df_pca, aes(PC1, PC2)) +
+  geom_point(aes(color = Group, shape = Group, size = 1.2, text = Label)) +  
+  scale_shape_manual(values = c("DDI" = 19, "non-DDI" = 19, "Test" = 17)) +  
+  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "Test" = "darkorange"), name = "Group") +
+  geom_text(data = subset(df_pca, Group == "Test"), aes(label = Label), nudge_y = 0.3, nudge_x = 0.3) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
+  theme_bw()
+
+# Convert to plotly object
+p <- ggplotly(p, tooltip = "text") # Hover text shows chemical names
+
+# Adjust point size, test chemical points are a bit bigger
+p$x$data[[1]]$marker$size <- p$x$data[[1]]$marker$size / 2
+p$x$data[[2]]$marker$size <- p$x$data[[2]]$marker$size / 2
+p$x$data[[3]]$marker$size <- p$x$data[[3]]$marker$size / 1.5
+
+p
+
 # Add the ID column back to merged_log2
 merged_log2 <- merged_log2 %>%
   mutate(ID = id_column) %>%
   select(ID, everything())
-
-# PCA
-pca <- prcomp(t(merged_log2[,-1]), scale = TRUE)
-df_pca <- as.data.frame(pca$x)
-
-# The sign of principle components is arbitrary, so we need to know the sign of the DDI classifier chemicals
-# To figure out whether test chemicals are DDI or non-DDI
-ddi_pc1 <- df_pca[1:13, ] %>% select(PC1)  # Save PC1 of DDI classifier chemicals
-mean_ddi_sign <- sign(mean(ddi_pc1$PC1)) # Calculate the sign of the mean of the PC1 values for the DDI chemicals
-nddi_pc1 <- df_pca[14:29, ] %>% select(PC1)  # Save PC1 of non-DDI classifier chemicals
-
-pc1 <- df_pca[30:nrow(df_pca), ] %>% select(PC1) # Save PC1 of test chemicals for summary table
-pc1$ID <- rownames(pc1)
-rownames(pc1) <- NULL
-pc1 <- pc1 %>% select(ID, everything())
-
-# Set up labels and colours
-df_pca$color <- factor(c(rep("DDI", 13), rep("non-DDI", 16), rep("tested", nrow(df_pca) - 29)))
-df_pca$labels <- colnames(merged_log2[,-1])
-
-# Create a scatter plot of the first two principal components with labels and colors
-p <- ggplot(df_pca, aes(PC1, PC2)) +
-  geom_point(aes(color = color, shape = color, text = paste("ID:", labels)), size = 2) +  
-  scale_shape_manual(values = c("DDI" = 19, "non-DDI" = 19, "tested" = 18)) +  
-  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "tested" = "darkorange"), name = "Group") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
-  theme_bw()
-
-ggplotly(p, tooltip = "text")  # Hover text shows chemical names
-
 ```
 
 # Hierarchical Clustering {.tabset .tabset-pills}
@@ -360,6 +375,27 @@ for (j in 31:ncol(merged_log2)){
 ```
 
 # Nearest Shrunken Centroid Prediction and Heatmap
+```{r NSC}
+# Calculate probabilities of DDI vs non-DDI
+my_pred <- data.frame(samples = names(merged_log10)[-c(1:10)], probG = 0, probNG = 0)
+for(k in 1:(ncol(merged_log10) - 10)){
+  #k <- 1
+  G <- sum(((merged_log10[,k + 10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5)
+  NG <- sum(((merged_log10[,k + 10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
+  probG <- 1/(1 + exp(G/2 - NG/2))
+  probNG <- 1 - probG
+
+  my_pred[k,2] <- floor(100*probG)/100
+  my_pred[k,3] <- floor(100*probNG)/100
+}
+
+# Save prediction info for summary table
+pred <- my_pred[30:nrow(my_pred), ] %>%
+  dplyr::select(samples, probG) %>%
+  rename(ID = samples)
+```
+
+
 
 ```{r heatmap, fig.width=8, fig.height=10}
 
@@ -421,7 +457,7 @@ pheatmap(std_win_log10,
 
 ```{r summary}
 # Create a summary table
-summary_table1 <- pc1 %>%
+summary_table1 <- testchem_pc1 %>%
   merge(dendro_results, by = "ID") %>%
   merge(pred, by = "ID") %>%
   rename(PCA = PC1, HC = dendro_DDI, NSC = probG)
@@ -430,7 +466,7 @@ summary_table1 <- pc1 %>%
 summary_table2 <- summary_table1
 
 # Assign "DDI" or "Non-DDI" based on the comparison of the signs (because the sign of the PCA is arbitrary)
-summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == mean_ddi_sign, "DDI", "Non-DDI")
+summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == -1, "DDI", "Non-DDI")
 
 summary_table2$HC <- ifelse(summary_table1$HC == TRUE, "DDI",
                             ifelse(summary_table1$HC == "UNCERTAIN", "Inconclusive", "Non-DDI"))
