@@ -290,7 +290,7 @@ df_pca <- data.frame(PC1 = t(pc1mine), PC2 = t(pc2mine))
 # Add group column
 df_pca <- df_pca %>% mutate(Group = case_when(
   rownames(df_pca) %in% DDI_chems ~ "DDI",
-  rownames(df_pca) %in% NDDI_chems ~ "non-DDI",
+  rownames(df_pca) %in% NDDI_chems ~ "Non-DDI",
   TRUE ~ "Test"
 ))
 
@@ -308,15 +308,17 @@ all_pc1 <- df_pca %>%
 # Plot
 p <- ggplot(df_pca, aes(PC1, PC2)) +
   geom_point(aes(color = Group, shape = Group, size = 1.2, text = Label)) +  
-  scale_shape_manual(values = c("DDI" = 19, "non-DDI" = 19, "Test" = 17)) +  
-  scale_color_manual(values = c("DDI" = "red", "non-DDI" = "blue", "Test" = "darkorange"), name = "Group") +
+  scale_shape_manual(values = c("DDI" = 19, "Non-DDI" = 19, "Test" = 17)) +  
+  scale_color_manual(values = c("DDI" = "red", "Non-DDI" = "blue", "Test" = "darkorange"), name = "Group") +
   geom_text(data = subset(df_pca, Group == "Test"), aes(label = Label), nudge_y = 0.3, nudge_x = 0.3) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
-  theme_bw() +
-  guides(color = guide_legend(title = NULL))  # Remove the legend title
+  theme_bw()
 
 # Convert to plotly object
 p <- ggplotly(p, tooltip = "text") # Hover text shows chemical names
+
+# Remove the legend title
+p <- p %>% layout(legend = list(title = list(text = '')))
 
 # Adjust point size, test chemical points are a bit bigger
 p$x$data[[1]]$marker$size <- p$x$data[[1]]$marker$size / 2
@@ -458,16 +460,6 @@ breaks <- seq(min(std_win_log10, na.rm = TRUE), max(std_win_log10, na.rm = TRUE)
 color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
 #color_scale <- viridis(17, option = "magma") #will play with colour scale
 
-# Add annotation bars based on predictions
-predDDI <- my_pred %>%
-  select(samples, probG) %>%
-  rename(Prediction = probG)
-rownames(predDDI) <- predDDI$samples
-predDDI$samples <- NULL
-
-predDDI$Prediction <- factor(predDDI$Prediction, levels = c(0, 1),
-                             labels = c("Non-DDI", "DDI"))
-
 # Define the color mapping for each annotation bar
 annotation_colors <- list(
   PCA = c("Non-DDI" = "blue", "DDI" = "red"),
@@ -476,8 +468,11 @@ annotation_colors <- list(
   Overall = c("Non-DDI" = "blue", "DDI" = "red")
 )
 
+# Reorder the rows in the annotation to match the matrix
+t2 <- t2[match(colnames(std_win_log10), rownames(t2)), ]
+
 # Create the heatmap with a gap between classifier and sample columns
-p <- pheatmap(std_win_log10,
+pheatmap(std_win_log10,
          cluster_cols = FALSE,
          # cluster_rows = FALSE,
          gaps_col = 29,
@@ -489,13 +484,6 @@ p <- pheatmap(std_win_log10,
          annotation_col = t2,
          annotation_colors = annotation_colors)
 
-# Remove the legend titles
-p$annotation_legend$PCA$legend_title <- NULL
-p$annotation_legend$HC$legend_title <- NULL
-p$annotation_legend$NSC$legend_title <- NULL
-p$annotation_legend$Overall$legend_title <- NULL
-
-p
 ```
 
 
@@ -515,7 +503,7 @@ summary_table2 <- summary_table1
 # Assign "DDI" or "Non-DDI" based on the comparison of the signs (because the sign of the PCA is arbitrary)
 summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == -1, "DDI", "Non-DDI")
 
-summary_table2$HC <- ifelse(summary_table1$HC)
+summary_table2$HC <- summary_table1$HC
 
 summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "Non-DDI")
 
