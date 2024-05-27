@@ -138,9 +138,7 @@ Results of all three analyses are summarized in a table at the end of this repor
 ```{r load_facet_data, include=FALSE}
 # Load facet data. Gets allBiomarkers and contrasts_subset for current facet
 load_facet_data(paths, params)
-```
 
-```{r cases, include=FALSE}
 # Have to deal with weird data setup in case2
 if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
   allBiomarkers <- allBiomarkers[["all"]]
@@ -149,35 +147,25 @@ if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
 ```
 
 ```{r import_control_info}
-#message(paste("Facet is", params$reports_filter)) # Message doesn't work if reports_filter is NULL (case 1)
-
-# contrasts_subset # Uncomment for troubleshooting
-
-# Will this work if there's no reports_filter (aka reports_facet in config)?
+# Get the control from the contrasts (first contrast)
+# This will only work if there's just one control for all the groups in the report
 control <- contrasts_subset %>%
   slice(1) %>%
   pull(V2)
-
-# control # Uncomment for troubleshooting
 ```
 
-
-```{r import_data}
-df <- as.data.frame(allBiomarkers)
-
-df <- df %>%
+```{r process_data}
+df <- as.data.frame(allBiomarkers) %>%
   rename(ID = SampleID)
 
 # Collapse Duplicate IDs, taking the mean
 df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
 
-# Convert all columns except ID to numeric
-df <- df %>%
-  mutate(across(-ID, as.numeric))
-
+# Convert all columns except ID to numeric, collapse probes to genes
 # Probes are already collapsed to genes in write_additional_output.R lines 30-32
-# So I don't think taking means here is necessary
+# So taking means here probably is not necessary
 df <- df %>%
+  mutate(across(-ID, as.numeric)) %>%
   group_by(ID) %>%
   summarise_all(mean)
 
@@ -195,7 +183,7 @@ df_means <- bind_cols(df["ID"], df_means)
 if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
   # Just want columns for the report facet plus the control
   filter_columns <- contrasts_subset[[1]]
-  filter_columns <- c("ID",filter_columns, control)
+  filter_columns <- c("ID", filter_columns, control)
   #Replace "." with "-" in filter_columns
   filter_columns <- gsub("\\.", "-", filter_columns)
 
@@ -221,10 +209,13 @@ classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-
 
 classifier <- read.delim(classifier_path, sep = "\t")
 
-colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin", "Cisplatin", "Etoposide", "Hydrogen Peroxide",
-  "Hydroxyurea", "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite", "X ray", "2 DG", "Apicidin",
-  "Antimycin A", "Cadmium Chloride", "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%", "HC toxin", "Heat Shock",
-  "Oxamflatin", "Paclitaxel", "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
+colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
+                                 "Cisplatin", "Etoposide", "Hydrogen Peroxide", "Hydroxyurea",
+                                 "Methotrexate",  "MMS", "Potassium Chromate VI", "Sodium Arsenite",
+                                 "X ray", "2 DG", "Apicidin","Antimycin A", "Cadmium Chloride",
+                                 "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%",
+                                 "HC toxin", "Heat Shock", "Oxamflatin", "Paclitaxel",
+                                 "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
 
 DDI_chems <- c("5 FU",
   "AraC",
@@ -260,9 +251,7 @@ NDDI_chems <- c("2 DG",
 )
 
 merged_log10 <- merge(classifier, log10ratios, by = "ID")
-
 ```
-
 
 
 # Principal Component Analysis
@@ -281,7 +270,7 @@ merged_log2 <- merged_log10 %>%
   mutate_all(~ log2(10^.))
 
 # Calculate PCA using the classifier's mean and standard deviation
-pc_calc <- (merged_log2 - merged_log10$PC.mn)/merged_log10$PC.std
+pc_calc <- (merged_log2 - merged_log10$PC.mn) / merged_log10$PC.std
 rownames(pc_calc) <- id_column
 
 pc1mine <- as.vector(merged_log10$PC1) %*% as.matrix(pc_calc)
@@ -297,7 +286,7 @@ df_pca <- df_pca %>% mutate(Group = case_when(
 ))
 
 # Add a new column with the row names
-df_pca$Label = rownames(df_pca)
+df_pca$Label <- rownames(df_pca)
 
 testchem_pc1 <- df_pca[30:nrow(df_pca), ] %>%
   select(PC1, Label) %>%
@@ -309,8 +298,8 @@ all_pc1 <- df_pca %>%
 
 # Plot
 p <- ggplot(df_pca, aes(PC1, PC2)) +
-  geom_point(aes(color = Group, shape = Group, size = 1.2, text = Label)) +  
-  scale_shape_manual(values = c("DDI" = 19, "Non-DDI" = 19, "Test" = 17)) +  
+  geom_point(aes(color = Group, shape = Group, size = 1.2, text = Label)) +
+  scale_shape_manual(values = c("DDI" = 19, "Non-DDI" = 19, "Test" = 17)) +
   scale_color_manual(values = c("DDI" = "red", "Non-DDI" = "blue", "Test" = "darkorange"), name = "Group") +
   geom_text(data = subset(df_pca, Group == "Test"), aes(label = Label), nudge_y = 0.3, nudge_x = 0.3) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
@@ -320,7 +309,7 @@ p <- ggplot(df_pca, aes(PC1, PC2)) +
 p <- ggplotly(p, tooltip = "text") # Hover text shows chemical names
 
 # Remove the legend title
-p <- p %>% layout(legend = list(title = list(text = '')))
+p <- p %>% layout(legend = list(title = list(text = "")))
 
 # Adjust point size, test chemical points are a bit bigger
 p$x$data[[1]]$marker$size <- p$x$data[[1]]$marker$size / 2
@@ -341,9 +330,9 @@ merged_log2 <- merged_log2 %>%
 
 # Initialize a data frame to store the HC grouping results
 dendro_results_testchems <- data.frame(ID = character(), HC = character(), stringsAsFactors = FALSE)
-dendro_biomarker <- data.frame(ID = names(pc_calc[,1:29]),
-                                 HC = ifelse(names(pc_calc[,1:29]) %in% DDI_chems, "DDI", "Non-DDI"),
-                                 stringsAsFactors = FALSE)
+dendro_biomarker <- data.frame(ID = names(pc_calc[, 1:29]),
+                               HC = ifelse(names(pc_calc[, 1:29]) %in% DDI_chems, "DDI", "Non-DDI"),
+                               stringsAsFactors = FALSE)
 
 # Dendrogram for each dose
 for (j in 30:ncol(pc_calc)){
@@ -367,7 +356,7 @@ for (j in 30:ncol(pc_calc)){
   # Cut the dendrogram into 2 groups
   dendro_groups <- cutree(dendro, k = 2)
   test_sample_group <- dendro_groups[length(dendro_groups)]
-  
+
   # Count the number of DDI chemicals that are in the same group as the test sample
   same_group_count <- sum(dendro_groups[names(dendro_groups) %in% DDI_chems] == test_sample_group)
 
@@ -392,15 +381,15 @@ dendro_results_all <- rbind(dendro_biomarker, dendro_results_testchems)
 ```{r NSC}
 # Calculate probabilities of DDI vs non-DDI
 my_pred <- data.frame(samples = names(merged_log10)[-c(1:10)], probG = 0, probNG = 0)
-for(k in 1:(ncol(merged_log10) - 10)){
+for (k in 1:(ncol(merged_log10) - 10)){
   #k <- 1
-  G <- sum(((merged_log10[,k + 10] - merged_log10$Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5)
-  NG <- sum(((merged_log10[,k + 10] - merged_log10$Non.Genotoxic.score)/merged_log10$stdev)^2) - 2*log(0.5) 
-  probG <- 1/(1 + exp(G/2 - NG/2))
+  G <- sum(((merged_log10[, k + 10] - merged_log10$Genotoxic.score) / merged_log10$stdev)^2) - 2 * log(0.5)
+  NG <- sum(((merged_log10[, k + 10] - merged_log10$Non.Genotoxic.score) / merged_log10$stdev)^2) - 2 * log(0.5)
+  probG <- 1 / (1 + exp(G / 2 - NG / 2))
   probNG <- 1 - probG
 
-  my_pred[k,2] <- floor(100*probG)/100
-  my_pred[k,3] <- floor(100*probNG)/100
+  my_pred[k, 2] <- floor(100 * probG) / 100
+  my_pred[k, 3] <- floor(100 * probNG) / 100
 }
 
 # Save prediction info for summary table
@@ -445,7 +434,7 @@ winsorize_sd <- function(x) {
 }
 
 # Standardize against PC.mn and PC.std from classifier, transform to log10
-standardized_log2 <- as.matrix(merged_log2[,-1])
+standardized_log2 <- as.matrix(merged_log2[, -1])
 standardized_log2 <- (standardized_log2 - merged_log10$PC.mn) / merged_log10$PC.std
 
 rownames(standardized_log2) <- id_column
@@ -455,7 +444,6 @@ standardized_log10 <- log10(2^standardized_log2)
 # Winsorize because temposeq data can be very bright on heatmap
 # What about RNA-seq data? Should I do a conditional? Should talk to Andrew
 std_win_log10 <- apply(standardized_log10, 2, winsorize_sd)
-
 
 # Calculate the color scale using the full data set
 breaks <- seq(min(std_win_log10, na.rm = TRUE), max(std_win_log10, na.rm = TRUE), length.out = 17)
@@ -473,18 +461,18 @@ annotation_colors <- list(
 # Reorder the rows in the annotation to match the matrix
 t2 <- t2[match(colnames(std_win_log10), rownames(t2)), ]
 
-# Create the heatmap 
+# Create the heatmap
 p <- pheatmap(std_win_log10,
-         cluster_cols = FALSE,
-         # cluster_rows = FALSE,
-         gaps_col = 29,
-         color = color_scale,
-         breaks = breaks,
-         clustering_method = "average",
-         clustering_distance_rows = "correlation",
-         clustering_distance_cols = "correlation",
-         annotation_col = t2,
-         annotation_colors = annotation_colors)
+              cluster_cols = FALSE,
+              # cluster_rows = FALSE,
+              gaps_col = 29,
+              color = color_scale,
+              breaks = breaks,
+              clustering_method = "average",
+              clustering_distance_rows = "correlation",
+              clustering_distance_cols = "correlation",
+              annotation_col = t2,
+              annotation_colors = annotation_colors)
 ```
 
 ```{r display_heatmap, fig.width=8, fig.height=10}
@@ -492,12 +480,12 @@ p <- pheatmap(std_win_log10,
 # Remove the legends for PCA, HC, and NSC
 gt <- p$gtable
 
-# Change the title
+# Change the legend title
 annlegend_grob <- gt$grobs[[7]]
 annlegend_grob$children[[1]]$label <- "Prediction"
 
 # Create the new gTree
-new_annlegend_grob <- gTree(children=gList(annlegend_grob$children[[1]], annlegend_grob$children[[2]],annlegend_grob$children[[3]]),cl="gTree")
+new_annlegend_grob <- gTree(children = gList(annlegend_grob$children[[1]], annlegend_grob$children[[2]], annlegend_grob$children[[3]]), cl = "gTree")
 new_annlegend_grob$widths <- annlegend_grob$widths
 new_annlegend_grob$heights <- annlegend_grob$heights
 new_annlegend_grob$vp <- annlegend_grob$vp
@@ -505,7 +493,7 @@ new_annlegend_grob$vp <- annlegend_grob$vp
 # Replace the original legend with the modified one
 gt$grobs[[7]] <- new_annlegend_grob
 
-# Display the modified gtable
+# Display the modified heatmap
 plot.new()
 grid::grid.draw(gt)
 ```
@@ -522,17 +510,13 @@ summary_table1 <- testchem_pc1 %>%
 # Initialize
 summary_table2 <- summary_table1
 
-# Assign "DDI" or "Non-DDI" based on the comparison of the signs (because the sign of the PCA is arbitrary)
+# Assign "DDI" or "Non-DDI" based on results in the three tests
 summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == -1, "DDI", "Non-DDI")
-
 summary_table2$HC <- summary_table1$HC
-
 summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "Non-DDI")
-
 summary_table2$Overall <- apply(summary_table2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("DDI" %in% x, "DDI", "Non-DDI"))
 
-# Print formatted table
-# Color the cells
+# Color table cells
 color_cells <- function(x) {
   ifelse(x == "DDI", cell_spec(x, "html", color = "red"), cell_spec(x, "html", color = "blue"))
 }
@@ -540,7 +524,7 @@ summary_table2$Overall <- sapply(summary_table2$Overall, color_cells)
 
 # Print the formatted table
 kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
-  kable_styling("striped", full_width = F)
+  kable_styling("striped", full_width = FALSE)
 ```
 
 
