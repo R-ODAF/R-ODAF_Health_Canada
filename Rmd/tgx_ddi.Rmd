@@ -91,6 +91,8 @@ library(viridis)
 library(knitr)
 library(kableExtra)
 library(plotly)
+library(gtable)
+library(grid)
 ```
 
 
@@ -431,7 +433,7 @@ t2 <- t2[, c("PCA", "HC", "NSC", "Overall")]
 t2[] <- lapply(t2, factor)
 ```
 
-```{r heatmap, fig.width=8, fig.height=10}
+```{r setup_heatmap, fig.show='hide'}
 
 winsorize_sd <- function(x) {
   mn <- mean(x)
@@ -471,8 +473,8 @@ annotation_colors <- list(
 # Reorder the rows in the annotation to match the matrix
 t2 <- t2[match(colnames(std_win_log10), rownames(t2)), ]
 
-# Create the heatmap with a gap between classifier and sample columns
-pheatmap(std_win_log10,
+# Create the heatmap 
+p <- pheatmap(std_win_log10,
          cluster_cols = FALSE,
          # cluster_rows = FALSE,
          gaps_col = 29,
@@ -483,10 +485,30 @@ pheatmap(std_win_log10,
          clustering_distance_cols = "correlation",
          annotation_col = t2,
          annotation_colors = annotation_colors)
-
 ```
 
+```{r display_heatmap, fig.width=8, fig.height=10}
 
+# Remove the legends for PCA, HC, and NSC
+gt <- p$gtable
+
+# Change the title
+annlegend_grob <- gt$grobs[[7]]
+annlegend_grob$children[[1]]$label <- "Prediction"
+
+# Create the new gTree
+new_annlegend_grob <- gTree(children=gList(annlegend_grob$children[[1]], annlegend_grob$children[[2]],annlegend_grob$children[[3]]),cl="gTree")
+new_annlegend_grob$widths <- annlegend_grob$widths
+new_annlegend_grob$heights <- annlegend_grob$heights
+new_annlegend_grob$vp <- annlegend_grob$vp
+
+# Replace the original legend with the modified one
+gt$grobs[[7]] <- new_annlegend_grob
+
+# Display the modified gtable
+plot.new()
+grid::grid.draw(gt)
+```
 
 # Summary Table
 
