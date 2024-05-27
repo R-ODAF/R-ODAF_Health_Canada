@@ -335,18 +335,18 @@ merged_log2 <- merged_log2 %>%
 
 # Hierarchical Clustering {.tabset .tabset-pills}
 ```{r Dendrograms, results='asis'}
-# Done on log2 ratios
+# Done on centred and scaled log2 ratios
 
 # Initialize a data frame to store the HC grouping results
 dendro_results_testchems <- data.frame(ID = character(), HC = character(), stringsAsFactors = FALSE)
-dendro_biomarker <- data.frame(ID = names(merged_log2[,2:30]),
-                                 HC = ifelse(names(merged_log2[,2:30]) %in% DDI_chems, "DDI", "Non-DDI"),
+dendro_biomarker <- data.frame(ID = names(pc_calc[,1:29]),
+                                 HC = ifelse(names(pc_calc[,1:29]) %in% DDI_chems, "DDI", "Non-DDI"),
                                  stringsAsFactors = FALSE)
 
 # Dendrogram for each dose
-for (j in 31:ncol(merged_log2)){
-  cat(paste0("## ", colnames(merged_log2)[j], "\n"))
-  dendro <- dist(t(merged_log2[, c(2:30, j)]))
+for (j in 30:ncol(pc_calc)){
+  cat(paste0("## ", colnames(pc_calc)[j], "\n"))
+  dendro <- dist(t(pc_calc[, c(1:29, j)]))
   dendro <- hclust(dendro, method = "average")
   dendro <- as.dendrogram(dendro)
   labels_colors(dendro) <- c(rep("red", 13),
@@ -356,7 +356,7 @@ for (j in 31:ncol(merged_log2)){
   # Increase the bottom margin to make room for x-axis labels
   par(mar = c(10, 4, 4, 2))  # Default is c(5, 4, 4, 2) + 0.1
 
-  plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(merged_log2)[j]))
+  plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(pc_calc)[j]))
   cat("\n\n")
 
   # Reset to default margins
@@ -379,7 +379,7 @@ for (j in 31:ncol(merged_log2)){
   }
 
   # Save results for summary table
-  dendro_results_testchems <- rbind(dendro_results_testchems, data.frame(ID = colnames(merged_log2)[j], HC = result, stringsAsFactors = FALSE))
+  dendro_results_testchems <- rbind(dendro_results_testchems, data.frame(ID = colnames(pc_calc)[j], HC = result, stringsAsFactors = FALSE))
 }
 
 # Save results for all chemicals
