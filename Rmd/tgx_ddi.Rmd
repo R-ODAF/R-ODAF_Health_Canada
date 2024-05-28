@@ -223,8 +223,29 @@ colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
 # Fix annotations depending on temposeq kit
 # Need to talk to Andrew to find additional fixes
 if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
-  classifier$ID[8] <- "TIGAR"
-  classifier$ID[22] <- "AMER1"
+  classifier <- classifier %>%
+    mutate(ID = case_when(
+      ID == "C12orf5" ~ "TIGAR",
+      ID == "FAM123B" ~ "AMER1",
+      TRUE ~ ID
+  ))
+}
+
+if (params$biospyder_manifest_file == "Human_S1500_Surrogate_2.0_standardized.csv") {
+  classifier <- classifier %>%
+    mutate(ID = case_when(
+      ID == "C12orf5" ~ "TIGAR",
+      ID == "FAM123B" ~ "AMER1",
+      ID == "HIST1H1E" ~ "H1-4",
+      ID == "HIST1H2BB" ~ "H2BC3",
+      ID == "HIST1H2BC" ~ "H2BC4",
+      ID == "HIST1H2BG" ~ "H2BC8",
+      ID == "HIST1H2BI" ~ "H2BC10",
+      ID == "HIST1H2BM" ~ "H2BC14",
+      ID == "HIST1H2BN" ~ "H2BC15",
+      ID == "HIST1H3D" ~ "H3C4",
+      TRUE ~ ID
+    ))
 }
 
 DDI_chems <- c("5 FU",
@@ -261,7 +282,17 @@ NDDI_chems <- c("2 DG",
 )
 
 merged_log10 <- merge(classifier, log10ratios, by = "ID")
+
+# Check how many genes match between the classifier and the data
+nmatched <- nrow(merged_log10)
+
+missed <- setdiff(classifier$ID, merged_log10$ID)
 ```
+
+There are 64 genes in the biomarker and your data matched `r nmatched` of them. 
+The following genes were not found in your data: `r missed`.
+
+Mismatches can happen because of differences in gene annotation between temposeq platforms.
 
 
 # Principal Component Analysis
@@ -463,7 +494,7 @@ color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
 # Define the color mapping for each annotation bar
 annotation_colors <- list(
   PCA = c("Non-DDI" = "blue", "DDI" = "red"),
-  HC = c("Non-DDI" = "blue", "DDI" = "red"),
+  HC = c("Non-DDI" = "blue", "UNCERTAIN" = "yellow", "DDI" = "red"),
   NSC = c("Non-DDI" = "blue", "DDI" = "red"),
   Overall = c("Non-DDI" = "blue", "DDI" = "red")
 )
