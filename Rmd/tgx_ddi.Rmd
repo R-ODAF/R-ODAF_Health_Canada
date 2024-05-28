@@ -169,9 +169,12 @@ df <- df %>%
   group_by(ID) %>%
   summarise_all(mean)
 
-# Average the dose replicates
+## Average the dose replicates
+# Replace sample names with info from the metadata column used for deseq2 design
+designcol <- params$design
 df_no_id <- select(df, -ID)
-names(df_no_id) <- sub("_\\d$", "", names(df_no_id))
+name_mapping <- setNames(exp_metadata[[designcol]], exp_metadata$original_names)
+colnames(df_no_id) <- name_mapping[colnames(df_no_id)]
 
 # Calculate the row-wise mean for each unique base name, add ID column back on
 df_means <- df_no_id %>%
