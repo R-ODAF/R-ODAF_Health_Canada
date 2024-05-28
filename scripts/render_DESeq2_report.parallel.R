@@ -54,6 +54,12 @@ exp_metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, "metadata.Q
 
 facets <- R.ODAF.utils::get_facets(exp_metadata, params)
 
+# Only make reports for facets with DEGS
+hasDEGs <- names(which(sapply(X = mergedDEGsList,
+                                FUN = function(i) length(i)>=1),
+                         arr.ind = T))
+display_facets <- facets[facets %in% hasDEGs]
+
 # set up the rest of the output paths (requires facets)
 paths <- R.ODAF.utils::set_up_filepaths(params,
                                         results_location_arg,
@@ -62,15 +68,15 @@ paths <- R.ODAF.utils::set_up_filepaths(params,
 
 if (params$parallel) {
   biocluster <- BiocParallel::MulticoreParam(workers = round(params$cpus * 0.9))
-  BiocParallel::bpmapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_main_report == TRUE) {
     Sys.sleep(60)
   }
-  BiocParallel::bpmapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_data_explorer_report  == TRUE) {
     Sys.sleep(60)
   }
-  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
   if (params$generate_go_pathway_report  == TRUE) {
     Sys.sleep(60)
   }
@@ -80,16 +86,16 @@ if (params$parallel) {
   #reduced_cpus <- round(params$cpus*0.5)
   #if (reduced_cpus < 1) { reduced_cpus = 1 }
   #biocluster <- BiocParallel::MulticoreParam(workers = reduced_cpus )
-  BiocParallel::bpmapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
+  BiocParallel::bpmapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths), BPPARAM = biocluster)
 } else {
-  base::mapply(FUN = make_main_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
-  base::mapply(FUN = make_data_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
-  base::mapply(FUN = make_pathway_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
-  base::mapply(FUN = make_stats_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_main_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_data_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_pathway_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
 }
 
 if (params$generate_tgxddi_report) {
-  base::mapply(FUN = make_tgxddi_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+  base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
 }
 
 
