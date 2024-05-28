@@ -95,7 +95,12 @@ if (params$parallel) {
 }
 
 if (params$generate_tgxddi_report) {
-  base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  if (params$platform == "TempO-Seq") {
+    base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  }
+  else {
+    message("TGxDDI report generation is currently only supported for TempO-Seq data.")
+  }
 }
 
 
