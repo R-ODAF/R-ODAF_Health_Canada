@@ -68,11 +68,12 @@ overallResListDEGs <- list()
 rldList <- list()
 mergedDEGsList <- list()
 filtered_table <- data.frame()
+allBiomarkers <- list()
 
 if (is.na(params$deseq_facet)){
   message("### Learning a single model for the whole experiment. ###")
   if(params$write_additional_output){
-    write_additional_output(count_data, exp_metadata, params[["design"]], params)
+    allBiomarkers[['all']] <- write_additional_output(count_data, exp_metadata, params[["design"]], params)
   }
   dds <- learn_deseq_model(count_data, exp_metadata, params[["design"]], params)
   rld <- regularize_data(dds, original_design, covariates, params$batch_var)
@@ -98,7 +99,7 @@ if (is.na(params$deseq_facet)){
     check_data(count_data_subset, exp_metadata_subset, contrasts_subset)
 
     if (params$write_additional_output) {
-      write_additional_output(count_data_subset, exp_metadata_subset, params[["design"]], params)
+      allBiomarkers[[current_filter]] <- write_additional_output(count_data_subset, exp_metadata_subset, params[["design"]], params)
     }
     ddsList[[current_filter]] <- learn_deseq_model(count_data_subset, exp_metadata_subset, params[["design"]], params)
     designList[[current_filter]] <- exp_metadata_subset
@@ -159,6 +160,7 @@ save(ddsList,
      paths,
      filtered_table,
      sample_count_metadata,
+     allBiomarkers,
      file = file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
 
 if (is.na(params$deseq_facet)) {

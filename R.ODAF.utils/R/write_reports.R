@@ -102,3 +102,28 @@ make_pathway_reports <- function(pars, paths, facet)  {
     render_report(go_pathway_report, go_pathway_file, pars)
   }
 }
+
+#' Generate TGx-DDI Report
+#'
+#' Renders the TGx-DDI report HTML file for a given facet using the specified parameters.
+#' The function updates the `reports_filter` in `pars` based on the facet provided.
+#'
+#' @param pars A list of parameters used for report generation.
+#' @param facet A character string specifying the facet for which to generate the report.
+#' @param paths A list of paths used throughout the analysis.
+#' @return Invisible NULL. The function is called for its side effect of rendering an HTML report.
+#' @export
+make_tgxddi_reports <- function(pars, paths, facet) {
+  if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
+    pars$reports_filter <- NULL
+  } else {
+    pars$reports_filter <- facet
+  }
+  prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
+  if (pars$generate_tgxddi_report) {
+    message("Generating TGX-DDI report")
+    tgxddi_report <- file.path(paths$projectdir, "Rmd", "tgx_ddi.Rmd")
+    tgxddi_file <- file.path(paths$reports_dir, paste0("tgxddi_", prefix, ".html"))  
+    render_report(tgxddi_report, tgxddi_file, pars)
+  }
+}

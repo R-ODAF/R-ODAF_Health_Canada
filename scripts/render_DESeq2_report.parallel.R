@@ -45,6 +45,7 @@ overallResListAll <- data_env$overallResListAll
 overallResListDEGs <- data_env$overallResListDEGs
 exp_contrasts <- data_env$exp_contrasts
 filtered_table <-  data_env$filtered_table
+allBiomarkers <- data_env$allBiomarkers
 rm(data_env)
 gc()
 
@@ -93,10 +94,20 @@ if (params$parallel) {
   base::mapply(FUN = make_stats_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
 }
 
-# Add back after troubleshooting above code...
-if (!is.na(params$reports_facet)) {
-  summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, display_facets, params)
+if (params$generate_tgxddi_report) {
+  if (params$platform == "TempO-Seq") {
+    base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+  }
+  else {
+    message("TGxDDI report generation is currently only supported for TempO-Seq data.")
+  }
 }
+
+
+# Add back after troubleshooting above code...
+# if (!is.na(params$reports_facet)) {
+#   summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
+# }
 
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!

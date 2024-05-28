@@ -53,6 +53,7 @@ params:
   generate_stats_report: TRUE
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
+  generate_tgxddi_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
@@ -508,5 +509,5 @@ for (i in seq_along(contrasts)) {
 DBI::dbDisconnect(dbconn(db))
 ```
 
-```{r, child=file.path(paths$root,'Rmd','session_info.Rmd')}
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```
