@@ -220,6 +220,13 @@ colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
                                  "HC toxin", "Heat Shock", "Oxamflatin", "Paclitaxel",
                                  "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
 
+# Fix annotations depending on temposeq kit
+# Need to talk to Andrew to find additional fixes
+if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
+  classifier$ID[8] <- "TIGAR"
+  classifier$ID[22] <- "AMER1"
+}
+
 DDI_chems <- c("5 FU",
   "AraC",
   "Bleomycin",
