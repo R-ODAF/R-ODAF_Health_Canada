@@ -115,4 +115,4 @@ system("rm -rf /tmp/intermediates_*")
 
 # save config and contrasts file too
 file.copy(file.path(paths$inputs, "config", "config.yaml"), paths$record)
-file.copy(file.path(paths$contrasts, "contrasts.txt"), paths$record)
+file.copy(file.path(paths$contrasts, params$contrasts_file), paths$record)

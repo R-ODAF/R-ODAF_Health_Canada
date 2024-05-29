@@ -9,7 +9,7 @@
 get_contrasts <- function(file_path = NULL, paths) {
   if (is.null(file_path)) {
     message("No file path provided for contrasts. Using default path.")
-    file_path <- file.path(paths[["contrasts"]], "contrasts.txt")
+    file_path <- file.path(paths[["contrasts"]], common_config[["contrasts_file"]])
   }
   # Make sure file exists before attempting to read
   if (!file.exists(file_path)) {
