@@ -10,7 +10,13 @@ properties:
           - string
       project_title:
         type: string
-      project_name:
+      researcher_name:
+        type: string
+      bioinformatician_name:
+        type: string
+      metadata_file:  
+        type: string
+      contrasts_file:
         type: string
       project_description:
         type:
@@ -45,7 +51,9 @@ properties:
     required:
       - projectdir
       - project_title
-      - project_name
+      - researcher_name
+      - metadata_file
+      - contrasts_file
       - project_description
       - batch_var
       - dose

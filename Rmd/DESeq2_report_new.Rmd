@@ -1,8 +1,11 @@
 ---
 params:
   projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
-  project_title: "Default"    # Change depending on your project name
-  project_name: "Your name here" 
+  project_title: "Test"    # Change depending on your project name
+  researcher_name: "Name" # Name of the researcher leading the project
+  bioinformatician_name: "Name" # Name of the person running the R-ODAF analyses
+  metadata_file: "metadata.txt" # Name of the metadata file. Must be in inputs/metadata/ 
+  contrasts_file: "contrasts.txt" # Name of the contrasts file. Must be in inputs/contrasts/ 
   project_description: null # description of project for report, optional
   analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
   batch_var: "batch"          # For example, multiple plates
