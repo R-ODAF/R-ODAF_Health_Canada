@@ -151,7 +151,7 @@ if (params$collapse_replicates == T) {
 # B. Tab delimited sample information file with at least 2 columns:
 #    1. sample names identical to the column names of count_data
 #    2. compound/group/whatever (needs to identify to which experimental group the sample belongs)
-exp_metadata_file <- file.path(paths$metadata, "metadata.txt")
+exp_metadata_file <- file.path(paths$metadata, params[["metadata_file"]])
 # Check if the metadata was previously backed up.
 # If so, restore it before doing the new manual sample removal.
 # This is done to ensure we start with the full list of samples from the start.
