@@ -30,9 +30,10 @@ num_threads = pipeline_config["threads"]
 input_dir = main_dir / "inputs"
 raw_dir = input_dir / "raw" # should already exist
 metadata_dir = input_dir / "metadata" # should already exist
-metadata_file = metadata_dir / "metadata.txt" # should aready exist
 
-# Validate metadata file
+
+# Import and validate metadata file
+metadata_file = metadata_dir / common_config["metadata_file"] # should aready exist
 meta_pandas = pd.read_table(metadata_file)
 
 validate(meta_pandas, "../schema/metadata.schema.yaml")
@@ -44,6 +45,14 @@ sample_id_col = pipeline_config["sample_id"]
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
 
+# Import and validate contrasts file
+contrasts_dir = input_dir / "contrasts"
+contrasts_file =  contrasts_dir / common_config["contrasts_file"]
+
+contrasts_pandas = pd.read_table(contrasts_file, sep = "\t")
+# Check if contrasts file is tab-delmited with two columns
+if contrasts_pandas.shape[1] != 2:
+    sys.exit(f"Error! The contrasts file should have two tab-delimited columns, but it has {contrasts_pandas.shape[1]} columns. \n Double check that your file is tab-separated, not space separated.")
 
 # Check existence of reference files, break if not there
 genome_filename = pipeline_config["genome_filename"]
@@ -63,8 +72,10 @@ if check_ref_genome == False:
     sys.exit(f"Error! You are missing the expected reference annotation file: {annotation_filepath}")
 
 if common_config["platform"] =="TempO-Seq":
+    if common_config["biospyder_dbs"] is None or common_config["biospyder_manifest_file"] is None:
+        sys.exit(f"Error! You have biospyder information set to null in the config, but it is required for TempO-Seq analysis.")
+    
     biospyder_filepath = common_config["biospyder_dbs"] + common_config["biospyder_manifest_file"]
-
     check_manifest = os.path.exists(biospyder_filepath)
 
     if check_manifest == False:

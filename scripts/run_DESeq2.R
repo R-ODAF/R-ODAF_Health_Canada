@@ -33,7 +33,7 @@ sample_count_metadata <- list()
 sample_count_metadata$samples_postQC <- nrow(exp_metadata)
 
 # read in contrasts
-exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, "contrasts.txt"), paths)
+exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$contrasts_file), paths)
 original_design <- params$design
 
 # load count data
