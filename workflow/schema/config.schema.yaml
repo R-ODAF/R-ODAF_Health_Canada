@@ -45,9 +45,13 @@ properties:
       units:
         type: string
       biospyder_dbs:
-        type: string
+        type: 
+        - string
+        - 'null'
       biospyder_manifest_file:
-        type: string
+        type: 
+        - string
+        - 'null'
     required:
       - projectdir
       - project_title
