@@ -94,13 +94,13 @@ title: "`r params$platform` DEG analysis - GO and pathway analysis"
 
 
 
-# `r params$project_title` - GO and pathway analysis {-}
+# `r params$project_title` {-}
 
 Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
 
-Report prepared by: `r params$project_bioinformatics_name`
+Report prepared by: `r params$bioinformatician_name`
 
-Report prepared for: `r params$project_name`
+Report prepared for: `r params$researcher_name`
 
 
 ***

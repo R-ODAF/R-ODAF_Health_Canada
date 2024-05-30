@@ -35,8 +35,6 @@ params:
   units: "uM" # only required for biosets output. Units of dose
   biospyder_dbs: "~/shared/dbs/biospyder/"
   biospyder_manifest_file:  "Human_S1500_1.2_standardized.csv"
-title: "`r paste('Study-wide sample quality control:', gsub(pattern = '_', replacement = ' ', x = params$project_title))`"
-subtitle: "`r paste(params$platform)`"
 output:
   html_document:
     toc: true
@@ -46,9 +44,23 @@ output:
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
-author: "Matthew J. Meier"
 ---
 
+```{r setup, include=FALSE}
+startTime <- Sys.time()
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+# `r params$platform` - Study-wide sample quality control {-}
+## `r params$project_title` {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$bioinformatician_name`
+
+Report prepared for: `r params$researcher_name`
+
+***
 
 Modified from code provided by Andrew Williams (Health Canada) and recommendations from Joshua Harrill (US EPA). See [References].  
 
@@ -58,10 +70,6 @@ The purpose of this report is to provide objective metrics to assess sample qual
 
 This script will automatically output a new sample metadata table that includes only the samples passing the metrics here; that sample metadata will be used as input to subsequent analysis steps, thereby excluding any samples from analysis that do not meet these standards. 
 
-```{r setup, include=FALSE}
-startTime <- Sys.time()
-knitr::opts_chunk$set(warning = FALSE, message = FALSE)
-```
 
 ```{r load_libraries, message = F, warnings = F, echo = F}
 library(edgeR)
