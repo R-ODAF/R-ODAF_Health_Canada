@@ -11,7 +11,7 @@
 get_metadata <- function(file_path = NULL, paths) {
   if (is.null(file_path)) {
     message("No file path provided for metadata. Using default path.")
-    file_path <- file.path(paths[["metadata"]], "metadata.QC_applied.txt")
+    file_path <- file.path(paths[["qc"]], "metadata.QC_applied.txt")
   }
   # Make sure file exists before attempting to read
   if (!file.exists(file_path)) {

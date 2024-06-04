@@ -1443,7 +1443,7 @@ write.table(QAQC_annotated,
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(metadata_outliers_removed,
-            file.path(paths$metadata, "metadata.QC_applied.txt"),
+            file.path(paths$qc, "metadata.QC_applied.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))

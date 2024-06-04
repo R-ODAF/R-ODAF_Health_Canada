@@ -50,7 +50,7 @@ rm(data_env)
 gc()
 
 # Read in metadata
-exp_metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, "metadata.QC_applied.txt"), paths)
+exp_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
 
 facets <- R.ODAF.utils::get_facets(exp_metadata, params)
 
