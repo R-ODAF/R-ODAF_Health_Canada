@@ -120,6 +120,7 @@ make_tgxddi_reports <- function(pars, paths, facet) {
     pars$reports_filter <- facet
   }
   prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
+  pars$prefix <- prefix
   if (pars$generate_tgxddi_report) {
     message("Generating TGX-DDI report")
     tgxddi_report <- file.path(paths$projectdir, "Rmd", "tgx_ddi.Rmd")

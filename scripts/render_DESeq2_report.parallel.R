@@ -97,6 +97,16 @@ if (params$parallel) {
 if (params$generate_tgxddi_report) {
   if (params$platform == "TempO-Seq") {
     base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+    # Concatenate all the TGxDDI output csv files into one
+    tgxddi_files <- list.files(paths$reports_dir, pattern = "_tgx-ddi_results.csv", full.names = TRUE)
+    tgxddi_df <- readr::read_csv(tgxddi_files[1], show_col_types = FALSE)
+    for (i in 2:length(tgxddi_files)) {
+      tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
+    }
+    # Write out the concatenated file
+    readr::write_csv(tgxddi_df, file.path(paths$reports_dir, paste0("tgx-ddi_results_summary.csv")))
+    # Delete the individual files
+    file.remove(tgxddi_files)
   }
   else {
     message("TGxDDI report generation is currently only supported for TempO-Seq data.")

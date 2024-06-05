@@ -66,6 +66,7 @@ params:
   alpha: 0.05
   feature_id: null
   biospyder: null
+  prefix: null # Prefix for output files
 output:
   html_document:
     toc: true
@@ -569,6 +570,13 @@ summary_table2$Overall <- sapply(summary_table2$Overall, color_cells)
 # Print the formatted table
 kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
   kable_styling("striped", full_width = FALSE)
+
+
+# Output the summary table to a file
+# Remove HTML tags from the 'Overall' column
+summary_table2$Overall <- gsub("<.*?>", "", summary_table2$Overall)
+
+write.csv(summary_table2, file = file.path(paths$reports_dir, paste0(params$prefix, "_tgx-ddi_results.csv")), row.names = FALSE)
 ```
 
 
