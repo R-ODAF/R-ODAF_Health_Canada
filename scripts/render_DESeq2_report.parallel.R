@@ -96,7 +96,7 @@ if (params$parallel) {
 
 if (params$generate_tgxddi_report) {
   if (params$platform == "TempO-Seq") {
-    base::mapply(FUN = make_tgxddi_reports, facet = display_facets, MoreArgs = list(pars = params, paths = paths))
+    base::mapply(FUN = make_tgxddi_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
     # Concatenate all the TGxDDI output csv files into one
     tgxddi_files <- list.files(paths$reports_dir, pattern = "_tgx-ddi_results.csv", full.names = TRUE)
     tgxddi_df <- readr::read_csv(tgxddi_files[1], show_col_types = FALSE)
