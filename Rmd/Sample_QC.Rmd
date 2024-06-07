@@ -1036,7 +1036,6 @@ cor_plot <- ggplot(cor_distribution_all, aes(.data[[params$treatment_var]], mean
   geom_boxplot(outlier.shape = NA, outlier.color = NA) +
   geom_jitter(size = 0.5) +
   theme(axis.text = element_text(angle = 90))
-ggsave("File", device = "pdf")
 ggplotly(cor_plot)
 # Ok, there's a bug that prevents outliers from being hidden, but whatever.
 # https://github.com/plotly/plotly.R/issues/1114
@@ -1444,7 +1443,7 @@ write.table(QAQC_annotated,
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 write.table(metadata_outliers_removed,
-            file.path(paths$metadata, "metadata.QC_applied.txt"),
+            file.path(paths$qc, "metadata.QC_applied.txt"),
             sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
 
 count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))

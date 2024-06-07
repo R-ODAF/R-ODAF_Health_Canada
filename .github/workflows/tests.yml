@@ -108,7 +108,7 @@ jobs:
       - name: Generate md5sums
         run: |
           md5sum output/processed/count_table.tsv > checksum.count_table
-          md5sum inputs/metadata/metadata.QC_applied.txt > checksum.metadata.QC_applied
+          md5sum output/QC/metadata.QC_applied.txt > checksum.metadata.QC_applied
           md5sum output/QC/MultiQC_Report_data.zip > checksum.multiQC
           md5sum output/QC/details/QC_per_sample.txt > checksum.QC_per_sample
           md5sum output/analysis/analysis_default_????????-????/DEG_lists/BaP/*.txt > checksums.BaP_DEGs #wildcards for timestamped folder

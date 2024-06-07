@@ -28,7 +28,7 @@ paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg)
 ##############################################################################################
 
 # Read in metadata
-exp_metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, "metadata.QC_applied.txt"), paths)
+exp_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
 sample_count_metadata <- list()
 sample_count_metadata$samples_postQC <- nrow(exp_metadata)
 
