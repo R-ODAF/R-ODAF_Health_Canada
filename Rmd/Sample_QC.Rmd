@@ -96,6 +96,7 @@ library(dendsort)
 library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
 library(ggh4x)
+library(scales)
 ```
 
 
@@ -1679,7 +1680,7 @@ plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], co
   coord_flip()
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") 
 plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
 plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
 plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
@@ -1697,8 +1698,8 @@ plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]]),
   theme(axis.text.x = element_text(angle = 90))
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
-plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") + scale_y_continuous(labels = scales::scientific)
+plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads") 
 plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
 plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 ```
