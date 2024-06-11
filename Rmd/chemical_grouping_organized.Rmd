@@ -578,7 +578,7 @@ plotPCAcustom <- function(obj, title = "", trim_names = TRUE, ...) {
             "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
             "#000000", "#293352")
   if (length(unique(df$V3)) > length(cbp1)) {
-    cbp1 <- viridis(length(unique(df$V3)))
+    cbp1 <- hcl.colors(length(unique(df$V3)), "Roma")
   }
   p1 <- ggplot(df, aes(PC1, PC2, colour = V3)) +
     geom_point(size = 3) + scale_color_manual(values = cbp1) +
@@ -688,5 +688,29 @@ plot(hca_biomarker_genes_dendro, horiz = F, main = "ER-biomarker genes, bioactiv
 f <- prcomp(t(matrix_biomarker_genes_bioactive0.01), retx = TRUE, center = TRUE, scale. = TRUE)
 # plot it
 plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarker genes, Bioactivity > 1%, ER biomarker data not included")
+
+```
+
+```{r}
+# pick columns from matrix_biomarker_genes based on top doses
+matrix_biomarker_genes_topactive  <- matrix_biomarker_genes [, c(colnames(matrix_DEGs_top_bioactive_0.1))]
+matrix_biomarker_genes_topactive  <- as.matrix(matrix_biomarker_genes_topactive)
+rownames(matrix_biomarker_genes_topactive) <- id
+matrix_biomarker_genes_topactive[is.na(matrix_biomarker_genes_topactive)] <- 0
+
+# Hierarchical clustering
+hca_biomarker_genes_topactive <- hclust( as.dist(1-cor(as.matrix(matrix_biomarker_genes_topactive),
+                                  method = dist_method) ),
+                         method = link_method)
+hca_biomarker_genes_topactive_dendro <- as.dendrogram(hca_biomarker_genes_topactive)
+
+# plot dendrogram
+par(mar = c(20,4,4,4), cex = 0.75)
+plot(hca_biomarker_genes_topactive_dendro, horiz = F, main = "ER-biomarker genes, top doses of active chems, ER biomarker data not included")
+
+# make a PCA of the matrix
+g <- prcomp(t(matrix_biomarker_genes_topactive), retx = TRUE, center = TRUE, scale. = TRUE)
+# plot it
+plotPCAcustom(g, trim_names = F, legend.position = "right", title = "ER-biomarker genes, top doses of active chems, ER biomarker data not included")
 
 ```
