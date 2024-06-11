@@ -670,7 +670,7 @@ HC and PCA of genes used in ER biomarker, but without including the ER biomarker
 # pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
 
 matrix_biomarker_genes_bioactive0.01  <- matrix_biomarker_genes [, c(colnames(matrix_DEGs_bioactivity_gt_0.01))]
-matrix_biomarker_genes_bioactive0.01  <- as.matrix(matrix_biomarker_genes_bioactive0.01[, -1])
+matrix_biomarker_genes_bioactive0.01  <- as.matrix(matrix_biomarker_genes_bioactive0.01)
 rownames(matrix_biomarker_genes_bioactive0.01) <- id
 matrix_biomarker_genes_bioactive0.01[is.na(matrix_biomarker_genes_bioactive0.01)] <- 0
 
