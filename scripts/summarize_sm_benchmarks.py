@@ -1,6 +1,6 @@
 # This script produces a summary table from benchmark files output by Snakemake
 ## when running the R-ODAF_Health_Canada pipeline
-#Run it in the directory with the benchmark files
+
 
 import pandas as pd
 import glob
@@ -40,10 +40,7 @@ dfs = []
 
 # Loop through each file and read it into a DataFrame
 for file_path in file_paths:
-    # Extract the part of the file name between "benchmark." and ".txt"
     info_from_file_name = os.path.basename(file_path).split('benchmark.')[1].replace('.txt', '')
-    
-    # Read the file into a DataFrame
     df = pd.read_csv(file_path, sep='\t')
     
     # Add a new column with information from the file name
@@ -70,18 +67,34 @@ result_df = pd.DataFrame()
 # Calculate count for the "rule" column
 result_df['rule_count'] = grouped_df['rule'].count()
 
-# Iterate through the specified columns and calculate mean and total
-for column in args.columns:
-    if column in df.columns:
-        result_df[f'{column}_mean'] = grouped_df[column].mean()
-        result_df[f'{column}_total'] = grouped_df[column].sum()
+# Calculate mean and total for the "s" and "io_*" columns, if they're in the columns list
+if 's' in args.columns:
+    result_df['s_mean'] = grouped_df['s'].mean()
+    result_df['s_total'] = grouped_df['s'].sum()
+
+if 'io_in' in args.columns:
+    result_df['io_in_mean'] = grouped_df['io_in'].mean()
+    result_df['io_in_total'] = grouped_df['io_in'].sum()
+if 'io_out' in args.columns:
+    result_df['io_out_mean'] = grouped_df['io_out'].mean()
+    result_df['io_out_total'] = grouped_df['io_out'].sum()
+
+# Calculate max for the "max_*" columns, if they're in the columns list
+if 'max_rss' in args.columns:
+    result_df['max_rss_max'] = grouped_df['max_rss'].max()
+if 'max_vms' in args.columns:
+    result_df['max_vms_max'] = grouped_df['max_vms'].max()
+if 'max_uss' in args.columns:  
+    result_df['max_uss_max'] = grouped_df['max_uss'].max()
+if 'max_pss' in args.columns:
+    result_df['max_pss_max'] = grouped_df['max_pss'].max()
+
 
 # Reset the index to make "rule" a regular column
 result_df.reset_index(inplace=True)
 
 # Add tag column
 result_df['Tag'] = args.tag
-
 
 # Save the result DataFrame to a TSV file
 result_df.to_csv(args.output_file, sep='\t', index=False)
