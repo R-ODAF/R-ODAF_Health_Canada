@@ -1,0 +1,532 @@
+---
+params:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_title: "Test"    # Change depending on your project name
+  researcher_name: "Name" # Name of the researcher leading the project
+  bioinformatician_name: "Name" # Name of the person running the R-ODAF analyses
+  metadata_file: "metadata.txt" # Name of the metadata file. Must be in inputs/metadata/ 
+  contrasts_file: "contrasts.txt" # Name of the contrasts file. Must be in inputs/contrasts/ 
+  project_description: null # description of project for report, optional
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
+  batch_var: "batch"          # For example, multiple plates
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
+  formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
+  lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
+  strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
+  exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
+  exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+  include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+  cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
+  wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
+  # "wikipathways-20210810-gmt-Mus_musculus.gmt"
+  # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+  nBestFeatures: 20              # The number of best features to make plots of their counts
+  nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
+  nHeatmap: 50                   # Number of most variable genes for heatmap
+  nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+  generate_main_report: TRUE
+  generate_stats_report: TRUE
+  generate_data_explorer_report: TRUE
+  generate_go_pathway_report: TRUE
+  generate_tgxddi_report: TRUE
+  output_digits: 5
+  parallel: FALSE
+  species_data: null
+  count_data_file: null
+  sampledata_sep: null
+  MinCount: null
+  alpha: 0.05
+  feature_id: null
+  biospyder: null
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+bibliography: "`r file.path(params$projectdir, 'Rmd/tgx-hdaci-references.bib')`"
+
+---
+
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+library(tidyverse)
+library(cluster)
+library(Cairo)
+library(heatmap3)
+library(dendextend)
+library(ggplot2)
+library(pheatmap)
+library(viridis)
+library(knitr)
+library(kableExtra)
+library(plotly)
+library(gtable)
+library(grid)
+```
+
+
+---
+title: "`r params$platform` TGx-HDACi biomarker report"
+---
+
+# `r params$project_title` {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$bioinformatician_name`
+
+Report prepared for: `r params$researcher_name`
+
+***
+
+<span style="color:red;">
+WARNING: The TGx-HDACi biomarker was developed using the TK6 cell line after 4 hours of exposure [@cho_hdaci_2019].
+The results of this analysis may not be applicable to other cell lines, tissues, or experimental designs.
+</span>
+
+<span style="color:red;">Cell line used in this study: `r params$celltype` </span>
+
+This report shows the results of the TGx-HDACi biomarker analysis for the `r params$platform` platform. 
+
+TGX-HDACi was developed as a toxicogenomics signature to identify chemicals that cause histone deacetylase inhibition (HDACi).
+It uses an 81-gene classification tool generated from a training set of 20 chemicals: 10 HDACi and 10 non-HDACi chemicals. TK6 cells were exposed to specific doses of these chemicals for 4 hours, then the gene expression changes were measured using a whole-transcriptome TempO-Seq platform.
+
+The probability that a tested chemical is HDACi is calculated based on the similarity of its gene expression profile to the agents in the classifier.
+
+Three analyses are performed on test chemicals using the TGx-HDACi biomarker:
+
+1. Principal component analysis
+
+2. 2-dimensional hierarchical clustering
+
+3. Nearest Shrunken Centroids (NSC) probability analysis, visualized by heatmaps
+
+The test chemical is considered histone deacetylase inhibiting if it is positive in at least one of these analyses.
+Results of all three analyses are summarized in a table at the end of this report.
+
+
+```{r load_facet_data, include=FALSE}
+# Load facet data. Gets allBiomarkers and contrasts_subset for current facet
+load_facet_data(paths, params)
+
+# Have to deal with weird data setup in case2
+if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
+  allBiomarkers <- allBiomarkers[["all"]]
+}
+# in case1 and case3, allBiomarkers is fine as is
+```
+
+```{r import_control_info}
+# Get the control from the contrasts (first contrast)
+# This will only work if there's just one control for all the groups in the report
+control <- contrasts_subset %>%
+  dplyr::slice(1) %>%
+  pull(V2)
+```
+
+```{r process_data}
+df <- as.data.frame(allBiomarkers) %>%
+  dplyr::rename(ID = SampleID)
+
+# Collapse Duplicate IDs, taking the mean
+df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
+
+# Convert all columns except ID to numeric, collapse probes to genes
+# Probes are already collapsed to genes in write_additional_output.R lines 30-32
+# So taking means here probably is not necessary
+df <- df %>%
+  mutate(across(-ID, as.numeric)) %>%
+  group_by(ID) %>%
+  summarise_all(mean)
+
+## Average the dose replicates
+# Replace sample names with info from the metadata column used for deseq2 design
+designcol <- params$design
+df_no_id <- dplyr::select(df, -ID)
+name_mapping <- setNames(exp_metadata[[designcol]], exp_metadata$original_names)
+colnames(df_no_id) <- name_mapping[colnames(df_no_id)]
+
+# Calculate the row-wise mean for each unique base name, add ID column back on
+df_means <- df_no_id %>%
+  split.default(names(df_no_id)) %>%
+  map_df(rowMeans, na.rm = TRUE)
+df_means <- bind_cols(df["ID"], df_means)
+
+# Subset dataframe to just the reports group in case2
+if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
+  # Just want columns for the report facet plus the control
+  filter_columns <- contrasts_subset[[1]]
+  filter_columns <- c("ID", filter_columns, control)
+  #Replace "." with "-" in filter_columns
+  filter_columns <- gsub("\\.", "-", filter_columns)
+
+
+  # Subset the columns from the formatted df
+  df_means <- df_means %>%
+    select(all_of(filter_columns))
+}
+
+# Log2 ratios vs control (from contrasts)
+log2ratios <- df_means
+log2ratios[, -1] <- sweep(log2ratios[, -1], 1, log2ratios[[control]], `-`)
+# Remove the control column
+log2ratios <- dplyr::select(log2ratios, -one_of(control))
+```
+
+```{r load_classifier}
+# Classifier for TK6 cells
+classifier_path <- file.path(params$projectdir, "resources", "HDACi_classifier_TK6_wID_wlog2FC.txt")
+
+classifier <- read.delim(classifier_path, sep = "\t") %>%
+  distinct() %>%
+  dplyr::rename("5-FU" = X5.FU,
+         "2-DG" = X2.DG)
+
+HDACi_chems <- c("Api", "Mo", "Oxa", "Pan", "SBHA", "Scr", "Sodbuty", "Tac", "TSA", "Vor")
+
+nHDACi_chems <- c("2-DG", "5-FU", "Ant", "Ble", "CdCl2", "Cisp", "CPT", "HU", "Tun", "Vin")
+```
+
+```{r merge}
+merged <- merge(classifier, log2ratios, by = "ID")
+
+nmatched <- nrow(merged)
+
+missed <- setdiff(classifier$ID, merged$ID)
+```
+
+There are 81 genes in the biomarker and your data matched `r nmatched` of them. 
+The following genes were not found in your data: `r missed`.
+
+Mismatches can happen because of differences in gene annotation between temposeq platforms.
+
+# Principal Component Analysis
+
+The PCA plot is interactive. Hover over the points on the PCA plot to see chemical names.
+
+```{r PCA, warning=FALSE}
+# Done on log2 ratios
+
+# Save the ID column
+id_column <- merged$ID
+
+# Save just the log2FC columns
+merged_log2 <- merged %>%
+  dplyr::select(-c(1:10))
+
+# Calculate PCA using the classifier's mean and standard deviation
+pc_calc <- (merged_log2 - merged$pc.mean) / merged$pc.sd
+rownames(pc_calc) <- id_column
+
+pc1 <- as.vector(merged$pcl.1) %*% as.matrix(pc_calc)
+pc2 <- as.vector(merged$pcl.2) %*% as.matrix(pc_calc)
+
+df_pca <- data.frame(PC1 = t(pc1), PC2 = t(pc2))
+
+# Add group column
+df_pca <- df_pca %>% mutate(Group = case_when(
+  rownames(df_pca) %in% HDACi_chems ~ "HDACi",
+  rownames(df_pca) %in% nHDACi_chems ~ "Non-HDACi",
+  TRUE ~ "Test"
+))
+
+# Add a new column with the row names
+df_pca$Label <- rownames(df_pca)
+
+testchem_pc1 <- df_pca[21:nrow(df_pca), ] %>%
+  dplyr::select(PC1, Label) %>%
+  dplyr::rename(ID = Label)
+
+all_pc1 <- df_pca %>%
+  dplyr::select(PC1, Label) %>%
+  dplyr::rename(ID = Label)
+
+# Plot
+p <- ggplot(df_pca, aes(PC1, PC2)) +
+  geom_point(aes(color = Group, shape = Group, size = 1.2, text = Label)) +
+  scale_shape_manual(values = c("HDACi" = 19, "Non-HDACi" = 19, "Test" = 17)) +
+  scale_color_manual(values = c("HDACi" = "red", "Non-HDACi" = "blue", "Test" = "darkorange"), name = "Group") +
+  geom_text(data = subset(df_pca, Group == "Test"), aes(label = Label), nudge_y = 0.1, nudge_x = 0) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "darkgrey") +
+  theme_bw()
+
+# Convert to plotly object
+p <- ggplotly(p, tooltip = "text") # Hover text shows chemical names
+
+# Remove the legend title
+p <- p %>% layout(legend = list(title = list(text = "")))
+
+# Adjust point size, test chemical points are a bit bigger
+p$x$data[[1]]$marker$size <- p$x$data[[1]]$marker$size / 2
+p$x$data[[2]]$marker$size <- p$x$data[[2]]$marker$size / 2
+p$x$data[[3]]$marker$size <- p$x$data[[3]]$marker$size / 1.5
+
+p
+
+# Add the ID column back to merged_log2
+merged_log2 <- merged_log2 %>%
+  mutate(ID = id_column) %>%
+  select(ID, everything())
+```
+
+
+# Hierarchical Clustering {.tabset .tabset-pills}
+```{r Dendrograms, results='asis'}
+# Done on centred and scaled log2 ratios
+
+# Initialize a data frame to store the HC grouping results
+dendro_results_testchems <- data.frame(ID = character(), HC = character(), stringsAsFactors = FALSE)
+dendro_biomarker <- data.frame(ID = names(pc_calc[, 1:20]),
+                               HC = ifelse(names(pc_calc[, 1:20]) %in% HDACi_chems, "HDACi", "Non-HDACi"),
+                               stringsAsFactors = FALSE)
+
+# Dendrogram for each dose
+for (j in 21:ncol(pc_calc)){
+  cat(paste0("## ", colnames(pc_calc)[j], "\n"))
+  dendro <- dist(t(pc_calc[, c(1:20, j)]))
+  dendro <- hclust(dendro, method = "average")
+  dendro <- as.dendrogram(dendro)
+  labels_colors(dendro) <- c(rep("red", 13),
+                             rep("blue", 16),
+                             "darkorange")[order.dendrogram(dendro)]
+
+  # Increase the bottom margin to make room for x-axis labels
+  par(mar = c(10, 4, 4, 2))  # Default is c(5, 4, 4, 2) + 0.1
+
+  plot(dendro, horiz = FALSE, main = paste("Euclidean, Average Linkage (log2),", colnames(pc_calc)[j]))
+  cat("\n\n")
+
+  # Reset to default margins
+  par(mar = c(5, 4, 4, 2) + 0.1)
+
+  # Cut the dendrogram into 2 groups
+  dendro_groups <- cutree(dendro, k = 2)
+  test_sample_group <- dendro_groups[length(dendro_groups)]
+
+  # Count the number of HDACi chemicals that are in the same group as the test sample
+  same_group_count <- sum(dendro_groups[names(dendro_groups) %in% HDACi_chems] == test_sample_group)
+
+  # Find if test sample is in the same group as all HDACi chemicals
+  if (same_group_count == length(HDACi_chems)) {
+    result <- "HDACi"
+  } else if (same_group_count > 0) {
+    result <- "UNCERTAIN"
+  } else {
+    result <- "Non-HDACi"
+  }
+
+  # Save results for summary table
+  dendro_results_testchems <- rbind(dendro_results_testchems, data.frame(ID = colnames(pc_calc)[j], HC = result, stringsAsFactors = FALSE))
+}
+
+# Save results for all chemicals
+dendro_results_all <- rbind(dendro_biomarker, dendro_results_testchems)
+```
+
+
+# Nearest Shrunken Centroid Prediction and Heatmap
+```{r NSC}
+# Calculate probabilities of HDACi vs non-HDACi
+my_pred <- data.frame(samples = names(merged)[-c(1:10)], probH = 0, probNH = 0)
+for (k in 1:(ncol(merged) - 10)){
+  #k <- 1
+  H <- sum(((merged[, k + 10] - merged$HDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
+  NH <- sum(((merged[, k + 10] - merged$NonHDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
+  probH <- 1 / (1 + exp(H / 2 - NH / 2))
+  probNH <- 1 - probH
+
+  my_pred[k, 2] <- floor(100 * probH) / 100
+  my_pred[k, 3] <- floor(100 * probNH) / 100
+}
+
+# Save prediction info for summary table
+pred <- my_pred[21:nrow(my_pred), ] %>%
+  dplyr::select(samples, probH) %>%
+  dplyr::rename(ID = samples)
+
+pred_all <- my_pred %>%
+  dplyr::select(samples, probH) %>%
+  dplyr::rename(ID = samples)
+```
+
+```{r HM_annotations}
+# Make summary table for all chemicals, used for annotation bars on heatmap
+t1 <- all_pc1 %>%
+  merge(dendro_results_all, by = "ID") %>%
+  merge(pred_all, by = "ID") %>%
+  dplyr::rename(PCA = PC1, NSC = probH)
+
+t2 <- t1
+
+t2$PCA <- ifelse(sign(t1$PCA) == -1, "HDACi", "Non-HDACi")
+t2$NSC <- ifelse(t1$NSC > 0.5, "HDACi", "Non-HDACi")
+t2$Overall <- apply(t2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("HDACi" %in% x, "HDACi", "Non-HDACi"))
+
+rownames(t2) <- t2$ID
+t2 <- t2[, c("PCA", "HC", "NSC", "Overall")]
+
+# Convert all columns to factor
+t2[] <- lapply(t2, factor)
+```
+
+```{r setup_heatmap, fig.show='hide'}
+
+winsorize_sd <- function(x) {
+  mn <- mean(x)
+  sd <- sd(x)
+  x <- (x - mn) / sd
+  x[x > 3] <- 3
+  x[x < -3] <- -3
+  return(x)
+}
+
+# Standardize against PC.mn and PC.std from classifier, transform to log10
+standardized_log2 <- as.matrix(merged_log2[, -1])
+standardized_log2 <- (standardized_log2 - merged$pc.mean) / merged$pc.sd
+
+rownames(standardized_log2) <- id_column
+
+
+# Winsorize because temposeq data can be very bright on heatmap
+# What about RNA-seq data? Should I do a conditional? Should talk to Andrew
+std_win_log2 <- apply(standardized_log2, 2, winsorize_sd)
+
+# Calculate the color scale using the full data set
+breaks <- seq(min(std_win_log2, na.rm = TRUE), max(std_win_log2, na.rm = TRUE), length.out = 17)
+color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
+#color_scale <- viridis(17, option = "magma") #will play with colour scale
+
+# Define the color mapping for each annotation bar
+annotation_colors <- list(
+  PCA = c("Non-HDACi" = "blue", "HDACi" = "red"),
+  HC = c("Non-HDACi" = "blue", "UNCERTAIN" = "yellow", "HDACi" = "red"),
+  NSC = c("Non-HDACi" = "blue", "HDACi" = "red"),
+  Overall = c("Non-HDACi" = "blue", "HDACi" = "red")
+)
+
+# Reorder the rows in the annotation to match the matrix
+t2 <- t2[match(colnames(std_win_log2), rownames(t2)), ]
+
+# Create the heatmap
+p <- pheatmap(std_win_log2,
+              cluster_cols = FALSE,
+              # cluster_rows = FALSE,
+              gaps_col = 20,
+              color = color_scale,
+              breaks = breaks,
+              clustering_method = "average",
+              clustering_distance_rows = "correlation",
+              clustering_distance_cols = "correlation",
+              annotation_col = t2,
+              annotation_colors = annotation_colors)
+```
+
+```{r display_heatmap, fig.width=8, fig.height=10}
+# This is necessary to make a heatmap with a reasonable legend
+# Remove the legends for PCA, HC, and NSC
+gt <- p$gtable
+
+# Change the legend title
+annlegend_grob <- gt$grobs[[7]]
+annlegend_grob$children[[1]]$label <- "Prediction"
+
+# Create the new gTree
+new_annlegend_grob <- gTree(children = gList(annlegend_grob$children[[1]], annlegend_grob$children[[2]], annlegend_grob$children[[3]]), cl = "gTree")
+new_annlegend_grob$widths <- annlegend_grob$widths
+new_annlegend_grob$heights <- annlegend_grob$heights
+new_annlegend_grob$vp <- annlegend_grob$vp
+
+# Replace the original legend with the modified one
+gt$grobs[[7]] <- new_annlegend_grob
+
+# Display the modified heatmap
+plot.new()
+grid::grid.draw(gt)
+```
+
+# Summary Table
+
+```{r summary}
+# Create a summary table of test chemicals
+summary_table1 <- testchem_pc1 %>%
+  merge(dendro_results_testchems, by = "ID") %>%
+  merge(pred, by = "ID") %>%
+  dplyr::rename(PCA = PC1, NSC = probH)
+
+# Initialize
+summary_table2 <- summary_table1
+
+# Assign "HDACi" or "Non-HDACi" based on results in the three tests
+summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == -1, "HDACi", "Non-HDACi")
+summary_table2$HC <- summary_table1$HC
+summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "HDACi", "Non-HDACi")
+summary_table2$Overall <- apply(summary_table2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("HDACi" %in% x, "HDACi", "Non-HDACi"))
+
+# Color table cells
+color_cells <- function(x) {
+  ifelse(x == "HDACi", cell_spec(x, "html", color = "red"), cell_spec(x, "html", color = "blue"))
+}
+summary_table2$Overall <- sapply(summary_table2$Overall, color_cells)
+
+# Print the formatted table
+kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
+  kable_styling("striped", full_width = FALSE)
+
+
+# Output the summary table to a file
+# Remove HTML tags from the 'Overall' column
+summary_table2$Overall <- gsub("<.*?>", "", summary_table2$Overall)
+
+write.csv(summary_table2, file = file.path(paths$reports_dir, paste0(params$reports_filter, "_tgx-HDACi_results.csv")), row.names = FALSE)
+```
+
+
+# References
+
+---
+nocite: '@*'
+---
+
+
+<div id="refs"></div>
+
+
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
+```
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
