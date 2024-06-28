@@ -57,6 +57,7 @@ params:
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   generate_tgxddi_report: TRUE
+  generate_tgxhdaci_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
@@ -320,8 +321,8 @@ for (j in 21:ncol(pc_calc)){
   dendro <- dist(t(pc_calc[, c(1:20, j)]))
   dendro <- hclust(dendro, method = "average")
   dendro <- as.dendrogram(dendro)
-  labels_colors(dendro) <- c(rep("red", 13),
-                             rep("blue", 16),
+  labels_colors(dendro) <- c(rep("red", 10),
+                             rep("blue", 10),
                              "darkorange")[order.dendrogram(dendro)]
 
   # Increase the bottom margin to make room for x-axis labels

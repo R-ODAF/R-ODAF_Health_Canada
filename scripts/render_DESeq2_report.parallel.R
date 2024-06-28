@@ -117,6 +117,24 @@ if (params$generate_tgxddi_report) {
   }
 }
 
+if (params$generate_tgxhdaci_report) {
+  if (params$platform == "TempO-Seq") {
+    base::mapply(FUN = make_hdaci_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
+    # Concatenate all the TGxHDACi output csv files into one
+    tgxhdaci_files <- list.files(paths$reports_dir, pattern = "_tgx-HDACi_results.csv", full.names = TRUE)
+    tgxhdaci_df <- readr::read_csv(tgxhdaci_files[1], show_col_types = FALSE)
+    for (i in 2:length(tgxhdaci_files)) {
+      tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
+    }
+    # Write out the concatenated file
+    readr::write_csv(tgxhdaci_df, file.path(paths$reports_dir, paste0("tgx-hdaci_results_summary.csv")))
+    # Delete the individual files
+    file.remove(tgxhdaci_files)
+  }
+  else {
+    message("TGxhdaci report generation is currently only supported for TempO-Seq data.")
+  }
+}
 
 # Add back after troubleshooting above code...
 # if (!is.na(params$reports_facet)) {
