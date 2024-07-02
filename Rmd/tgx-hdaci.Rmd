@@ -206,6 +206,19 @@ log2ratios <- df_means
 log2ratios[, -1] <- sweep(log2ratios[, -1], 1, log2ratios[[control]], `-`)
 # Remove the control column
 log2ratios <- dplyr::select(log2ratios, -one_of(control))
+
+# Fix annotations depending on temposeq kit, to match classifier gene names
+# Need to update this for more kits!
+
+if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
+  log2ratios <- log2ratios %>%
+    dplyr::mutate(ID = case_when(
+      ID == "TMEM250" ~ "C9orf69",
+      ID == "TENT4B" ~ "PAPD5",
+      ID == "CEMIP2" ~ "TMEM2",
+      TRUE ~ ID
+    ))
+}
 ```
 
 ```{r load_classifier}
@@ -456,7 +469,7 @@ p <- pheatmap(std_win_log2,
               annotation_colors = annotation_colors)
 ```
 
-```{r display_heatmap, fig.width=8, fig.height=10}
+```{r display_heatmap, fig.width=8, fig.height=12}
 # This is necessary to make a heatmap with a reasonable legend
 # Remove the legends for PCA, HC, and NSC
 gt <- p$gtable
