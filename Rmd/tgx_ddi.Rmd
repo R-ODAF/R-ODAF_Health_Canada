@@ -157,16 +157,30 @@ control <- contrasts_subset %>%
   pull(V2)
 ```
 
+```{r import_IDs}
+biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
+biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
+
+biospyder_IDs <- biospyder_manifest_file %>%
+  dplyr::select(Gene_Symbol, Ensembl_Gene_ID) %>%
+  dplyr::rename(SampleID = Gene_Symbol)
+```
+
 ```{r process_data}
+if (params$platform == "TempO-Seq") {
 df <- as.data.frame(allBiomarkers) %>%
-  rename(ID = SampleID)
+  merge(biospyder_IDs, by = "SampleID") %>%
+  dplyr::rename(ID = Ensembl_Gene_ID) %>%
+  dplyr::select(-SampleID) %>%
+  dplyr::select(ID, everything())
+}
+
+
 
 # Collapse Duplicate IDs, taking the mean
 df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
 
-# Convert all columns except ID to numeric, collapse probes to genes
-# Probes are already collapsed to genes in write_additional_output.R lines 30-32
-# So taking means here probably is not necessary
+# Convert all columns except ID to numeric, average counts for same ensemblID
 df <- df %>%
   mutate(across(-ID, as.numeric)) %>%
   group_by(ID) %>%
@@ -211,9 +225,20 @@ log10ratios <- log2ratios %>%
 
 ```{r classifier}
 
-classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-classifier_Li-2015.txt")
+classifier_path <- file.path(params$projectdir, "resources", "Biomarker_TGx-DDI_Li2015_Tk6_with_IDs_PCA_and_training_set.txt")
 
 classifier <- read.delim(classifier_path, sep = "\t")
+
+# Save the classifier IDs for later
+classifier_IDs <- classifier %>%
+  dplyr::select(ID, ENTREZ_ID, Ensembl_Gene_ID) %>%
+  dplyr::rename(Gene_Symbol = ID)
+
+# Use ensembl ID instead of gene symbol
+classifier <- classifier %>%
+  dplyr::select(-ID) %>%
+  dplyr::rename(ID = Ensembl_Gene_ID) %>%
+  dplyr::select(ID, everything())
 
 colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
                                  "Cisplatin", "Etoposide", "Hydrogen Peroxide", "Hydroxyurea",
@@ -222,34 +247,6 @@ colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
                                  "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%",
                                  "HC toxin", "Heat Shock", "Oxamflatin", "Paclitaxel",
                                  "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
-
-# Fix annotations depending on temposeq kit
-# Need to talk to Andrew to find additional fixes
-if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
-  classifier <- classifier %>%
-    mutate(ID = case_when(
-      ID == "C12orf5" ~ "TIGAR",
-      ID == "FAM123B" ~ "AMER1",
-      TRUE ~ ID
-  ))
-}
-
-if (params$biospyder_manifest_file == "Human_S1500_Surrogate_2.0_standardized.csv") {
-  classifier <- classifier %>%
-    mutate(ID = case_when(
-      ID == "C12orf5" ~ "TIGAR",
-      ID == "FAM123B" ~ "AMER1",
-      ID == "HIST1H1E" ~ "H1-4",
-      ID == "HIST1H2BB" ~ "H2BC3",
-      ID == "HIST1H2BC" ~ "H2BC4",
-      ID == "HIST1H2BG" ~ "H2BC8",
-      ID == "HIST1H2BI" ~ "H2BC10",
-      ID == "HIST1H2BM" ~ "H2BC14",
-      ID == "HIST1H2BN" ~ "H2BC15",
-      ID == "HIST1H3D" ~ "H3C4",
-      TRUE ~ ID
-    ))
-}
 
 DDI_chems <- c("5 FU",
   "AraC",
@@ -290,6 +287,8 @@ merged_log10 <- merge(classifier, log10ratios, by = "ID")
 nmatched <- nrow(merged_log10)
 
 missed <- setdiff(classifier$ID, merged_log10$ID)
+
+# classifier_IDs %>% dplyr::filter(Ensembl_Gene_ID %in% missed)
 ```
 
 There are 64 genes in the biomarker and your data matched `r nmatched` of them. 
