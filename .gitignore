@@ -29,6 +29,17 @@
 *.log
 # Python stuff
 *.pyc
+
+## Inputs
+*metadata.txt
+*contrasts.txt
+*config.yaml
+inputs*/reference/*
+*.gmt
+*.csv
+inputs_* # For Lauren's testing setup
+*remove.txt
+
 # Custom
 ## Sequence files
 *fq
@@ -41,14 +52,6 @@
 *bam
 *sam
 *.bai
-
-## Inputs
-*metadata.txt
-*contrasts.txt
-*config.yaml
-inputs/reference/*
-*.gmt
-*.csv
 
 ## Test data repo
 test-data/
@@ -66,10 +69,6 @@ count_table*.tsv
 checksum*
 truth_checksums/*
 
-TODO.txt
-
-run.sh
-preprocessing.txt
 
 ## Misc
 *Log.out
@@ -92,13 +91,7 @@ analysis_complete
 reports_complete
 
 *.bak
-*remove.txt
-data/raw/run_folders.txt
+
+
 c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt
-reference/
-wikipathways-20210810-gmt-Homo_sapiens.gmt
-unify_temposeq_manifests/
-data/
-Human_S1500_1.2_standardized.csv
-test-data*
-truth_checksums*
+

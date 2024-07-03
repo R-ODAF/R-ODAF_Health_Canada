@@ -96,6 +96,7 @@ library(dendsort)
 library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
 library(ggh4x)
+library(scales)
 ```
 
 
@@ -1283,7 +1284,7 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 if (!is.na(params$batch_var)) {
   batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
 } else{
-  batch_length <- 5
+  batch_length <- 1
 }
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
 rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
@@ -1301,18 +1302,31 @@ plate_plot <- ggplot(QAQC_annotated, aes(x = factor(.data[[colname]]),
   scale_x_discrete(position = "top")
 
 if (!is.na(params$batch_var)) {
-    plate_plot <- plate_plot + facet_wrap(~ .data[[params$batch_var]], scales = "free", ncol = 2)
+  plate_plot <- plate_plot + facet_wrap2(
+    ~ .data[[params$batch_var]], 
+    scales = "free", axes = "all", remove_labels = FALSE, 
+    ncol = 2)
+} else {
+  plate_plot <- plate_plot + theme(
+    plot.margin = margin(0, 0, 0, 0, "cm"),
+    legend.text = element_text(size = 8)
+  )
 }
+
 ```
 
 
 ```{r}
-custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
+custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
+
+# Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
+custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
+
 ```
 
 ### Number of Mapped Reads
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Number of mapped reads"))  %>%
@@ -1321,7 +1335,7 @@ custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
 
 ### Fraction of Mapped Reads
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
   ggtitle("Fraction of mapped reads")) %>%
@@ -1330,7 +1344,7 @@ custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
 
 ### Nsig80
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
@@ -1339,7 +1353,7 @@ custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
 
 ### Ncov5
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
@@ -1348,7 +1362,7 @@ custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
 
 ### Gini
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
   ggtitle("Gini")) %>%
@@ -1357,7 +1371,7 @@ custom_fig_height <- ifelse(test = are_there_plates, yes = batch_length, no = 5)
 
 ### Any samples which failed
 
-```{r fig.height = as.numeric(custom_fig_height), eval = are_there_plates}
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
   geom_tile(mapping = aes(fill = log(.data[[params$dose]] + 1)),
             data = QAQC_annotated) +   
@@ -1679,7 +1693,7 @@ plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], co
   coord_flip()
 
 plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") 
 plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
 plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
 plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
@@ -1697,8 +1711,8 @@ plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]]),
   theme(axis.text.x = element_text(angle = 90))
 
 plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads")
-plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") + scale_y_continuous(labels = scales::scientific)
+plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads") 
 plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
 plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
 ```
