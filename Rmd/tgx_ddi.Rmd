@@ -162,23 +162,34 @@ biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifes
 biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
 
 biospyder_IDs <- biospyder_manifest_file %>%
-  dplyr::select(Gene_Symbol, Ensembl_Gene_ID) %>%
-  dplyr::rename(SampleID = Gene_Symbol)
+  dplyr::select(Probe_Name, Ensembl_Gene_ID)
+
+# Can't just use the Gene_symbol column because sometimes that's an alias and won't match the sample data
+
+# Take the Probe_Name column, remove everything after the underscore, and group probes for same gene
+biospyder_IDs$Probe_Name <- sub("_.*", "", biospyder_IDs$Probe_Name)
+biospyder_IDs <- biospyder_IDs %>%
+  distinct() %>%
+  rename(SampleID = Probe_Name)
 ```
 
 ```{r process_data}
+# Temposeq rows are named by gene symbol
+# So get the ensembl IDs from the biospyder manifest
 if (params$platform == "TempO-Seq") {
-df <- as.data.frame(allBiomarkers) %>%
-  merge(biospyder_IDs, by = "SampleID") %>%
-  dplyr::rename(ID = Ensembl_Gene_ID) %>%
-  dplyr::select(-SampleID) %>%
-  dplyr::select(ID, everything())
+  df <- as.data.frame(allBiomarkers) %>%
+    merge(biospyder_IDs, by = "SampleID") %>%
+    dplyr::rename(ID = Ensembl_Gene_ID) %>%
+    dplyr::select(-SampleID) %>%
+    dplyr::select(ID, everything()) %>%
+    dplyr::distinct()
 }
 
 
 
 # Collapse Duplicate IDs, taking the mean
-df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
+# Not if we're using ensembl IDs, only if it's probe IDs
+# df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
 
 # Convert all columns except ID to numeric, average counts for same ensemblID
 df <- df %>%
@@ -206,7 +217,6 @@ if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
   filter_columns <- c("ID", filter_columns, control)
   #Replace "." with "-" in filter_columns
   filter_columns <- gsub("\\.", "-", filter_columns)
-
 
   # Subset the columns from the formatted df
   df_means <- df_means %>%
