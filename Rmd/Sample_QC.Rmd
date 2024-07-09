@@ -1278,14 +1278,15 @@ Click on the tabs below to view the plate layout for the experiment (if any was 
 
 ```{r is-there-plate-info, echo = F, warning = F}
 are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = T))
-```
 
-```{r plate_pos, eval = are_there_plates}
 if (!is.na(params$batch_var)) {
   batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
 } else{
   batch_length <- 1
 }
+```
+
+```{r plate_pos, eval = are_there_plates}
 colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
 rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
 colname <- names(QAQC_annotated[colnum])
