@@ -157,40 +157,38 @@ control <- contrasts_subset %>%
   pull(V2)
 ```
 
-```{r import_IDs}
-biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
-biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
-
-biospyder_IDs <- biospyder_manifest_file %>%
-  dplyr::select(Probe_Name, Ensembl_Gene_ID)
-
-# Can't just use the Gene_symbol column because sometimes that's an alias and won't match the sample data
-
-# Take the Probe_Name column, remove everything after the underscore, and group probes for same gene
-biospyder_IDs$Probe_Name <- sub("_.*", "", biospyder_IDs$Probe_Name)
-biospyder_IDs <- biospyder_IDs %>%
-  distinct() %>%
-  rename(SampleID = Probe_Name)
-```
-
-```{r process_data}
+```{r get_IDs}
 # Temposeq rows are named by gene symbol
 # So get the ensembl IDs from the biospyder manifest
+
 if (params$platform == "TempO-Seq") {
+  biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
+  biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
+
+  biospyder_IDs <- biospyder_manifest_file %>%
+    dplyr::select(Probe_Name, Ensembl_Gene_ID)
+
+  # Can't just use the Gene_symbol column because sometimes that's an alias and won't match the sample data
+
+  # Take the Probe_Name column, remove everything after the underscore, and group probes for same gene
+  biospyder_IDs$Probe_Name <- sub("_.*", "", biospyder_IDs$Probe_Name)
+  biospyder_IDs <- biospyder_IDs %>%
+    dplyr::distinct() %>%
+    dplyr::rename(SampleID = Probe_Name)
+
   df <- as.data.frame(allBiomarkers) %>%
     merge(biospyder_IDs, by = "SampleID") %>%
     dplyr::rename(ID = Ensembl_Gene_ID) %>%
     dplyr::select(-SampleID) %>%
     dplyr::select(ID, everything()) %>%
     dplyr::distinct()
+} else {
+  ###### NEED TO EDIT FOR RNA-SEQ ################
+  df <- as.data.frame(allBiomarkers)
 }
+```
 
-
-
-# Collapse Duplicate IDs, taking the mean
-# Not if we're using ensembl IDs, only if it's probe IDs
-# df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
-
+```{r process_data}
 # Convert all columns except ID to numeric, average counts for same ensemblID
 df <- df %>%
   mutate(across(-ID, as.numeric)) %>%
@@ -210,7 +208,7 @@ df_means <- df_no_id %>%
   map_df(rowMeans, na.rm = TRUE)
 df_means <- bind_cols(df["ID"], df_means)
 
-# Subset dataframe to just the reports group in case2
+# In case 2: Subset dataframe to just the reports group
 if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
   # Just want columns for the report facet plus the control
   filter_columns <- contrasts_subset[[1]]
@@ -234,9 +232,7 @@ log10ratios <- log2ratios %>%
 ```
 
 ```{r classifier}
-
 classifier_path <- file.path(params$projectdir, "resources", "Biomarker_TGx-DDI_Li2015_Tk6_with_IDs_PCA_and_training_set.txt")
-
 classifier <- read.delim(classifier_path, sep = "\t")
 
 # Save the classifier IDs for later
