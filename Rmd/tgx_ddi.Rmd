@@ -486,7 +486,20 @@ winsorize_sd <- function(x) {
 standardized_log2 <- as.matrix(merged_log2[, -1])
 standardized_log2 <- (standardized_log2 - merged_log10$PC.mn) / merged_log10$PC.std
 
-rownames(standardized_log2) <- id_column
+# Add the ID column back, column name "ID"
+standardized_log2 <- cbind(ID = merged_log2$ID, standardized_log2)
+
+# Change the IDs to gene symbol
+standardized_log2 <- standardized_log2 %>%
+  merge(classifier_IDs, by.x = "ID", by.y = "Ensembl_Gene_ID") %>%
+  select(-ID, -ENTREZ_ID) %>%
+  select(Gene_Symbol, everything())
+
+rownames(standardized_log2) <- standardized_log2$Gene_Symbol
+standardized_log2 <- standardized_log2[, -1]
+
+# Don't know why everything is chr now, but make it numeric
+standardized_log2[] <- lapply(standardized_log2, as.numeric)
 
 standardized_log10 <- log10(2^standardized_log2)
 
