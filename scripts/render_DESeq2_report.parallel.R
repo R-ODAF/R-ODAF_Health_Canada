@@ -58,7 +58,11 @@ facets <- R.ODAF.utils::get_facets(exp_metadata, params)
 hasDEGs <- names(which(sapply(X = mergedDEGsList,
                                 FUN = function(i) length(i)>=1),
                          arr.ind = T))
+if(!is.na(params$deseq_facet)) {
 display_facets <- facets[facets %in% hasDEGs]
+} else {
+  display_facets <- facets
+}
 
 # set up the rest of the output paths (requires facets)
 paths <- R.ODAF.utils::set_up_filepaths(params,
