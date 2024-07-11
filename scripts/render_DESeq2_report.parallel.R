@@ -59,7 +59,7 @@ hasDEGs <- names(which(sapply(X = mergedDEGsList,
                                 FUN = function(i) length(i)>=1),
                          arr.ind = T))
 if(!is.na(params$deseq_facet)) {
-display_facets <- facets[facets %in% hasDEGs]
+  display_facets <- facets[facets %in% hasDEGs]
 } else {
   display_facets <- facets
 }
@@ -99,7 +99,7 @@ if (params$parallel) {
 }
 
 if (params$generate_tgxddi_report) {
-  if (params$platform == "TempO-Seq") {
+  if (params$species == "human") {
     base::mapply(FUN = make_tgxddi_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
     # Concatenate all the TGxDDI output csv files into one
     tgxddi_files <- list.files(paths$reports_dir, pattern = "_tgx-ddi_results.csv", full.names = TRUE)
@@ -113,7 +113,7 @@ if (params$generate_tgxddi_report) {
     file.remove(tgxddi_files)
   }
   else {
-    message("TGxDDI report generation is currently only supported for TempO-Seq data.")
+    message(paste("TGxDDI analysis is only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGxDDI analysis."))
   }
 }
 

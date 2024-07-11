@@ -183,8 +183,8 @@ if (params$platform == "TempO-Seq") {
     dplyr::select(ID, everything()) %>%
     dplyr::distinct()
 } else {
-  ###### NEED TO EDIT FOR RNA-SEQ ################
-  df <- as.data.frame(allBiomarkers)
+  df <- as.data.frame(allBiomarkers) %>%
+    dplyr::rename(ID = SampleID)
 }
 ```
 
