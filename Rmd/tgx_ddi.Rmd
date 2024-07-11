@@ -232,7 +232,7 @@ log10ratios <- log2ratios %>%
 ```
 
 ```{r classifier}
-classifier_path <- file.path(params$projectdir, "resources", "Biomarker_TGx-DDI_Li2015_Tk6_with_IDs_PCA_and_training_set.txt")
+classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-classifier_Li-2015.txt")
 classifier <- read.delim(classifier_path, sep = "\t")
 
 # Save the classifier IDs for later
