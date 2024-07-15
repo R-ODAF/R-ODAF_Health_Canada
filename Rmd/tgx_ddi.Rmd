@@ -157,16 +157,39 @@ control <- contrasts_subset %>%
   pull(V2)
 ```
 
+```{r get_IDs}
+# Temposeq rows are named by gene symbol
+# So get the ensembl IDs from the biospyder manifest
+
+if (params$platform == "TempO-Seq") {
+  biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
+  biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
+
+  biospyder_IDs <- biospyder_manifest_file %>%
+    dplyr::select(Probe_Name, Ensembl_Gene_ID)
+
+  # Can't just use the Gene_symbol column because sometimes that's an alias and won't match the sample data
+
+  # Take the Probe_Name column, remove everything after the underscore, and group probes for same gene
+  biospyder_IDs$Probe_Name <- sub("_.*", "", biospyder_IDs$Probe_Name)
+  biospyder_IDs <- biospyder_IDs %>%
+    dplyr::distinct() %>%
+    dplyr::rename(SampleID = Probe_Name)
+
+  df <- as.data.frame(allBiomarkers) %>%
+    merge(biospyder_IDs, by = "SampleID") %>%
+    dplyr::rename(ID = Ensembl_Gene_ID) %>%
+    dplyr::select(-SampleID) %>%
+    dplyr::select(ID, everything()) %>%
+    dplyr::distinct()
+} else {
+  df <- as.data.frame(allBiomarkers) %>%
+    dplyr::rename(ID = SampleID)
+}
+```
+
 ```{r process_data}
-df <- as.data.frame(allBiomarkers) %>%
-  rename(ID = SampleID)
-
-# Collapse Duplicate IDs, taking the mean
-df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
-
-# Convert all columns except ID to numeric, collapse probes to genes
-# Probes are already collapsed to genes in write_additional_output.R lines 30-32
-# So taking means here probably is not necessary
+# Convert all columns except ID to numeric, average counts for same ensemblID
 df <- df %>%
   mutate(across(-ID, as.numeric)) %>%
   group_by(ID) %>%
@@ -185,14 +208,13 @@ df_means <- df_no_id %>%
   map_df(rowMeans, na.rm = TRUE)
 df_means <- bind_cols(df["ID"], df_means)
 
-# Subset dataframe to just the reports group in case2
+# In case 2: Subset dataframe to just the reports group
 if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
   # Just want columns for the report facet plus the control
   filter_columns <- contrasts_subset[[1]]
   filter_columns <- c("ID", filter_columns, control)
   #Replace "." with "-" in filter_columns
   filter_columns <- gsub("\\.", "-", filter_columns)
-
 
   # Subset the columns from the formatted df
   df_means <- df_means %>%
@@ -210,10 +232,19 @@ log10ratios <- log2ratios %>%
 ```
 
 ```{r classifier}
-
 classifier_path <- file.path(params$projectdir, "resources", "tgx-ddi_biomarker-classifier_Li-2015.txt")
-
 classifier <- read.delim(classifier_path, sep = "\t")
+
+# Save the classifier IDs for later
+classifier_IDs <- classifier %>%
+  dplyr::select(ID, ENTREZ_ID, Ensembl_Gene_ID) %>%
+  dplyr::rename(Gene_Symbol = ID)
+
+# Use ensembl ID instead of gene symbol
+classifier <- classifier %>%
+  dplyr::select(-ID) %>%
+  dplyr::rename(ID = Ensembl_Gene_ID) %>%
+  dplyr::select(ID, everything())
 
 colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
                                  "Cisplatin", "Etoposide", "Hydrogen Peroxide", "Hydroxyurea",
@@ -222,34 +253,6 @@ colnames(classifier)[11:39] <- c("5 FU", "AraC", "Bleomycin", "Camptothecin",
                                  "Colchicine", "Docetaxel", "EtOH 2%", "EtOH 4%",
                                  "HC toxin", "Heat Shock", "Oxamflatin", "Paclitaxel",
                                  "Thapsigargin", "TSA", "Tunicamysin", "Vinblastine")
-
-# Fix annotations depending on temposeq kit
-# Need to talk to Andrew to find additional fixes
-if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
-  classifier <- classifier %>%
-    mutate(ID = case_when(
-      ID == "C12orf5" ~ "TIGAR",
-      ID == "FAM123B" ~ "AMER1",
-      TRUE ~ ID
-  ))
-}
-
-if (params$biospyder_manifest_file == "Human_S1500_Surrogate_2.0_standardized.csv") {
-  classifier <- classifier %>%
-    mutate(ID = case_when(
-      ID == "C12orf5" ~ "TIGAR",
-      ID == "FAM123B" ~ "AMER1",
-      ID == "HIST1H1E" ~ "H1-4",
-      ID == "HIST1H2BB" ~ "H2BC3",
-      ID == "HIST1H2BC" ~ "H2BC4",
-      ID == "HIST1H2BG" ~ "H2BC8",
-      ID == "HIST1H2BI" ~ "H2BC10",
-      ID == "HIST1H2BM" ~ "H2BC14",
-      ID == "HIST1H2BN" ~ "H2BC15",
-      ID == "HIST1H3D" ~ "H3C4",
-      TRUE ~ ID
-    ))
-}
 
 DDI_chems <- c("5 FU",
   "AraC",
@@ -290,6 +293,8 @@ merged_log10 <- merge(classifier, log10ratios, by = "ID")
 nmatched <- nrow(merged_log10)
 
 missed <- setdiff(classifier$ID, merged_log10$ID)
+
+# classifier_IDs %>% dplyr::filter(Ensembl_Gene_ID %in% missed)
 ```
 
 There are 64 genes in the biomarker and your data matched `r nmatched` of them. 
@@ -481,7 +486,20 @@ winsorize_sd <- function(x) {
 standardized_log2 <- as.matrix(merged_log2[, -1])
 standardized_log2 <- (standardized_log2 - merged_log10$PC.mn) / merged_log10$PC.std
 
-rownames(standardized_log2) <- id_column
+# Add the ID column back, column name "ID"
+standardized_log2 <- cbind(ID = merged_log2$ID, standardized_log2)
+
+# Change the IDs to gene symbol
+standardized_log2 <- standardized_log2 %>%
+  merge(classifier_IDs, by.x = "ID", by.y = "Ensembl_Gene_ID") %>%
+  select(-ID, -ENTREZ_ID) %>%
+  select(Gene_Symbol, everything())
+
+rownames(standardized_log2) <- standardized_log2$Gene_Symbol
+standardized_log2 <- standardized_log2[, -1]
+
+# Don't know why everything is chr now, but make it numeric
+standardized_log2[] <- lapply(standardized_log2, as.numeric)
 
 standardized_log10 <- log10(2^standardized_log2)
 
