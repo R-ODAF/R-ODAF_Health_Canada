@@ -113,7 +113,7 @@ if (params$generate_tgxddi_report) {
     file.remove(tgxddi_files)
   }
   else {
-    message(paste("TGxDDI analysis is only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGxDDI analysis."))
+    message(paste("TGx-DDI analysis is only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-DDI analysis."))
   }
 }
 
