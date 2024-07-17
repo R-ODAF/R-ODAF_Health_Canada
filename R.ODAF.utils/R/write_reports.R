@@ -128,9 +128,9 @@ make_tgxddi_reports <- function(pars, paths, facet) {
   }
 }
 
-#' Generate TGx-DDI Report
+#' Generate TGx-HDACi Report
 #'
-#' Renders the TGx-DDI report HTML file for a given facet using the specified parameters.
+#' Renders the TGx-HDACi report HTML file for a given facet using the specified parameters.
 #' The function updates the `reports_filter` in `pars` based on the facet provided.
 #'
 #' @param pars A list of parameters used for report generation.
