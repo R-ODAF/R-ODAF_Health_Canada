@@ -159,16 +159,39 @@ control <- contrasts_subset %>%
   pull(V2)
 ```
 
+```{r get_IDs}
+# Temposeq rows are named by gene symbol
+# So get the ensembl IDs from the biospyder manifest
+
+if (params$platform == "TempO-Seq") {
+  biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
+  biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
+
+  biospyder_IDs <- biospyder_manifest_file %>%
+    dplyr::select(Probe_Name, Ensembl_Gene_ID)
+
+  # Can't just use the Gene_symbol column because sometimes that's an alias and won't match the sample data
+
+  # Take the Probe_Name column, remove everything after the underscore, and group probes for same gene
+  biospyder_IDs$Probe_Name <- sub("_.*", "", biospyder_IDs$Probe_Name)
+  biospyder_IDs <- biospyder_IDs %>%
+    dplyr::distinct() %>%
+    dplyr::rename(SampleID = Probe_Name)
+
+  df <- as.data.frame(allBiomarkers) %>%
+    merge(biospyder_IDs, by = "SampleID") %>%
+    dplyr::rename(ID = Ensembl_Gene_ID) %>%
+    dplyr::select(-SampleID) %>%
+    dplyr::select(ID, everything()) %>%
+    dplyr::distinct()
+} else {
+  df <- as.data.frame(allBiomarkers) %>%
+    dplyr::rename(ID = SampleID)
+}
+```
+
 ```{r process_data}
-df <- as.data.frame(allBiomarkers) %>%
-  dplyr::rename(ID = SampleID)
-
-# Collapse Duplicate IDs, taking the mean
-df$ID <- sub("_.*", "", df$ID) # remove everything after the underscore in the first column of df
-
-# Convert all columns except ID to numeric, collapse probes to genes
-# Probes are already collapsed to genes in write_additional_output.R lines 30-32
-# So taking means here probably is not necessary
+# Convert all columns except ID to numeric, collapse replicate IDs
 df <- df %>%
   mutate(across(-ID, as.numeric)) %>%
   group_by(ID) %>%
@@ -206,26 +229,22 @@ log2ratios <- df_means
 log2ratios[, -1] <- sweep(log2ratios[, -1], 1, log2ratios[[control]], `-`)
 # Remove the control column
 log2ratios <- dplyr::select(log2ratios, -one_of(control))
-
-# Fix annotations depending on temposeq kit, to match classifier gene names
-# Need to update this for more kits!
-
-if (params$biospyder_manifest_file == "Human_Whole_Transcriptome_2.0_standardized.csv") {
-  log2ratios <- log2ratios %>%
-    dplyr::mutate(ID = case_when(
-      ID == "TMEM250" ~ "C9orf69",
-      ID == "TENT4B" ~ "PAPD5",
-      ID == "CEMIP2" ~ "TMEM2",
-      TRUE ~ ID
-    ))
-}
 ```
 
 ```{r load_classifier}
 # Classifier for TK6 cells
 classifier_path <- file.path(params$projectdir, "resources", "HDACi_classifier_TK6_wID_wlog2FC.txt")
+classifier <- read.delim(classifier_path, sep = "\t")
 
-classifier <- read.delim(classifier_path, sep = "\t") %>%
+# Save the classifier IDs for later
+classifier_IDs <- classifier %>%
+  dplyr::select(ID, Entrez_ID, Ensembl_Gene_ID) %>%
+  dplyr::rename(Gene_Symbol = ID)
+
+classifier <- classifier %>%
+  dplyr::select(-ID) %>%
+  dplyr::rename(ID = Ensembl_Gene_ID) %>%
+  dplyr::select(ID, everything()) %>%
   distinct() %>%
   dplyr::rename("5-FU" = X5.FU,
          "2-DG" = X2.DG)
@@ -260,7 +279,7 @@ id_column <- merged$ID
 
 # Save just the log2FC columns
 merged_log2 <- merged %>%
-  dplyr::select(-c(1:10))
+  dplyr::select(-c(1:9))
 
 # Calculate PCA using the classifier's mean and standard deviation
 pc_calc <- (merged_log2 - merged$pc.mean) / merged$pc.sd
@@ -375,11 +394,11 @@ dendro_results_all <- rbind(dendro_biomarker, dendro_results_testchems)
 # Nearest Shrunken Centroid Prediction and Heatmap
 ```{r NSC}
 # Calculate probabilities of HDACi vs non-HDACi
-my_pred <- data.frame(samples = names(merged)[-c(1:10)], probH = 0, probNH = 0)
-for (k in 1:(ncol(merged) - 10)){
+my_pred <- data.frame(samples = names(merged)[-c(1:9)], probH = 0, probNH = 0)
+for (k in 1:(ncol(merged) - 9)){
   #k <- 1
-  H <- sum(((merged[, k + 10] - merged$HDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
-  NH <- sum(((merged[, k + 10] - merged$NonHDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
+  H <- sum(((merged[, k + 9] - merged$HDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
+  NH <- sum(((merged[, k + 9] - merged$NonHDACi.score) / merged$std.dev)^2) - 2 * log(0.5)
   probH <- 1 / (1 + exp(H / 2 - NH / 2))
   probNH <- 1 - probH
 
@@ -432,8 +451,20 @@ winsorize_sd <- function(x) {
 standardized_log2 <- as.matrix(merged_log2[, -1])
 standardized_log2 <- (standardized_log2 - merged$pc.mean) / merged$pc.sd
 
-rownames(standardized_log2) <- id_column
+# Add the ID column back, column name "ID"
+standardized_log2 <- cbind(ID = merged_log2$ID, standardized_log2)
 
+# Change the IDs to gene symbol
+standardized_log2 <- standardized_log2 %>%
+  merge(classifier_IDs, by.x = "ID", by.y = "Ensembl_Gene_ID") %>%
+  select(-ID, -Entrez_ID) %>%
+  select(Gene_Symbol, everything())
+
+rownames(standardized_log2) <- standardized_log2$Gene_Symbol
+standardized_log2 <- standardized_log2[, -1]
+
+# Don't know why everything is chr now, but make it numeric
+standardized_log2[] <- lapply(standardized_log2, as.numeric)
 
 # Winsorize because temposeq data can be very bright on heatmap
 # What about RNA-seq data? Should I do a conditional? Should talk to Andrew
