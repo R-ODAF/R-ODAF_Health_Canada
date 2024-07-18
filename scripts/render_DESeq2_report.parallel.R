@@ -118,7 +118,7 @@ if (params$generate_tgxddi_report) {
 }
 
 if (params$generate_tgxhdaci_report) {
-  if (params$platform == "TempO-Seq") {
+  if (params$species == "human") {
     base::mapply(FUN = make_hdaci_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
     # Concatenate all the TGxHDACi output csv files into one
     tgxhdaci_files <- list.files(paths$reports_dir, pattern = "_tgx-HDACi_results.csv", full.names = TRUE)
@@ -132,11 +132,10 @@ if (params$generate_tgxhdaci_report) {
     file.remove(tgxhdaci_files)
   }
   else {
-    message("TGxhdaci report generation is currently only supported for TempO-Seq data.")
+    message("TGx-HDACi report generation is currently only human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")
   }
 }
 
-# Add back after troubleshooting above code...
 if (!is.na(params$reports_facet)) {
   summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
 }
