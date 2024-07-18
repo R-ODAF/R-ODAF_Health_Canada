@@ -75,7 +75,7 @@ output:
     code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
-bibliography: "`r file.path(params$projectdir, 'Rmd/tgx-hdaci-references.bib')`"
+bibliography: "`r file.path(params$projectdir, 'references/tgx-hdaci-references.bib')`"
 
 ---
 
