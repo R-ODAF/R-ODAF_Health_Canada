@@ -298,8 +298,10 @@ missed <- setdiff(classifier$ID, merged_log10$ID)
 # classifier_IDs %>% dplyr::filter(Ensembl_Gene_ID %in% missed)
 ```
 
-There are 64 genes in the biomarker and your data matched `r nmatched` of them. 
-The following genes were not found in your data: `r missed`.
+### Mismatches
+There are **64** genes in the biomarker and your data matched **`r nmatched`** of them. 
+
+The following genes were not found in your data: **`r missed`.**
 
 Mismatches can happen because of differences in gene annotation between temposeq platforms.
 
