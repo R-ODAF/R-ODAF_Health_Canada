@@ -1,0 +1,186 @@
+---
+params:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_title: "Test"    # Change depending on your project name
+  researcher_name: "Name" # Name of the researcher leading the project
+  bioinformatician_name: "Name" # Name of the person running the R-ODAF analyses
+  metadata_file: "metadata.txt" # Name of the metadata file. Must be in inputs/metadata/ 
+  contrasts_file: "contrasts.txt" # Name of the contrasts file. Must be in inputs/contrasts/ 
+  project_description: null # description of project for report, optional
+  clust_method: "spearman" # For clustering
+  studywide_tree_height_cutoff: 0.1  # For clustering
+  group_tree_height_cutoff: 0.2
+  dendro_color_by: "group" # Specify how you would like to color the dendrograms
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  align_threshold: 0.5     # 50% alignment rate for TempO-Seq Experiments
+  gini_cutoff: 0.95
+  exp_groups:
+    value:
+      one: ["chemical", "dose"]
+      #two: ["I7_Index_ID", "I5_Index_ID"]
+      three: ["row", "column"]
+    #4: ["batch"]
+    #As many groups as desired...
+  batch_var: "temposeq_plate"          # "batch"
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  treatment_var: "chemical"
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
+  # Column names for metadata, if applicable
+  technical_control: "technical_control"
+  reference_rna: "reference_rna"
+  solvent_control: "solvent_control"
+  write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "Some cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file:  "Human_S1500_1.2_standardized.csv"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+bibliography: "`r file.path(params$projectdir, 'Rmd/references.bib')`"
+---
+```{r load_libraries}
+library(here)
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+
+```
+
+```{r temp}
+devtools::load_all("./R.ODAF.utils") # Remove this if calling Rmd from another script
+
+# Parse command line arguments
+run_args <- commandArgs(trailingOnly = TRUE)
+
+# Check if at least one argument is provided
+if (length(run_args) > 0) {
+  # Assume the first argument is the new location
+  results_location_arg <- run_args[1]
+  # Source functions and pass along analysis directory argument
+} else {
+  message("Error: Missing argument. Provide the analysis directory name as an argument.")
+}
+
+
+# Load project parameters
+# params <- R.ODAF.utils::get_params(context = "analysis")
+### UGH, the get_params function will only get common + Deseq params (analysis) or common + QC params (QC), never both
+
+message("Reading config file...")
+config <- yaml::read_yaml(here::here("inputs", "config", "config.yaml"), eval.expr = TRUE)
+params <- c(config$common, config$QC, config$DESeq2)
+params <- replace_nulls_in_config(params)
+
+# Set up initial project paths
+paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg)
+```
+
+```{r paths}
+############################################################################
+# File paths in project directory
+############################################################################
+paths <- R.ODAF.utils::set_up_filepaths(params)
+knitr::opts_knit$set(root.dir = paths[["projectdir"]])
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+```{r setup, include=FALSE}
+startTime <- Sys.time()
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+
+has_description <- !is.na(params$project_description)
+description_text <- paste("Purpose of report:", params$project_description)
+```
+
+
+# `r params$project_title` Summary Report {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$bioinformatician_name`
+
+Report prepared for: `r params$researcher_name`
+
+`r if(has_description){description_text}`
+
+***
+
+
+
+## Sample Quality Controls
+
+Quality control of each sample is performed according to the criteria laid out in Harrill et al., 2021 [cite!], plus an additional filter for the distance between samples in hierarchical clustering.
+
+
+```{r criteria_table}
+criteria <- data.frame(
+  Abbreviation = c("NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Description = c("All-samples clustering distance",
+                  "Number of mapped reads",
+                  "Fraction of uniquely mapped reads", 
+                  "Number of probes with at least 5 uniquely mapped reads", 
+                  "Number of probes capturing the top 80% of a signal in a sample", 
+                  "Gini coefficient"),
+  "Threshold" = c(params$studywide_tree_height_cutoff,params$nmr_threshold, params$align_threshold, "within 3*IQR", "within 3*IQR", params$gini_cutoff)
+)
+
+# Generate and style the table
+criteria %>%
+  kable("html", caption = "Criteria Table") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+## Is it possible to get the thresholds from the Sample QC report?
+```
+
+
+```{r import_QC}
+metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, params$metadata_file), paths)
+
+tech_ctrl_names <- metadata %>%
+  dplyr::filter(.data[[params$technical_control]] == TRUE) %>%
+  dplyr::pull(original_names)
+
+sample_names <- metadata %>%
+  dplyr::filter(.data[[params$technical_control]] == FALSE) %>%
+  dplyr::pull(original_names)
+
+ref_samples <- metadata %>%
+  dplyr::filter(.data[[params$reference_rna]] == TRUE) %>%
+  dplyr::pull(original_names)
+```
+
+This project contained `r nrow(metadata)` total samples. Of these, `r length(tech_ctrl_names)` were technical controls, `r length(ref_samples)` were reference RNA samples, and `r length(sample_names)` were experimental samples.
+
+```{r sample_qc}
+qc_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
+qc_info <- file.path(paths$qc, "details", "QC_per_sample.txt")
+qc_info <- read.delim(qc_info, sep = "\t", stringsAsFactors = FALSE)
+
+passed <- qc_info %>%
+  dplyr::filter(Any == "PASS") %>%
+  dplyr::pull(sample_ID)
+
+num_passed_refs <- passed %in% ref_samples %>% sum()
+num_passed_samples <- passed %in% sample_names %>% sum()
+
+pass_table <- data.frame(
+  "Sample Type" = c("Experimental Samples", "Reference RNA", "Technical Controls"),
+  "Total Number" = c(length(sample_names), length(ref_samples), length(tech_ctrl_names)),
+  "Number Passing QC Filters" = c(num_passed_samples, num_passed_refs, "N/A*")
+)
+
+pass_table %>%
+  kable("html", caption = "Passing QC Table") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+*Note that technical controls are used to check the quality of the sequencing run and are not subject to the same QC filters as experimental samples.
+
