@@ -61,14 +61,14 @@ devtools::load_all("./R.ODAF.utils") # Remove this if calling Rmd from another s
 run_args <- commandArgs(trailingOnly = TRUE)
 
 # Check if at least one argument is provided
-if (length(run_args) > 0) {
-  # Assume the first argument is the new location
-  results_location_arg <- run_args[1]
-  # Source functions and pass along analysis directory argument
-} else {
-  message("Error: Missing argument. Provide the analysis directory name as an argument.")
-}
-
+# if (length(run_args) > 0) {
+#   # Assume the first argument is the new location
+#   results_location_arg <- run_args[1]
+#   # Source functions and pass along analysis directory argument
+# } else {
+#   message("Error: Missing argument. Provide the analysis directory name as an argument.")
+# }
+results_location_arg <- "analysis_test_pathways_20240722-1632"
 
 # Load project parameters
 # params <- R.ODAF.utils::get_params(context = "analysis")
@@ -87,7 +87,7 @@ paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg)
 ############################################################################
 # File paths in project directory
 ############################################################################
-paths <- R.ODAF.utils::set_up_filepaths(params)
+# paths <- R.ODAF.utils::set_up_filepaths(params)
 knitr::opts_knit$set(root.dir = paths[["projectdir"]])
 knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
@@ -122,14 +122,19 @@ Quality control of each sample is performed according to the criteria laid out i
 
 ```{r criteria_table}
 criteria <- data.frame(
-  Abbreviation = c("NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Abbreviation = c("Dendrogram","NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
   Description = c("All-samples clustering distance",
                   "Number of mapped reads",
                   "Fraction of uniquely mapped reads", 
                   "Number of probes with at least 5 uniquely mapped reads", 
                   "Number of probes capturing the top 80% of a signal in a sample", 
                   "Gini coefficient"),
-  "Threshold" = c(params$studywide_tree_height_cutoff,params$nmr_threshold, params$align_threshold, "within 3*IQR", "within 3*IQR", params$gini_cutoff)
+  "Threshold" = c(paste0("< ",params$studywide_tree_height_cutoff),
+                  paste0("> ",params$nmr_threshold),
+                  paste0("> ",params$align_threshold), 
+                  "within 3*IQR", "within 3*IQR", 
+                  paste0("< ",params$gini_cutoff)
+                  )
 )
 
 # Generate and style the table
@@ -137,7 +142,6 @@ criteria %>%
   kable("html", caption = "Criteria Table") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 
-## Is it possible to get the thresholds from the Sample QC report?
 ```
 
 
@@ -157,10 +161,13 @@ ref_samples <- metadata %>%
   dplyr::pull(original_names)
 ```
 
-This project contained `r nrow(metadata)` total samples. Of these, `r length(tech_ctrl_names)` were technical controls, `r length(ref_samples)` were reference RNA samples, and `r length(sample_names)` were experimental samples.
+
 
 ```{r sample_qc}
 qc_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
+
+
+
 qc_info <- file.path(paths$qc, "details", "QC_per_sample.txt")
 qc_info <- read.delim(qc_info, sep = "\t", stringsAsFactors = FALSE)
 
@@ -184,3 +191,163 @@ pass_table %>%
 
 *Note that technical controls are used to check the quality of the sequencing run and are not subject to the same QC filters as experimental samples.
 
+```{r QC_fails}
+fail_dendro <- qc_info %>%
+  dplyr::filter(dendrogram == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
+fail_nmr <- qc_info %>% 
+  dplyr::filter(NMR == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
+fail_fmr <- qc_info %>% 
+  dplyr::filter(FMR == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
+fail_ncov5 <- qc_info %>% 
+  dplyr::filter(Ncov5 == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
+fail_nsig80 <- qc_info %>% 
+  dplyr::filter(Nsig80 == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
+fail_gic <- qc_info %>% 
+  dplyr::filter(Gini == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+```
+
+## Samples Failing QC Filters {.tabset}
+
+### Clustering Distance
+```{r dendro_fail}
+fail_dendro %>%
+  kable("html", caption = "Samples Failing Clustering Distance Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+### Number of Mapped Reads
+```{r nmr_fail}
+fail_nmr %>%
+  kable("html", caption = "Samples Failing Number of Mapped Reads Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+### Fraction of Uniquely Mapped Reads
+```{r fmr_fail}
+fail_fmr %>%
+  kable("html", caption = "Samples Failing Fraction of Uniquely Mapped Reads Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+```
+
+### Number of Probes with at Least 5 Uniquely Mapped Reads
+```{r ncov5_fail}
+fail_ncov5 %>%
+  kable("html", caption = "Samples Failing Number of Probes with at Least 5 Uniquely Mapped Reads Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+### Number of Probes Capturing the Top 80% of a Signal in a Sample
+```{r nsig80_fail}
+fail_nsig80 %>%
+  kable("html", caption = "Samples Failing Number of Probes Capturing the Top 80% of a Signal in a Sample Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+### Gini Coefficient
+```{r gic_fail}
+fail_gic %>%
+  kable("html", caption = "Samples Failing Gini Coefficient Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+More details on filtering criteria for each sample, along with various other QC checks, figures, and tables, can be found in the Studywide Sample QC report.
+
+# Differential Expression
+
+Here is a methods blurb about differential expression analysis and R-ODAF filtering criteria.
+
+```{r DEGs}
+# read in contrasts
+exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$contrasts_file), paths)
+
+deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = FALSE)
+
+colnames(deg_counts) <- c(params$reports_facet, "contrast", "DEGs passing filter")
+```
+
+There were`r nrow(exp_contrasts)` contrasts analyzed in this project. Of these, `r nrow(deg_counts)` had differentially expressed genes (DEGs) that passed all R-ODAF filters.
+
+The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table below.
+
+```{r DEG_table}
+deg_counts %>%
+  kable("html", caption = "DEG Table") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+
+```{r DEG_figures}
+facets <- R.ODAF.utils::get_facets(qc_metadata, params)
+
+dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+load(dataFile) # metadata, contrasts, counts, resultsList
+
+if (!is.na(params$reports_facet)) {
+  plot_list <- summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
+
+  p1 <- plot_list$p1
+  p2 <- plot_list$p2
+
+}
+# TODO: I will need to put things in conditionals for whether there are facets, whether there are even DEGs, etc.
+p1
+```
+
+```{r p2}
+p2
+```
+
+
+
+
+# Biomarkers
+Biomarker analysis is only available on human datasets and the biomarkers available in this workflow have only been tested on specific cell lines. 
+The results of this analysis may not be applicable to other cell lines or tissues.
+
+The TGx-DDI biomarker was developed using the **TK6** cell line and has been tested on **HepaRG**.
+
+The TGx-HDACi biomarker was developed using the **TK6** cell line and has not been tested on other cells.
+
+<span style="color:red;">Cell line used in this study: `r params$celltype` </span>
+
+```{r check_biomarkers}
+if (params$generate_tgxddi_report && file.exists(file.path(paths$summary, "tgx-ddi_results_summary.csv"))) {
+  ddi_run <- TRUE
+} else {
+  ddi_run <- FALSE
+}
+## Uncomment once hdaci is implemented
+# if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx-HDACi_results_summary.csv"))) {
+#   hdaci_run <- TRUE
+# } else {
+#   hdaci_run <- FALSE
+# }
+```
+
+```{r tgxddi, eval = ddi_run}
+ddi_results <- read.csv(file.path(paths$summary, "tgx-ddi_results_summary.csv"), stringsAsFactors = FALSE)
+
+ddi_results %>%
+  kable("html", caption = "tgx-DDI Biomarker Results") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+```{r tgxhdaci, eval = hdaci_run}
+# hdaci_results <- read.csv(file.path(paths$summary, "tgx-HDACi_results_summary.csv"), stringsAsFactors = FALSE)
+
+# hdaci_results %>%
+#   kable("html", caption = "tgx-HDACi Biomarker Results") %>%
+#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```

@@ -74,8 +74,8 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          ylab("Number of DEGs") +
          xlab("Facet: contrast")
    }
-   ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "DEG_summary_plot.png")), p1,
-      width = plot_size, height = plot_size, units = "in", dpi = 300)
+   # ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "DEG_summary_plot.png")), p1,
+   #    width = plot_size, height = plot_size, units = "in", dpi = 300)
 
 
    # plot filter stats
@@ -117,7 +117,7 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          xlab("Facet: contrast")
    }
 
-   ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "filter_summary_plot.png")), p2,
-      width = plot_size, height = plot_size, units = "in", dpi = 300)
-
+   # ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "filter_summary_plot.png")), p2,
+   #    width = plot_size, height = plot_size, units = "in", dpi = 300)
+  return(list(p1 = p1, p2 = p2))
 }
