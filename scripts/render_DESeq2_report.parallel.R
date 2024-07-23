@@ -108,7 +108,7 @@ if (params$generate_tgxddi_report) {
       tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
     }
     # Write out the concatenated file
-    readr::write_csv(tgxddi_df, file.path(paths$reports_dir, paste0("tgx-ddi_results_summary.csv")))
+    readr::write_csv(tgxddi_df, file.path(paths$summary, paste0("tgx-ddi_results_summary.csv")))
     # Delete the individual files
     file.remove(tgxddi_files)
   }
