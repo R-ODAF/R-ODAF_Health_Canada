@@ -154,10 +154,7 @@ write_tables <- function(facet, params) {
               file = file.path(output_folder,
                                paste0(prefix, "-Per_sample_normalized_counts.txt")),
               quote = FALSE, sep = "\t", col.names = NA)
-  write.table(summary_counts,
-              file = file.path(output_folder,
-                               paste0(prefix, "-DEG_summary.txt")),
-              quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+
 
   if(params$write_additional_output){
     filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE) 

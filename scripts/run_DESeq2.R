@@ -181,3 +181,7 @@ if (params$parallel) {
     MoreArgs = list(params = params) # The list of additional static arguments
   )
 }
+
+write.table(summary_counts,
+            file = file.path(paths$summary, "DEG_counts.txt"),
+            quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
