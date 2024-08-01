@@ -123,6 +123,10 @@ if (params$generate_tgxddi_report) {
 #   summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
 # }
 
+if (params$generate_summary_report) {
+  make_summary_report(params, paths)
+}
+
 # NOTE Manually clean up temporary files
 # This is required because of the clean_tmpfiles_mod() workaround!
 system("rm -rf /tmp/intermediates_*")

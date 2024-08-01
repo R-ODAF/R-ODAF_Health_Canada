@@ -80,34 +80,7 @@ library(ggplot2)
 
 ```
 
-```{r temp}
-devtools::load_all("./R.ODAF.utils") # Remove this if calling Rmd from another script
 
-# Parse command line arguments
-run_args <- commandArgs(trailingOnly = TRUE)
-
-# Check if at least one argument is provided
-# if (length(run_args) > 0) {
-#   # Assume the first argument is the new location
-#   results_location_arg <- run_args[1]
-#   # Source functions and pass along analysis directory argument
-# } else {
-#   message("Error: Missing argument. Provide the analysis directory name as an argument.")
-# }
-results_location_arg <- "analysis_test_pathways_20240722-1632"
-
-# Load project parameters
-# params <- R.ODAF.utils::get_params(context = "analysis")
-### UGH, the get_params function will only get common + Deseq params (analysis) or common + QC params (QC), never both
-
-message("Reading config file...")
-config <- yaml::read_yaml(here::here("inputs", "config", "config.yaml"), eval.expr = TRUE)
-params <- c(config$common, config$QC, config$DESeq2)
-params <- replace_nulls_in_config(params)
-
-# Set up initial project paths
-paths <- R.ODAF.utils::set_up_filepaths(params, results_location_arg)
-```
 
 ```{r paths}
 ############################################################################
@@ -147,6 +120,12 @@ Quality control of each sample is performed according to the criteria laid out i
 
 
 ```{r criteria_table}
+# Workaround because "get_params(context = "analysis") leaves out QC parameters
+config <- yaml::read_yaml(file.path(paths$results,  "Pipeline_record", "config.yaml"), eval.expr = TRUE)
+
+qc_pars <- c(config$QC)
+qc_pars <- replace_nulls_in_config(qc_pars)
+
 criteria <- data.frame(
   Abbreviation = c("Dendrogram","NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
   Description = c("All-samples clustering distance",
@@ -155,11 +134,18 @@ criteria <- data.frame(
                   "Number of probes with at least 5 uniquely mapped reads", 
                   "Number of probes capturing the top 80% of a signal in a sample", 
                   "Gini coefficient"),
-  "Threshold" = c(paste0("< ",params$studywide_tree_height_cutoff),
+  "Default Threshold" = c("< 0.1",
+                          "> 10% of target read depth",
+                          "> 0.5",
+                          "within 3*IQR",
+                          "within 3*IQR",
+                          "RNA-Seq: < 0.99, TempO-Seq: < 0.95"),
+  "Threshold" = c(
+    paste0("< ",qc_pars$studywide_tree_height_cutoff),
                   paste0("> ",params$nmr_threshold),
-                  paste0("> ",params$align_threshold), 
+    paste0("> ",qc_pars$align_threshold), 
                   "within 3*IQR", "within 3*IQR", 
-                  paste0("< ",params$gini_cutoff)
+    paste0("< ",qc_pars$gini_cutoff)
                   )
 )
 
@@ -171,23 +157,26 @@ criteria %>%
 ```
 
 
-```{r import_QC}
+```{r passing_QC}
 metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, params$metadata_file), paths)
 
 tech_ctrl_names <- metadata %>%
-  dplyr::filter(.data[[params$technical_control]] == TRUE) %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "T") %>%
   dplyr::pull(original_names)
 
 sample_names <- metadata %>%
-  dplyr::filter(.data[[params$technical_control]] == FALSE) %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "F") %>%
+  dplyr::filter(.data[[params$solvent_control]] == "F") %>%
+  dplyr::pull(original_names)
+
+solvent_names <- metadata %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "F") %>%
+  dplyr::filter(.data[[params$solvent_control]] == "T") %>%
   dplyr::pull(original_names)
 
 ref_samples <- metadata %>%
-  dplyr::filter(.data[[params$reference_rna]] == TRUE) %>%
+  dplyr::filter(.data[[qc_pars$reference_rna]] == "T") %>%
   dplyr::pull(original_names)
-```
-
-
 
 ```{r sample_qc}
 qc_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
@@ -317,8 +306,9 @@ deg_counts %>%
 ```{r DEG_figures}
 facets <- R.ODAF.utils::get_facets(qc_metadata, params)
 
-dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-load(dataFile) # metadata, contrasts, counts, resultsList
+# Already loaded in render_DEseq2_report.parallel.R, so I probably shouldn't load here?
+# dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+# load(dataFile) # metadata, contrasts, counts, resultsList
 
 if (!is.na(params$reports_facet)) {
   plot_list <- summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)

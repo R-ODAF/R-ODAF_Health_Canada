@@ -127,3 +127,11 @@ make_tgxddi_reports <- function(pars, paths, facet) {
     render_report(tgxddi_report, tgxddi_file, pars)
   }
 }
+
+make_summary_report <- function(pars, paths)
+{
+  message("Generating summary report")
+  summary_report <- file.path(paths$projectdir, "Rmd", "summary_report_new.Rmd")
+  summary_file <- file.path(paths$summary, "summary_report.html")
+  render_report(summary_report, summary_file, pars)
+}
