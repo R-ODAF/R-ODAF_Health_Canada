@@ -95,25 +95,25 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          geom_bar(stat = "identity", position = "dodge") +
          facet_wrap(~name, scales = "free") +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Contrast")
 
    } else if (length(facets) < 10) {
       p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free") +
+         facet_wrap(~name, scales = "free_y", ncol = 1) +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Facet: contrast")
    } else {
       p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free") +
+         facet_wrap(~name, scales = "free_y", ncol = 1) +
          theme(axis.text.x = element_blank(),
             legend.position = "none") +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Facet: contrast")
    }
 
