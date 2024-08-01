@@ -71,6 +71,8 @@ output:
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 ---
+
+
 ```{r load_libraries}
 library(here)
 library(tidyverse)
@@ -114,7 +116,9 @@ Report prepared for: `r params$researcher_name`
 
 
 
-## Sample Quality Controls
+# Sample Quality Control 
+
+## Quality control criteria
 
 Quality control of each sample is performed according to the criteria laid out in Harrill et al., 2021 [cite!], plus an additional filter for the distance between samples in hierarchical clustering.
 
@@ -142,11 +146,11 @@ criteria <- data.frame(
                           "RNA-Seq: < 0.99, TempO-Seq: < 0.95"),
   "Threshold" = c(
     paste0("< ",qc_pars$studywide_tree_height_cutoff),
-                  paste0("> ",params$nmr_threshold),
+    paste0("> ",params$nmr_threshold),
     paste0("> ",qc_pars$align_threshold), 
-                  "within 3*IQR", "within 3*IQR", 
+    "within 3*IQR", "within 3*IQR", 
     paste0("< ",qc_pars$gini_cutoff)
-                  )
+  )
 )
 
 # Generate and style the table
@@ -156,6 +160,7 @@ criteria %>%
 
 ```
 
+## Samples passing quality control
 
 ```{r passing_QC}
 metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, params$metadata_file), paths)
@@ -178,10 +183,7 @@ ref_samples <- metadata %>%
   dplyr::filter(.data[[qc_pars$reference_rna]] == "T") %>%
   dplyr::pull(original_names)
 
-```{r sample_qc}
 qc_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
-
-
 
 qc_info <- file.path(paths$qc, "details", "QC_per_sample.txt")
 qc_info <- read.delim(qc_info, sep = "\t", stringsAsFactors = FALSE)
@@ -233,7 +235,9 @@ fail_gic <- qc_info %>%
   dplyr::select(sample_ID, params$dendro_color_by)
 ```
 
-## Samples Failing QC Filters {.tabset}
+## Samples Failing Quality Control {.tabset .tabset-pills}
+
+More details on filtering criteria for each sample, along with various other QC checks, figures, and tables, can be found in the Studywide Sample QC report.
 
 ### Clustering Distance
 ```{r dendro_fail}
@@ -278,11 +282,13 @@ fail_gic %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-More details on filtering criteria for each sample, along with various other QC checks, figures, and tables, can be found in the Studywide Sample QC report.
+
+---
 
 # Differential Expression
 
 Here is a methods blurb about differential expression analysis and R-ODAF filtering criteria.
+Possibly a table as well, like the QC criteria table above?
 
 ```{r DEGs}
 # read in contrasts
@@ -290,14 +296,18 @@ exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$c
 
 deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = FALSE)
 
-colnames(deg_counts) <- c(params$reports_facet, "contrast", "DEGs passing filter")
+colnames(deg_counts) <- c(params$reports_facet, "contrast", "DEGs passing filters")
 ```
 
-There were`r nrow(exp_contrasts)` contrasts analyzed in this project. Of these, `r nrow(deg_counts)` had differentially expressed genes (DEGs) that passed all R-ODAF filters.
+There were **`r nrow(exp_contrasts)` contrasts** analyzed in this project. 
 
-The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table below.
+Of these, **`r nrow(deg_counts)` contrasts** had differentially expressed genes (DEGs) that passed all R-ODAF filters.
+
+The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table and figure below.
 
 ```{r DEG_table}
+
+
 deg_counts %>%
   kable("html", caption = "DEG Table") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
@@ -322,7 +332,7 @@ if (!is.na(params$reports_facet)) {
 p1
 ```
 
-```{r p2}
+```{r p2, fig.height=12}
 p2
 ```
 
@@ -354,6 +364,10 @@ if (params$generate_tgxddi_report && file.exists(file.path(paths$summary, "tgx-d
 ```
 
 ```{r tgxddi, eval = ddi_run}
+# What I really want is a table, each row is a group (ex BaP_1.56) and columns are the calls for different biomarkers.
+# Don't need the results of each test, just the calls.
+# Need to get the tgx-DDI stuff in here first.
+
 ddi_results <- read.csv(file.path(paths$summary, "tgx-ddi_results_summary.csv"), stringsAsFactors = FALSE)
 
 ddi_results %>%
@@ -361,7 +375,8 @@ ddi_results %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-```{r tgxhdaci, eval = hdaci_run}
+```{r tgxhdaci, eval = FALSE}
+# {r tgxhdaci, eval = hdaci_run}
 # hdaci_results <- read.csv(file.path(paths$summary, "tgx-HDACi_results_summary.csv"), stringsAsFactors = FALSE)
 
 # hdaci_results %>%
