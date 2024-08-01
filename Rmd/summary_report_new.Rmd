@@ -52,6 +52,7 @@ params:
   generate_data_explorer_report: TRUE
   generate_go_pathway_report: TRUE
   generate_tgxddi_report: TRUE
+  generate_tgxhdaci_report: TRUE
   generate_summary_report: TRUE
   output_digits: 5
   parallel: FALSE
@@ -355,12 +356,12 @@ if (params$generate_tgxddi_report && file.exists(file.path(paths$summary, "tgx-d
 } else {
   ddi_run <- FALSE
 }
-## Uncomment once hdaci is implemented
-# if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx-HDACi_results_summary.csv"))) {
-#   hdaci_run <- TRUE
-# } else {
-#   hdaci_run <- FALSE
-# }
+# Uncomment once hdaci is implemented
+if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx-hdaci_results_summary.csv"))) {
+  hdaci_run <- TRUE
+} else {
+  hdaci_run <- FALSE
+}
 ```
 
 ```{r tgxddi, eval = ddi_run}
@@ -375,11 +376,10 @@ ddi_results %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-```{r tgxhdaci, eval = FALSE}
-# {r tgxhdaci, eval = hdaci_run}
-# hdaci_results <- read.csv(file.path(paths$summary, "tgx-HDACi_results_summary.csv"), stringsAsFactors = FALSE)
+```{r tgxhdaci, eval = hdaci_run}
+hdaci_results <- read.csv(file.path(paths$summary, "tgx-hdaci_results_summary.csv"), stringsAsFactors = FALSE)
 
-# hdaci_results %>%
-#   kable("html", caption = "tgx-HDACi Biomarker Results") %>%
-#   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+hdaci_results %>%
+  kable("html", caption = "tgx-HDACi Biomarker Results") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```

@@ -127,12 +127,12 @@ if (params$generate_tgxhdaci_report) {
       tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
     }
     # Write out the concatenated file
-    readr::write_csv(tgxhdaci_df, file.path(paths$reports_dir, paste0("tgx-hdaci_results_summary.csv")))
+    readr::write_csv(tgxhdaci_df, file.path(paths$summary, paste0("tgx-hdaci_results_summary.csv")))
     # Delete the individual files
     file.remove(tgxhdaci_files)
   }
   else {
-    message("TGx-HDACi report generation is currently only human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")
+    message("TGx-HDACi report generation is currently only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")
   }
 }
 
