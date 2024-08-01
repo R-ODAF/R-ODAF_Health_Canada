@@ -127,3 +127,28 @@ make_tgxddi_reports <- function(pars, paths, facet) {
     render_report(tgxddi_report, tgxddi_file, pars)
   }
 }
+
+#' Generate TGx-HDACi Report
+#'
+#' Renders the TGx-HDACi report HTML file for a given facet using the specified parameters.
+#' The function updates the `reports_filter` in `pars` based on the facet provided.
+#'
+#' @param pars A list of parameters used for report generation.
+#' @param facet A character string specifying the facet for which to generate the report.
+#' @param paths A list of paths used throughout the analysis.
+#' @return Invisible NULL. The function is called for its side effect of rendering an HTML report.
+#' @export
+make_hdaci_reports <- function(pars, paths, facet) {
+  if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
+    pars$reports_filter <- NULL
+  } else {
+    pars$reports_filter <- facet
+  }
+  prefix <-get_prefix(prefix_pars = pars, prefix_facet = facet)
+  if (pars$generate_tgxhdaci_report) {
+    message("Generating TGX-HDACi report")
+    tgxhdaci_report <- file.path(paths$projectdir, "Rmd", "tgx-hdaci.Rmd")
+    tgxhdaci_file <- file.path(paths$reports_dir, paste0("tgxhdaci_", prefix, ".html"))  
+    render_report(tgxhdaci_report, tgxhdaci_file, pars)
+  }
+}
