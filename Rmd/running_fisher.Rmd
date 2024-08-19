@@ -1,0 +1,297 @@
+
+################################################################
+# Libraries
+################################################################
+library(tidyverse)
+
+################################################################
+# Functions
+################################################################
+K <- function(bm, bioset){
+	#Arguements are two ranked order lists of genes
+	#Return the rankings for each common gene in the bioset
+	rnk <- 1:length(bioset)
+	K <- data.frame(ID = bm, Rank = 0)
+	ID <- 1:length(bioset)
+
+	for(j in 1:nrow(K)){
+		flag <- bioset == K$ID[j]
+		if(length(bioset[flag]) == 1) K$Rank[j] <- ID[flag]
+	}
+	K[K$Rank > 0,]
+}
+
+mat <- function(bm, bioset, N){
+	n <- length(bm)
+	x11 <- length(bioset[bioset %in% bm])
+	x12 <- n - x11
+	x21 <- length(bioset) - x11
+	x22 <- N - x21 - x11 - x12
+	matrix(c(x11, x21, x12, x22), ncol = 2)
+}
+
+test <- function(mat){
+	pval <- fisher.test(mat, alternative = "greater")$p.value
+	if(is.na(pval)){
+		pval <- 2.2e-16
+	}
+	pval
+}
+
+runningFisher <- function(bm, bioset, N){
+	score <- 0
+	if(length(bm) > 0){
+		Runs <- K(bm, bioset)
+		if(length(Runs$ID) > 0){
+			Runs$pval <- 1
+			for(k in 1:nrow(Runs)){
+				bs <- bioset[1:Runs$Rank[k]]
+				m <- mat(bm, bs, N)				
+				Runs$pval[k] <- test(m)
+			}
+			score <- min(Runs$pval*length(Runs$pval))
+			if(score > 1) score <- 1
+			-log10(score)
+		} else {
+			score
+		}
+	} else {
+		score
+	}
+}
+
+signedRF <- function(b1up, b1down, b2up, b2down, N){
+	s1 <- runningFisher(b1up, b2up, N)
+	s2 <- runningFisher(b1down, b2down, N)
+	s3 <- runningFisher(b1up, b2down, N)
+	s4 <- runningFisher(b1down, b2up, N)
+
+	#Reverse order
+	r1 <- runningFisher(b2up, b1up, N)
+	r2 <- runningFisher(b2down, b1down, N)
+	r3 <- runningFisher(b2up, b1down, N)
+	r4 <- runningFisher(b2down, b1up, N)
+
+	#The same procedure in this reverse direction produces another score for the same subset pair.
+	#The 2 scores are averaged to represent the magnitude of the similarity between the 2 subsets.
+	s1 <- (s1+r1)/2
+	s2 <- (s2+r2)/2
+	s3 <- (s3+r3)/2
+	s4 <- (s4+r4)/2
+
+	#The overall score is computed by summing up all directional subset pair scores. The sign of the 
+	#sum determines whether the 2 signatures are positively or negatively correlated. Note a negative 
+	#sign is given if Di and Dj are opposite (s3 and s4)
+	score <- s1+s2-s3-s4
+	score
+}
+
+RF <- function(bm, bioset, N){
+	#bm <- bm[b][[1]]; bioset <- x
+
+	#Rank order the values
+	bm <- bm[order(abs(bm$Score), decreasing = TRUE),]
+
+	b1up <- bm$ID[bm$Score > 0]
+	b1down <- bm$ID[bm$Score < 0]
+
+	b2up <- bioset$Gene[bioset$fc > 0]
+	b2down <- bioset$Gene[bioset$fc < 0]
+
+	signedRF(b1up, b1down, b2up, b2down, N)
+}
+	
+
+#############################################################################
+# Biomarkers
+#############################################################################
+setwd("/home/bradford/storage/Pipeline_updates/Biomarkers/Running_fischer/RF_files_from_Andrew")
+bm_dir <- "/"
+bms <- dir()
+bms <- bms[grep("Biomarker", bms)]
+bm <- NULL
+
+# [1] "Biomarker AHR Corton 2022 MCF-7 cells.txt"                        
+# [2] "Biomarker Aneugen Williams 2021 TS2.txt"                          
+# [3] "Biomarker Aneugen Williams Agilent Tk6.txt"                       
+# [4] "Biomarker AR Rooney 2018 LAPC-4 cell line.txt"                    
+# [5] "Biomarker DDI Genomark 2023 log2FC HepaRG.txt"                    
+# [6] "Biomarker ERa Corton 50 gene 2022 MCF-7 cells.txt"                
+# [7] "Biomarker ERa Judson 2015 46 genes MCF-7 cells.txt"               
+# [8] "Biomarker Fatty Liver Disease Lichtenstein 2020 HepaRG cells .txt"
+# [9] "Biomarker HIF1 Jonsson 2016.txt"                                  
+#[10] "Biomarker HSF1 Cervantes Corton 2021 A375 cells.txt"              
+#[11] "Biomarker MTF1 Jackson 2020.txt"                                  
+#[12] "Biomarker Nrf2 Rooney 2018 PLOS ONE.txt"                          
+#[13] "Biomarker PPARa PPARag Rogue 2011 HepaRG.txt"                     
+#[14] "Biomarker PPARa PPARag Rogue 2011 primary human hepatocytes.txt"  
+#[15] "Biomarker TGx-DDI Li 2015 Tk6 cells.txt"                          
+#[16] "Biomarker TGx-HDACi Cho 2021 Tk6 cells.txt"                       
+#[17] "Biomarker TGx-HDACi HepaRG only revisited.txt"                    
+#[18] "Biomarker TGx-TulBin Williams TK6 cells 20230629.txt"             
+#[19] "Biomarker TSA (HDACi) Yeakley 2017 MCF-7 celline.txt"     
+
+nms <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
+	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
+
+
+#Biomarkers
+for(k in 1:length(bms)){
+	tmp <- read.delim(bms[k])
+	tmp <- tmp[,c(1,2)]
+	names(tmp) <- c("ID", "Score")
+	tmp <- tmp[order(abs(tmp$Score), decreasing = TRUE),]
+	tmp$ID <- toupper(tmp$ID)
+	bm$tmp <- tmp
+	names(bm)[k] <- nms[k]
+}
+
+#############################################################################
+# Biosets
+#############################################################################
+root <- "/home/bradford/storage/Pipeline_updates/Biomarkers/Running_fischer/"
+setwd(paste0(root, "ESRAB_datapoorchems/BMD_and_biomarker_files/"))
+# setwd(paste0(root, "Herrala_files/BMD_and_biomarker_files/"))
+biosets <- dir()
+biosets <- biosets[-grep("_input_", biosets)]
+
+bs <- NULL
+indx <- 1
+
+for(k in 1:length(biosets)){
+	files <- dir(paste(getwd(), "/", biosets[k], sep = ""))
+	if(length(files) > 0){
+		for(f in 1:length(files)){	
+			file <- files[f]
+
+			tmp <- paste(getwd(), "/", biosets[k], "/", file, sep = "")
+			tmp <- read.delim(tmp)
+			tmp <- tmp %>% arrange(desc(abs(fc)))
+
+			bs$tmp <- tmp[,-1]
+			nms <- paste(strsplit(file, "_")[[1]][1], 
+				strsplit(file, "_")[[1]][3], 
+				strsplit(file, "_")[[1]][4], sep = "_")
+			names(bs)[indx] <- nms
+			indx <- indx + 1
+		}
+	}
+}
+
+#############################################################################
+# Running Fisher on the Battery of Biomarkers
+#############################################################################
+N <- 19694
+
+out <- NULL
+out2 <- data.frame(Compounds = names(bm))
+
+for(f in 1:length(bs)){
+	x <- bs[f][[1]]
+	nms <- names(bs)[f]
+	oo <- NULL
+	for(b in 1:length(bm)){
+		o <- RF(bm[b][[1]], x, N)
+		o <- cbind.data.frame(data.frame(Chem = nms, Biomarker = names(bm)[b]), o)
+		out <- rbind.data.frame(out, o)
+		oo <- rbind.data.frame(oo,o)
+	}
+	out2 <- cbind.data.frame(out2, oo$o)
+}
+
+#############################################################################
+# Output
+#############################################################################
+#out
+names(out2)[-1] <- names(bs)
+#out2
+out
+#out[order(out$score, decreasing = TRUE),]
+
+# setwd("C:/Users/ANWILLIA/OneDrive - HC-SC PHAC-ASPC/Desktop/projects 2024/Running Fisher Code")
+write.table(out, file="Running_Fisher_Test_new_code_20240621.txt", 
+	row.name = FALSE, col.name = TRUE, quote = FALSE, sep="\t")
+write.table(out2, file="Running_Fisher_Test_new_code_matrix_20240621.txt", 
+	row.name = FALSE, col.name = TRUE, quote = FALSE, sep="\t")
+
+
+#############################################################################
+# Plot
+#############################################################################
+# Unranked
+ggplot(out, aes(x = Chem, y = o, color = Biomarker)) +
+  geom_point() +
+  facet_wrap(~Biomarker, scales = "free_y")
+
+# Repeating line 77 because nms gets overwritten
+biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
+	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
+
+# Save x-axis ranked plot per biomarker
+
+# Initialize an empty list to store ggplot objects for the combined plot
+plot_list_combined <- list()
+
+# Assuming your loop starts here
+for (i in seq_along(unique(out$Biomarker))) {
+  biomarker <- unique(out$Biomarker)[i]
+  
+  if (biomarker == "HDACiTk6" || biomarker == "Genomark") {
+    threshold_hi <- 15
+    threshold_lo <- -15
+  } else {
+    threshold_hi <- 4
+    threshold_lo <- -4
+  }
+
+  print(biomarker)
+  print(threshold_hi)
+  print(threshold_lo)
+
+  j <- out %>% 
+    filter(Biomarker == biomarker) %>%
+    arrange(o, decreasing = TRUE) %>%
+    mutate(Chemical = str_extract(Chem, "^[^_]+")) %>% 
+    mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
+  
+  # Create the plot with full x-axis and y-axis labels
+  p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
+    geom_point(size = 4) +
+    geom_hline(yintercept = threshold_hi, color = "black") +
+    geom_hline(yintercept = threshold_lo, color = "black") +
+    labs(title = biomarker,
+         y = "-log10(p-value)",
+         x = "Bioset") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  # Save the individual plot
+  ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
+
+  # Create a modified version of the plot for the combined plot
+  # Only plots in the bottom row of each column should retain x-axis labels and ticks
+  # Only plots in the leftmost column should retain y-axis labels
+  if (i <= length(unique(out$Biomarker)) - 4) {
+    p_combined <- p + theme(axis.title.x = element_blank(),
+                            axis.text.x = element_blank(),
+                            axis.ticks.x = element_blank())
+  } else {
+    p_combined <- p
+  }
+
+  if (i %% 4 != 1) {
+    p_combined <- p_combined + theme(axis.title.y = element_blank())
+  }
+
+  # Append the modified plot to the list for the combined plot
+  plot_list_combined[[biomarker]] <- p_combined
+}
+
+# Load the patchwork library
+library(patchwork)
+
+# Combine the plots using patchwork with a shared legend
+combined_plot <- wrap_plots(plot_list_combined, ncol = 4) + 
+  plot_layout(guides = "collect")
+
+# Save the combined plot with increased height
+ggsave("combined_plot.png", plot = combined_plot, device = "png", height = 15, width = 20)
