@@ -1,12 +1,110 @@
+---
+params:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_title: "Test"    # Change depending on your project name
+  researcher_name: "Name" # Name of the researcher leading the project
+  bioinformatician_name: "Name" # Name of the person running the R-ODAF analyses
+  metadata_file: "metadata.txt" # Name of the metadata file. Must be in inputs/metadata/ 
+  contrasts_file: "contrasts.txt" # Name of the contrasts file. Must be in inputs/contrasts/ 
+  project_description: null # description of project for report, optional
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
+  batch_var: "batch"          # For example, multiple plates
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
+  formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
+  lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
+  strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
+  exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
+  exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+  include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+  cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
+  wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
+  # "wikipathways-20210810-gmt-Mus_musculus.gmt"
+  # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+  nBestFeatures: 20              # The number of best features to make plots of their counts
+  nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
+  nHeatmap: 50                   # Number of most variable genes for heatmap
+  nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+  generate_main_report: TRUE
+  generate_stats_report: TRUE
+  generate_data_explorer_report: TRUE
+  generate_go_pathway_report: TRUE
+  generate_tgxddi_report: TRUE
+  generate_tgxhdaci_report: TRUE
+  output_digits: 5
+  parallel: FALSE
+  species_data: null
+  count_data_file: null
+  sampledata_sep: null
+  MinCount: null
+  alpha: 0.05
+  feature_id: null
+  biospyder: null
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+bibliography: "`r file.path(params$projectdir, 'references/tgx-hdaci-references.bib')`"
 
-################################################################
-# Libraries
-################################################################
+---
+
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
 library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+```
 
-################################################################
-# Functions
-################################################################
+---
+title: "`r params$platform` Running Fisher biomarker suite report"
+---
+
+# `r params$project_title` {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$bioinformatician_name`
+
+Report prepared for: `r params$researcher_name`
+
+***
+
+```{r functions, echo=FALSE}
 K <- function(bm, bioset){
 	#Arguements are two ranked order lists of genes
 	#Return the rankings for each common gene in the bioset
@@ -100,42 +198,17 @@ RF <- function(bm, bioset, N){
 
 	signedRF(b1up, b1down, b2up, b2down, N)
 }
-	
+```
 
-#############################################################################
-# Biomarkers
-#############################################################################
-setwd("/home/bradford/storage/Pipeline_updates/Biomarkers/Running_fischer/RF_files_from_Andrew")
-bm_dir <- "/"
-bms <- dir()
-bms <- bms[grep("Biomarker", bms)]
-bm <- NULL
-
-# [1] "Biomarker AHR Corton 2022 MCF-7 cells.txt"                        
-# [2] "Biomarker Aneugen Williams 2021 TS2.txt"                          
-# [3] "Biomarker Aneugen Williams Agilent Tk6.txt"                       
-# [4] "Biomarker AR Rooney 2018 LAPC-4 cell line.txt"                    
-# [5] "Biomarker DDI Genomark 2023 log2FC HepaRG.txt"                    
-# [6] "Biomarker ERa Corton 50 gene 2022 MCF-7 cells.txt"                
-# [7] "Biomarker ERa Judson 2015 46 genes MCF-7 cells.txt"               
-# [8] "Biomarker Fatty Liver Disease Lichtenstein 2020 HepaRG cells .txt"
-# [9] "Biomarker HIF1 Jonsson 2016.txt"                                  
-#[10] "Biomarker HSF1 Cervantes Corton 2021 A375 cells.txt"              
-#[11] "Biomarker MTF1 Jackson 2020.txt"                                  
-#[12] "Biomarker Nrf2 Rooney 2018 PLOS ONE.txt"                          
-#[13] "Biomarker PPARa PPARag Rogue 2011 HepaRG.txt"                     
-#[14] "Biomarker PPARa PPARag Rogue 2011 primary human hepatocytes.txt"  
-#[15] "Biomarker TGx-DDI Li 2015 Tk6 cells.txt"                          
-#[16] "Biomarker TGx-HDACi Cho 2021 Tk6 cells.txt"                       
-#[17] "Biomarker TGx-HDACi HepaRG only revisited.txt"                    
-#[18] "Biomarker TGx-TulBin Williams TK6 cells 20230629.txt"             
-#[19] "Biomarker TSA (HDACi) Yeakley 2017 MCF-7 celline.txt"     
+```{r load_biomarkers, echo=FALSE}
+bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker", full.names = TRUE)
 
 nms <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
+# Nested list of biomarkers with genes and scores
+bm <- NULL
 
-#Biomarkers
 for(k in 1:length(bms)){
 	tmp <- read.delim(bms[k])
 	tmp <- tmp[,c(1,2)]
@@ -145,26 +218,30 @@ for(k in 1:length(bms)){
 	bm$tmp <- tmp
 	names(bm)[k] <- nms[k]
 }
+```
 
-#############################################################################
-# Biosets
-#############################################################################
-root <- "/home/bradford/storage/Pipeline_updates/Biomarkers/Running_fischer/"
-setwd(paste0(root, "ESRAB_datapoorchems/BMD_and_biomarker_files/"))
-# setwd(paste0(root, "Herrala_files/BMD_and_biomarker_files/"))
-biosets <- dir()
-biosets <- biosets[-grep("_input_", biosets)]
+```{r load_biosets, echo=FALSE}
+# Currently hard-coding this in, but these will EITHER come from
+## Biosets files from the results_location_arg OR
+## biomarker files (same as TGX-DDI or HDACi), then reformatted to be a list of genes and fold changes
+biosets <- dir(path = here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"),
+                      full.names = FALSE, 
+                      recursive = FALSE)
+biosets <- biosets[!grepl("_input_", biosets)]
 
 bs <- NULL
 indx <- 1
 
+# Again, hard-coding right now but that will change!
+# I just need to know how the biosets stuff looks with Andrew's code
+# So I can find a way to get things in the same format after very different importing
 for(k in 1:length(biosets)){
-	files <- dir(paste(getwd(), "/", biosets[k], sep = ""))
+	files <- dir(paste(here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"), "/", biosets[k], sep = "")) # looking for all the files in the directory (one directory per loop)
 	if(length(files) > 0){
 		for(f in 1:length(files)){	
 			file <- files[f]
 
-			tmp <- paste(getwd(), "/", biosets[k], "/", file, sep = "")
+			tmp <- paste(here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"), "/", biosets[k], "/", file, sep = "")
 			tmp <- read.delim(tmp)
 			tmp <- tmp %>% arrange(desc(abs(fc)))
 
@@ -178,9 +255,13 @@ for(k in 1:length(biosets)){
 	}
 }
 
-#############################################################################
-# Running Fisher on the Battery of Biomarkers
-#############################################################################
+```
+
+```{r run_RF, echo=FALSE}
+# Need different values for N
+# Depending on the biospyder kit?
+# What about RNA-seq?
+
 N <- 19694
 
 out <- NULL
@@ -199,31 +280,9 @@ for(f in 1:length(bs)){
 	out2 <- cbind.data.frame(out2, oo$o)
 }
 
-#############################################################################
-# Output
-#############################################################################
-#out
-names(out2)[-1] <- names(bs)
-#out2
-out
-#out[order(out$score, decreasing = TRUE),]
+```
 
-# setwd("C:/Users/ANWILLIA/OneDrive - HC-SC PHAC-ASPC/Desktop/projects 2024/Running Fisher Code")
-write.table(out, file="Running_Fisher_Test_new_code_20240621.txt", 
-	row.name = FALSE, col.name = TRUE, quote = FALSE, sep="\t")
-write.table(out2, file="Running_Fisher_Test_new_code_matrix_20240621.txt", 
-	row.name = FALSE, col.name = TRUE, quote = FALSE, sep="\t")
-
-
-#############################################################################
-# Plot
-#############################################################################
-# Unranked
-ggplot(out, aes(x = Chem, y = o, color = Biomarker)) +
-  geom_point() +
-  facet_wrap(~Biomarker, scales = "free_y")
-
-# Repeating line 77 because nms gets overwritten
+```{r plot_RF, echo=FALSE}
 biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
@@ -256,7 +315,7 @@ for (i in seq_along(unique(out$Biomarker))) {
   
   # Create the plot with full x-axis and y-axis labels
   p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
-    geom_point(size = 4) +
+    geom_point(size = 3) +
     geom_hline(yintercept = threshold_hi, color = "black") +
     geom_hline(yintercept = threshold_lo, color = "black") +
     labs(title = biomarker,
@@ -265,7 +324,7 @@ for (i in seq_along(unique(out$Biomarker))) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
   # Save the individual plot
-  ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
+  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
 
   # Create a modified version of the plot for the combined plot
   # Only plots in the bottom row of each column should retain x-axis labels and ticks
@@ -285,13 +344,11 @@ for (i in seq_along(unique(out$Biomarker))) {
   # Append the modified plot to the list for the combined plot
   plot_list_combined[[biomarker]] <- p_combined
 }
-
-# Load the patchwork library
-library(patchwork)
-
 # Combine the plots using patchwork with a shared legend
 combined_plot <- wrap_plots(plot_list_combined, ncol = 4) + 
   plot_layout(guides = "collect")
+```
 
-# Save the combined plot with increased height
-ggsave("combined_plot.png", plot = combined_plot, device = "png", height = 15, width = 20)
+```{r plot_combined, echo=FALSE, fig.height=16, fig.width=10}
+combined_plot
+```
