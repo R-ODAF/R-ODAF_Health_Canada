@@ -69,6 +69,7 @@ rldList <- list()
 mergedDEGsList <- list()
 filtered_table <- data.frame()
 allBiomarkers <- list()
+biosets <- list()
 
 if (is.na(params$deseq_facet)){
   message("### Learning a single model for the whole experiment. ###")
