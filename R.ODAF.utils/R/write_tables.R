@@ -22,6 +22,7 @@ write_tables <- function(facet, params) {
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
   resultsListDEGs <- overallResListDEGs[[current_filter]]
+  biosets_unfiltered <- bioset_input[[current_filter]]
   if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
@@ -29,13 +30,6 @@ write_tables <- function(facet, params) {
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = FALSE)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = FALSE)
 
-  if(params$write_additional_output){
-    biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE)  %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
-      arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
-      distinct(Gene_Symbol, .keep_all=TRUE) 
-    colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
-  }
 
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
@@ -160,7 +154,7 @@ write_tables <- function(facet, params) {
               quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
 
   if(params$write_additional_output){
-    filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE) 
+    filteredResults <- annotate_deseq_table(biosets_unfiltered, params, filter_results = TRUE, biosets_filter = TRUE) 
     resultsContrasts <- stringr::str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
     biosetsFilteredResults <- filteredResults %>%
       bind_cols(dose=resultsContrasts) %>%
