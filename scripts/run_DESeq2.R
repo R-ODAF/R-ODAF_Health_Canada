@@ -69,7 +69,7 @@ rldList <- list()
 mergedDEGsList <- list()
 filtered_table <- data.frame()
 allBiomarkers <- list()
-biosets <- list()
+bioset_input <- list()
 
 if (is.na(params$deseq_facet)){
   message("### Learning a single model for the whole experiment. ###")
@@ -113,6 +113,7 @@ if (is.na(params$deseq_facet)){
     overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
     mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
     filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+    bioset_input[[current_filter]] <- DESeq_results$bioset_input
   }
   overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
   overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]

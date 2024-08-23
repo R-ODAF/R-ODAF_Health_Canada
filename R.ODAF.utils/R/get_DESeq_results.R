@@ -28,7 +28,7 @@ get_DESeq_results <- function(dds,
   Counts <- DESeq2::counts(dds, normalized = TRUE)
   CPMdds <- edgeR::cpm(DESeq2::counts(dds, normalized = TRUE))
   mergedDEGs <- c()
-  biosets <- list()
+  bioset_input <- list()
 
   for (x in seq_len(nrow(contrasts))) { # For all comparisons to be done
    condition1 <- contrasts[x, 2] # Control
@@ -149,25 +149,10 @@ get_DESeq_results <- function(dds,
       }
    }
   
-  # Extract tables for biosets (DEGs passing R-ODAF filters, but lfc threshold params$linear_fc_filter_biosets, not params$linear_fc_filter_DEGs)
-  bioset_currentfacet <- as.data.frame(DEsamples)
-
-  bioset_currentfacet <- bioset_currentfacet %>%
-    dplyr::mutate(linearFoldChange = 2^log2FoldChange) %>%
-    dplyr::select(linearFoldChange, pvalue) %>%
-    dplyr::filter(pvalue < params$alpha & abs(linearFoldChange) > params$linear_fc_filter_biosets) %>%
-    # Set up probes column for collapsing to genes
-    dplyr::mutate(Probe = rownames(.))
-
-  bioset_currentfacet$Probe <- sub("_.*", "", bioset_currentfacet$Probe)
-  bioset_currentfacet <- bioset_currentfacet %>%
-    dplyr::distinct() 
-    
-
-  # Genes instead of probes in biosets
-
+  # Extract tables for biosets 
   
-  biosets[[contrast_string]] <- bioset_currentfacet
+   bioset_input[[contrast_string]] <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter_biosets) ,]
+
 
    # Extract the final list of DEGs
    
@@ -218,7 +203,7 @@ mergedDEGs <- unique(mergedDEGs)
       resListDEGs = resListDEGs,
       mergedDEGs = mergedDEGs,
       filtered_table = filtered_table,
-      biosets = biosets
+      bioset_input = bioset_input
     )
   )
 }
