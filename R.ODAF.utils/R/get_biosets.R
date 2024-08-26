@@ -31,6 +31,8 @@
     biosets_folder <- paths$biosets_output[[current_filter]]
   }
   
+  biosets <- list() 
+
   all_doses <- unique(biosetsFilteredResults$dose)
   for(d in all_doses){
     bfr <- biosetsFilteredResults %>%
@@ -38,14 +40,19 @@
       dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
       arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
       distinct(Gene_Symbol, .keep_all=TRUE) 
+    
     colnames(bfr) <- c("Gene","pval","fc")
+    bfr <- bfr %>% arrange(desc(abs(fc)))
     # assume that current_filter includes the chemical + timepoint + dose
-    biosets_fname <- paste(current_filter,d,params$units,params$celltype, sep='_')
-    biosets_fname <- paste0(str_replace_all(biosets_fname, " ", "_"),".txt")
+    biosets_name <- paste(d,params$units,params$celltype, sep='_')
+    biosets_name <- paste0(str_replace_all(biosets_name, " ", "_"))
+    biosets_fname <- paste0(biosets_name,".txt")
   
     write.table(bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
                 file = file.path(biosets_folder,biosets_fname),
-                quote = FALSE, sep = "\t", col.names = NA)  
+                quote = FALSE, sep = "\t", col.names = NA)
+    
+    biosets[[biosets_name]] <- bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits)))
   } 
-#   return(biosetsFilteredResults) # Need to figure out what to return (how to format)
+  return(biosets) # Need to figure out what to return (how to format)
  }

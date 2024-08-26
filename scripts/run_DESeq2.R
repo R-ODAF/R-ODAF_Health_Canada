@@ -150,12 +150,12 @@ if (is.na(params$deseq_facet)) {
 }
 
 # This will have to change once the function returns something instead of just writing files
-if(params$write_additional_output){
-  mapply(
-    FUN = R.ODAF.utils::write_biosets,
-    facet = facets,
-    MoreArgs = list(params = params)
-  )
+bs <- list()
+for (facet in facets) {
+  biosets <- write_biosets(params, facet)
+  
+  # Merge the results into the bs list
+  bs <- c(bs, biosets)
 }
 
 # save DESeq results to a file
@@ -176,12 +176,8 @@ save(ddsList,
      filtered_table,
      sample_count_metadata,
      allBiomarkers,
+     bs,
      file = file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
-# Need to add biosets stuff here?
-# If so, should I do the annotate_deseq)table.R stuff first, and save output from that as the biosets info?
-
-
-
 
 if (params$parallel) {
   parallel::mcmapply(
