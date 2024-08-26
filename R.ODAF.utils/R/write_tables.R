@@ -22,7 +22,6 @@ write_tables <- function(facet, params) {
   message(paste0("Writing tables for ", current_filter))
   resultsListAll <- overallResListAll[[current_filter]] 
   resultsListDEGs <- overallResListDEGs[[current_filter]]
-  biosets_unfiltered <- bioset_input[[current_filter]]
   if (length(resultsListDEGs) < 1) { return(message("No output for this facet.")) }
   resultsListFiltered <- overallResListFiltered[[current_filter]] # For BMDExpress
   dds <- ddsList[[current_filter]] 
@@ -117,10 +116,8 @@ write_tables <- function(facet, params) {
 
   if(is.na(params$deseq_facet)){
     output_folder <- paths$DEG_output
-    biosets_folder <- paths$biosets_output
   } else{
     output_folder <- paths$DEG_output[[current_filter]]
-    biosets_folder <- paths$biosets_output[[current_filter]]
   }
 
   #######################################
@@ -153,30 +150,7 @@ write_tables <- function(facet, params) {
                                paste0(prefix, "-DEG_summary.txt")),
               quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
 
-  if(params$write_additional_output){
-    filteredResults <- annotate_deseq_table(biosets_unfiltered, params, filter_results = TRUE, biosets_filter = TRUE) 
-    resultsContrasts <- stringr::str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
-    biosetsFilteredResults <- filteredResults %>%
-      bind_cols(dose=resultsContrasts) %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange, dose)
 
-    all_doses <- unique(biosetsFilteredResults$dose)
-    for(d in all_doses){
-      bfr <- biosetsFilteredResults %>%
-        filter(dose==d) %>%
-        dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
-        arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
-        distinct(Gene_Symbol, .keep_all=TRUE) 
-      colnames(bfr) <- c("Gene","pval","fc")
-      # assume that current_filter includes the chemical + timepoint + dose
-      biosets_fname <- paste(current_filter,d,params$units,params$celltype, sep='_')
-      biosets_fname <- paste0(str_replace_all(biosets_fname, " ", "_"),".txt")
-
-      write.table(bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
-                  file = file.path(biosets_folder,biosets_fname),
-                  quote = FALSE, sep = "\t", col.names = NA)
-    }
-  }
   ##########################
   ### Write results in Excel
   ##########################
