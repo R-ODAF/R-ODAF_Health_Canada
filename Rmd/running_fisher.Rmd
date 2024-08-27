@@ -265,6 +265,42 @@ for(f in 1:length(bs)){
 
 ```
 
+
+```{r match_table, echo=FALSE}
+# Initialize the matrix to store the results
+results <- matrix(nrow = length(bs) + 1, ncol = length(bm) + 1)
+colnames(results) <- c("Biomarker", names(bm))
+rownames(results) <- c("No. Genes", names(bs))
+
+# Fill the first row with the number of genes in each biomarker
+for (i in 1:length(bm)) {
+  results[1, i + 1] <- nrow(bm[[i]])
+}
+
+# Fill the rest of the matrix with the number of matching genes
+for (i in 1:length(bm)) {
+  for (j in 1:length(bs)) {
+    merged <- merge(bm[[i]], bs[[j]], by.x = "ID", by.y = "Gene")
+    results[j + 1, i + 1] <- nrow(merged)
+  }
+}
+
+# Add the names of the biosets to the first column
+results[-1, 1] <- names(bs)
+
+# Convert the matrix to a data frame
+results_df <- as.data.frame(results)
+
+# Remove the first column (Biomarker)
+results_df <- results_df[, -1]
+
+# Display the data frame using kable and kableExtra for formatting
+knitr::kable(results_df, caption = "Number of Genes and Matching Genes Between Biomarkers and Biosets", escape = FALSE) %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
+  kableExtra::row_spec(1, bold = TRUE) %>%
+  kableExtra::scroll_box(width = "100%", height = "500px", fixed_thead = TRUE)
+```
+
 ```{r plot_RF, echo=FALSE}
 biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
@@ -328,7 +364,3 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
 combined_plot
 ```
 
-Ideally, I want a table here showing how many genes matched each biomarker from each contrast, something like this:
-
-Biomarker | No. Genes | Matching contrast 1 | Matching contrast 2 | Matching contrast 3
---- | --- | --- | --- | ---
