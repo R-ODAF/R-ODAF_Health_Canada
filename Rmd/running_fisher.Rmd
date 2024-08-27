@@ -222,11 +222,21 @@ for(k in 1:length(bms)){
 ```
 
 ```{r load_biosets, echo=FALSE}
-# Gotta figure out if I'm calling this function from render_DESEq2_report.parallel.R
-# And if so, how to load "bs" from the Rdata file
-
+# # uncomment code to run interactively
+# # Otherwise, the data will be loaded from bs by way of render_DESeq2_report.parallel.R
 #data_file <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
 #load(data_file)
+
+# Rename the biosets to remove extra information (which clutters up the plots)
+original_names <- names(bs)
+
+rename_function <- function(name) {
+  sub("(_[0-9.]+).*", "\\1", name)
+}
+
+new_names <- sapply(original_names, rename_function)
+names(bs) <- new_names
+# print(names(bs))
 
 ```
 
@@ -274,10 +284,6 @@ for (i in seq_along(unique(out$Biomarker))) {
     threshold_lo <- -4
   }
 
-  print(biomarker)
-  print(threshold_hi)
-  print(threshold_lo)
-
   j <- out %>% 
     filter(Biomarker == biomarker) %>%
     arrange(o, decreasing = TRUE) %>%
@@ -286,7 +292,7 @@ for (i in seq_along(unique(out$Biomarker))) {
   
   # Create the plot with full x-axis and y-axis labels
   p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
-    geom_point(size = 4) +
+    geom_point(size = 3) +
     geom_hline(yintercept = threshold_hi, color = "black") +
     geom_hline(yintercept = threshold_lo, color = "black") +
     labs(title = biomarker,
@@ -301,7 +307,7 @@ for (i in seq_along(unique(out$Biomarker))) {
   plot_list_combined[[biomarker]] <- p
 }
 # Combine the plots using patchwork with a shared legend
-combined_plot <- wrap_plots(plot_list_combined, ncol = 4) + 
+combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
   plot_layout(guides = "collect",
   axis_titles = "collect") +
   plot_annotation(
@@ -318,7 +324,7 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 4) +
   )
 ```
 
-```{r plot_combined, echo=FALSE, fig.height=16, fig.width=10}
+```{r plot_combined, echo=FALSE, fig.height=20, fig.width=10}
 combined_plot
 ```
 
