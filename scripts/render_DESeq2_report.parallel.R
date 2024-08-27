@@ -46,6 +46,7 @@ overallResListDEGs <- data_env$overallResListDEGs
 exp_contrasts <- data_env$exp_contrasts
 filtered_table <-  data_env$filtered_table
 allBiomarkers <- data_env$allBiomarkers
+bs <- data_env$bs
 rm(data_env)
 gc()
 
@@ -134,6 +135,10 @@ if (params$generate_tgxhdaci_report) {
   else {
     message("TGx-HDACi report generation is currently only human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")
   }
+}
+
+if (params$write_additional_output && params$generate_runningfisher_report) {
+  make_runningfisher_report(pars = params, paths = paths, input = bs)
 }
 
 if (!is.na(params$reports_facet)) {

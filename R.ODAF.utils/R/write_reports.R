@@ -152,3 +152,23 @@ make_hdaci_reports <- function(pars, paths, facet) {
     render_report(tgxhdaci_report, tgxhdaci_file, pars)
   }
 }
+
+#' Generate Running Fisher Report
+#'
+#' Renders the Running Fisher report HTML file for the whole project.
+#' Uses biosets as input.
+#' Only possible if write_additional_output is TRUE (otherwise biosets will not exist).
+#'
+#' @param pars A list of parameters used for report generation.
+#' @param paths A list of paths used throughout the analysis.
+#' @return Invisible NULL. The function is called for its side effect of rendering an HTML report.
+#' @export
+
+make_runningfisher_report <- function(pars, paths, input) {
+  if (pars$write_additional_output && pars$generate_runningfisher_report) {
+    message("Generating Running Fisher report")
+    runningfisher_report <- file.path(paths$projectdir, "Rmd", "running_fisher.Rmd")
+    runningfisher_file <- file.path(paths$reports_dir, "running_fisher.html")
+    render_report(runningfisher_report, runningfisher_file, pars)
+  }
+}

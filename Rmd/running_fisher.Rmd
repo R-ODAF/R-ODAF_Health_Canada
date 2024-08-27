@@ -58,6 +58,7 @@ params:
   generate_go_pathway_report: TRUE
   generate_tgxddi_report: TRUE
   generate_tgxhdaci_report: TRUE
+  generate_runningfisher_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
@@ -221,39 +222,11 @@ for(k in 1:length(bms)){
 ```
 
 ```{r load_biosets, echo=FALSE}
-# Currently hard-coding this in, but these will EITHER come from
-## Biosets files from the results_location_arg OR
-## biomarker files (same as TGX-DDI or HDACi), then reformatted to be a list of genes and fold changes
-biosets <- dir(path = here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"),
-                      full.names = FALSE, 
-                      recursive = FALSE)
-biosets <- biosets[!grepl("_input_", biosets)]
+# Gotta figure out if I'm calling this function from render_DESEq2_report.parallel.R
+# And if so, how to load "bs" from the Rdata file
 
-bs <- NULL
-indx <- 1
-
-# Again, hard-coding right now but that will change!
-# I just need to know how the biosets stuff looks with Andrew's code
-# So I can find a way to get things in the same format after very different importing
-for(k in 1:length(biosets)){
-	files <- dir(paste(here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"), "/", biosets[k], sep = "")) # looking for all the files in the directory (one directory per loop)
-	if(length(files) > 0){
-		for(f in 1:length(files)){	
-			file <- files[f]
-
-			tmp <- paste(here::here("output/analysis/analysis_facetchemical_20240510-1219/BMD_and_biomarker_files"), "/", biosets[k], "/", file, sep = "")
-			tmp <- read.delim(tmp)
-			tmp <- tmp %>% arrange(desc(abs(fc)))
-
-			bs$tmp <- tmp[,-1]
-			nms <- paste(strsplit(file, "_")[[1]][1], 
-				strsplit(file, "_")[[1]][3], 
-				strsplit(file, "_")[[1]][4], sep = "_")
-			names(bs)[indx] <- nms
-			indx <- indx + 1
-		}
-	}
-}
+#data_file <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
+#load(data_file)
 
 ```
 
@@ -286,7 +259,6 @@ for(f in 1:length(bs)){
 biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
-# Save x-axis ranked plot per biomarker
 
 # Initialize an empty list to store ggplot objects for the combined plot
 plot_list_combined <- list()
@@ -323,7 +295,7 @@ for (i in seq_along(unique(out$Biomarker))) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
   # Save the individual plot
-  ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
+  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
 
   # Append the modified plot to the list for the combined plot
   plot_list_combined[[biomarker]] <- p
@@ -349,3 +321,8 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 4) +
 ```{r plot_combined, echo=FALSE, fig.height=16, fig.width=10}
 combined_plot
 ```
+
+Ideally, I want a table here showing how many genes matched each biomarker from each contrast, something like this:
+
+Biomarker | No. Genes | Matching contrast 1 | Matching contrast 2 | Matching contrast 3
+--- | --- | --- | --- | ---
