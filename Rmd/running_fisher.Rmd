@@ -291,7 +291,6 @@ biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46
 # Initialize an empty list to store ggplot objects for the combined plot
 plot_list_combined <- list()
 
-# Assuming your loop starts here
 for (i in seq_along(unique(out$Biomarker))) {
   biomarker <- unique(out$Biomarker)[i]
   
@@ -315,7 +314,7 @@ for (i in seq_along(unique(out$Biomarker))) {
   
   # Create the plot with full x-axis and y-axis labels
   p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
-    geom_point(size = 3) +
+    geom_point(size = 4) +
     geom_hline(yintercept = threshold_hi, color = "black") +
     geom_hline(yintercept = threshold_lo, color = "black") +
     labs(title = biomarker,
@@ -324,29 +323,27 @@ for (i in seq_along(unique(out$Biomarker))) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
   
   # Save the individual plot
-  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
-
-  # Create a modified version of the plot for the combined plot
-  # Only plots in the bottom row of each column should retain x-axis labels and ticks
-  # Only plots in the leftmost column should retain y-axis labels
-  if (i <= length(unique(out$Biomarker)) - 4) {
-    p_combined <- p + theme(axis.title.x = element_blank(),
-                            axis.text.x = element_blank(),
-                            axis.ticks.x = element_blank())
-  } else {
-    p_combined <- p
-  }
-
-  if (i %% 4 != 1) {
-    p_combined <- p_combined + theme(axis.title.y = element_blank())
-  }
+  ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
 
   # Append the modified plot to the list for the combined plot
-  plot_list_combined[[biomarker]] <- p_combined
+  plot_list_combined[[biomarker]] <- p
 }
 # Combine the plots using patchwork with a shared legend
 combined_plot <- wrap_plots(plot_list_combined, ncol = 4) + 
-  plot_layout(guides = "collect")
+  plot_layout(guides = "collect",
+  axis_titles = "collect") +
+  plot_annotation(
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    theme = theme(
+      plot.title = element_blank(),
+      plot.subtitle = element_blank(),
+      plot.caption = element_blank(),
+      axis.title.x = element_text(size = 12, face = "bold"),
+      axis.title.y = element_text(size = 12, face = "bold")
+    )
+  )
 ```
 
 ```{r plot_combined, echo=FALSE, fig.height=16, fig.width=10}
