@@ -73,7 +73,7 @@ output:
     toc: true
     toc_float: true
     number_sections: true
-    code_folding: hide
+    code_folding: show
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'references/tgx-hdaci-references.bib')`"
@@ -104,7 +104,11 @@ Report prepared by: `r params$bioinformatician_name`
 Report prepared for: `r params$researcher_name`
 
 ***
+Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in Kuperschmidt et al. (2010) [need to cite].
 
+Here is an explanation (that perhaps Andrew will provide?) of the Running Fisher method:
+
+***
 ```{r functions, echo=FALSE}
 K <- function(bm, bioset){
 	#Arguements are two ranked order lists of genes
@@ -212,7 +216,8 @@ bm <- NULL
 
 for(k in 1:length(bms)){
 	tmp <- read.delim(bms[k])
-	tmp <- tmp[,c(1,2)]
+  tmp <- tmp %>% dplyr::select(EnsemblID, log2FC)
+	#tmp <- tmp[,c(1,2)] # change this to get ensembl IDs and scores
 	names(tmp) <- c("ID", "Score")
 	tmp <- tmp[order(abs(tmp$Score), decreasing = TRUE),]
 	tmp$ID <- toupper(tmp$ID)
@@ -226,6 +231,34 @@ for(k in 1:length(bms)){
 # # Otherwise, the data will be loaded from bs by way of render_DESeq2_report.parallel.R
 #data_file <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
 #load(data_file)
+
+# Select EnsemblID as ID column
+# Note ensembl ID column needs to be renamed as Gene to match Andrew's code
+select_and_rename <- function(df) {
+  df <- df[, c("EnsemblID", "pval", "fc"), drop = FALSE]  # Select the columns
+  colnames(df) <- c("Gene", "pval", "fc")           # Rename the columns
+  return(df)
+}
+bs <- lapply(bs, select_and_rename)
+
+# Check for any NA values in the Gene, pval, or fc columns
+for (i in 1:length(bs)) {
+  if (any(is.na(bs[[i]]$Gene))) {
+    print(paste("NA in Gene column in bioset:", names(bs)[i]))
+  }
+  if (any(is.na(bs[[i]]$pval))) {
+    print(paste("NA in pval column in bioset:", names(bs)[i]))
+  }
+  if (any(is.na(bs[[i]]$fc))) {
+    print(paste("NA in fc column in bioset:", names(bs)[i]))
+  }
+}
+
+# Remove rows with NA ensemble IDs
+bs <- lapply(bs, function(x) x[!is.na(x$Gene), ])
+
+# Number of rows per bioset
+# sapply(bs, nrow)
 
 # Rename the biosets to remove extra information (which clutters up the plots)
 original_names <- names(bs)
@@ -265,6 +298,7 @@ for(f in 1:length(bs)){
 
 ```
 
+## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
 
 ```{r match_table, echo=FALSE}
 # Initialize the matrix to store the results
@@ -301,6 +335,8 @@ knitr::kable(results_df, caption = "Number of Genes and Matching Genes Between B
   kableExtra::scroll_box(width = "100%", height = "500px", fixed_thead = TRUE)
 ```
 
+
+## Running Fisher Analysis {-}
 ```{r plot_RF, echo=FALSE}
 biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")

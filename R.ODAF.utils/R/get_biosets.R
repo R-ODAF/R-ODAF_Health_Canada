@@ -22,7 +22,7 @@
   
   biosetsFilteredResults <- filteredResults %>%
       bind_cols(dose=resultsContrasts) %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange, dose)
+      dplyr::select(Gene_Symbol, Ensembl_Gene_ID, padj, linearFoldChange, dose)
 
   # Set up output paths
   if(is.na(params$deseq_facet)){
@@ -37,11 +37,11 @@
   for(d in all_doses){
     bfr <- biosetsFilteredResults %>%
       filter(dose==d) %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
+      dplyr::select(Gene_Symbol, Ensembl_Gene_ID, padj, linearFoldChange) %>%
       arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
       distinct(Gene_Symbol, .keep_all=TRUE) 
     
-    colnames(bfr) <- c("Gene","pval","fc")
+    colnames(bfr) <- c("Gene", "EnsemblID", "pval","fc")
     bfr <- bfr %>% arrange(desc(abs(fc)))
     # assume that current_filter includes the chemical + timepoint + dose
     biosets_name <- paste(d,params$units,params$celltype, sep='_')
