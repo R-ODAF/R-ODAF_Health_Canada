@@ -46,6 +46,7 @@ overallResListDEGs <- data_env$overallResListDEGs
 exp_contrasts <- data_env$exp_contrasts
 filtered_table <-  data_env$filtered_table
 allBiomarkers <- data_env$allBiomarkers
+count_data <- data_env$count_data
 bs <- data_env$bs
 rm(data_env)
 gc()

@@ -80,7 +80,6 @@ bibliography: "`r file.path(params$projectdir, 'references/tgx-hdaci-references.
 
 ---
 
-
 ```{r docSetup, warning = FALSE, message = FALSE, include = F}
 #### Record start time
 startTime <- Sys.time()
@@ -300,39 +299,92 @@ for(f in 1:length(bs)){
 
 ## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
 
-```{r match_table, echo=FALSE}
-# Initialize the matrix to store the results
-results <- matrix(nrow = length(bs) + 1, ncol = length(bm) + 1)
-colnames(results) <- c("Biomarker", names(bm))
-rownames(results) <- c("No. Genes", names(bs))
+```{r match_bm_counttable, echo=FALSE}
 
-# Fill the first row with the number of genes in each biomarker
-for (i in 1:length(bm)) {
-  results[1, i + 1] <- nrow(bm[[i]])
-}
+if (params$platform == "TempO-Seq") {
+  # Initialize an empty dataframe to store the results
+  match_counts <- data.frame(Biomarker = character(), 
+                             Genes_in_biomarker = integer(), 
+                             Manifest = integer(), 
+                             stringsAsFactors = FALSE)
 
-# Fill the rest of the matrix with the number of matching genes
-for (i in 1:length(bm)) {
-  for (j in 1:length(bs)) {
-    merged <- merge(bm[[i]], bs[[j]], by.x = "ID", by.y = "Gene")
-    results[j + 1, i + 1] <- nrow(merged)
+  for (biomarker_name in names(bm)) {
+    biomarker_df <- bm[[biomarker_name]]
+
+    genes_in_biomarker <- nrow(biomarker_df)
+
+    # Match ID column of the biomarker and the Ensembl_Gene_ID column of biospyder manifest
+    matching_genes <- sum(biomarker_df$ID %in% params$biospyder$Ensembl_Gene_ID)
+
+    # Store the result in the match_counts dataframe
+    match_counts <- rbind(match_counts, data.frame(Biomarker = biomarker_name, 
+                                                   Genes_in_biomarker = genes_in_biomarker, 
+                                                   Manifest = matching_genes))
+  }
+} else {
+  match_counts <- data.frame(Biomarker = character(),
+                             Genes_in_biomarker = integer(),
+                             Dataset = integer(),
+                             stringsAsFactors = FALSE)
+  
+  for (biomarker_name in names(bm)) {
+    biomarker_df <- bm[[biomarker_name]]
+
+    genes_in_biomarker <- nrow(biomarker_df)
+
+    # Match ID column of the biomarker and the rownames of the count data
+    matching_genes <- sum(biomarker_df$ID %in% rownames(count_data))
+
+    match_counts <- rbind(match_counts, data.frame(Biomarker = biomarker_name,
+                                                   Genes_in_biomarker = genes_in_biomarker,
+                                                   Dataset = matching_genes))
   }
 }
 
-# Add the names of the biosets to the first column
-results[-1, 1] <- names(bs)
+```
+
+```{r match_bm_bs, echo=FALSE}
+# Initialize the matrix to store the results
+results <- matrix(nrow = length(bm), ncol = length(bs))
+colnames(results) <- names(bs)
+rownames(results) <- names(bm)
+
+# Fill the matrix with the number of matching genes for each bioset
+for (i in 1:length(bm)) {
+  biomarker_df <- bm[[i]]
+  for (j in 1:length(bs)) {
+    bioset_df <- bs[[j]]
+    merged <- merge(biomarker_df, bioset_df, by.x = "ID", by.y = "Gene")
+    results[i, j] <- nrow(merged)
+  }
+}
 
 # Convert the matrix to a data frame
-results_df <- as.data.frame(results)
+results_df <- as.data.frame(results, stringsAsFactors = FALSE)
+results_df$Biomarker <- rownames(results_df)
 
-# Remove the first column (Biomarker)
-results_df <- results_df[, -1]
+# Merge the match_counts and results_df dataframes
+final_df <- merge(match_counts, results_df, by = "Biomarker")
+
+
+# Apply cell_spec to color the background of columns 4 onward based on their values
+final_df_colored <- final_df %>%
+  mutate(across(4:ncol(final_df), ~ kableExtra::cell_spec(.x, "html", 
+    color = "white",
+    background = scales::col_numeric(
+      palette = viridisLite::viridis(256, alpha = 0.3),
+      domain = NULL
+    )(.x),
+    extra_css = "padding: 0px 4px; border-radius: 0px;")))
 
 # Display the data frame using kable and kableExtra for formatting
-knitr::kable(results_df, caption = "Number of Genes and Matching Genes Between Biomarkers and Biosets", escape = FALSE) %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE) %>%
-  kableExtra::row_spec(1, bold = TRUE) %>%
-  kableExtra::scroll_box(width = "100%", height = "500px", fixed_thead = TRUE)
+knitr::kable(final_df_colored, escape = FALSE, caption = "Number of Genes and Matching Genes Between Biomarkers and Biosets") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE, position = "left") %>%
+  kableExtra::add_header_above(c(" " = 3, "Number of matching genes" = length(bs))) %>%
+  kableExtra::column_spec(1, bold = TRUE) %>%
+  kableExtra::column_spec(2, bold = TRUE) %>%
+  kableExtra::column_spec(3, italic = TRUE) %>%
+  kableExtra::scroll_box(width = "100%", height = "700px", fixed_thead = TRUE)
 ```
 
 
