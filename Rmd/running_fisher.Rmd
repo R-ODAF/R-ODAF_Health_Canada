@@ -88,6 +88,7 @@ library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(patchwork)
+library(pheatmap)
 ```
 
 ---
@@ -292,7 +293,7 @@ for(f in 1:length(bs)){
 		out <- rbind.data.frame(out, o)
 		oo <- rbind.data.frame(oo,o)
 	}
-	out2 <- cbind.data.frame(out2, oo$o)
+	out2[[nms]] <- oo$o
 }
 
 ```
@@ -452,3 +453,103 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
 combined_plot
 ```
 
+```{r threshold_setup, echo=FALSE}
+threshold4 <- c("AHR", "AR",
+                "ERa50", "ERa46",
+                "HSF1", "MTF1",
+                "Nrf2", "TGxDDI", 
+                "TSA")
+
+threshold15 <- c("HDACiTk6")
+
+thresholdunknown <- c("Aneugen1", "Aneugen2",
+                      "Genomark", "FattyLiver",
+                      "HIF1", "PParHepaRG",
+                      "PParHH", "HDACiHepaRG",
+                      "TGxTB")
+                      
+# Define custom color palette
+custom_colors <- c("blue", "white", "red")
+```
+
+```{r heatmap_threshold15, echo = FALSE}
+# Filter the data
+selected_data_threshold15 <- out2 %>% 
+  filter(Compounds %in% threshold15)
+
+# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
+data_matrix_threshold15 <- selected_data_threshold15 %>%
+  select(-Compounds) %>%
+  as.matrix()
+
+# Set the row names of the matrix to the values in the 'Compounds' column
+rownames(data_matrix_threshold15) <- selected_data_threshold15$Compounds
+
+# Create the heatmap
+pheatmap(data_matrix_threshold15,
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         show_rownames = TRUE,
+         show_colnames = TRUE,
+         fontsize = 8,
+         cellwidth = 10,
+         cellheight = 10,
+         main = "Heatmap for Biomarkers with Threshold -15 to 5",
+         color = custom_colors,
+         breaks = c(-20, -15, 15, 20),
+         legend_breaks = c(-Inf, 0, Inf),
+         legend_labels = c("< -15", "-15 to 15", "> 15"))
+```
+
+```{r heatmap_threshold4, echo=FALSE}
+# Filter the data
+selected_data_threshold4 <- out2 %>% 
+  filter(Compounds %in% threshold4)
+
+# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
+data_matrix_threshold4 <- selected_data_threshold4 %>%
+  select(-Compounds) %>%
+  as.matrix()
+
+# Set the row names of the matrix to the values in the 'Compounds' column
+rownames(data_matrix_threshold4) <- selected_data_threshold4$Compounds
+
+# Create the heatmap
+pheatmap(data_matrix_threshold4,
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         show_rownames = TRUE,
+         show_colnames = TRUE,
+         fontsize = 8,
+         cellwidth = 10,
+         cellheight = 10,
+         main = "Heatmap for Biomarkers with Threshold -4 to 4",
+         color = custom_colors,
+         breaks = c(-Inf, -4, 4, Inf),
+         legend_breaks = c(-Inf, -4, 4, Inf),
+         legend_labels = c("< -4", "-4 to 0", "0 to 4", "> 4"))
+```
+
+```{r heatmap_thresholdunkown, echo=FALSE}
+selected_data_thresholdunknown <- out2 %>% 
+  filter(Compounds %in% thresholdunknown)
+
+# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
+data_matrix_thresholdunknown <- selected_data_thresholdunknown %>%
+  select(-Compounds) %>%
+  as.matrix()
+
+# Set the row names of the matrix to the values in the 'Compounds' column
+rownames(data_matrix_thresholdunknown) <- selected_data_thresholdunknown$Compounds
+
+# Create the heatmap
+pheatmap(data_matrix_thresholdunknown,
+         cluster_rows = FALSE,
+         cluster_cols = FALSE,
+         show_rownames = TRUE,
+         show_colnames = TRUE,
+         fontsize = 8,
+         cellwidth = 10,
+         cellheight = 10,
+         main = "Heatmap for Biomarkers with Unknown Threshold")
+```
