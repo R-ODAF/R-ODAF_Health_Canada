@@ -72,7 +72,7 @@ output:
   html_document:
     toc: true
     toc_float: true
-    number_sections: true
+    number_sections: false
     code_folding: show
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
@@ -89,6 +89,8 @@ library(knitr)
 library(kableExtra)
 library(patchwork)
 library(pheatmap)
+library(scales)
+library(viridisLite)
 ```
 
 ---
@@ -242,17 +244,17 @@ select_and_rename <- function(df) {
 bs <- lapply(bs, select_and_rename)
 
 # Check for any NA values in the Gene, pval, or fc columns
-for (i in 1:length(bs)) {
-  if (any(is.na(bs[[i]]$Gene))) {
-    print(paste("NA in Gene column in bioset:", names(bs)[i]))
-  }
-  if (any(is.na(bs[[i]]$pval))) {
-    print(paste("NA in pval column in bioset:", names(bs)[i]))
-  }
-  if (any(is.na(bs[[i]]$fc))) {
-    print(paste("NA in fc column in bioset:", names(bs)[i]))
-  }
-}
+# for (i in 1:length(bs)) {
+#   if (any(is.na(bs[[i]]$Gene))) {
+#     print(paste("NA in Gene column in bioset:", names(bs)[i]))
+#   }
+#   if (any(is.na(bs[[i]]$pval))) {
+#     print(paste("NA in pval column in bioset:", names(bs)[i]))
+#   }
+#   if (any(is.na(bs[[i]]$fc))) {
+#     print(paste("NA in fc column in bioset:", names(bs)[i]))
+#   }
+# }
 
 # Remove rows with NA ensemble IDs
 bs <- lapply(bs, function(x) x[!is.na(x$Gene), ])
@@ -346,6 +348,7 @@ if (params$platform == "TempO-Seq") {
 
 ```{r match_bm_bs, echo=FALSE}
 # Initialize the matrix to store the results
+# Assuming bm and bs are already defined and populated
 results <- matrix(nrow = length(bm), ncol = length(bs))
 colnames(results) <- names(bs)
 rownames(results) <- names(bm)
@@ -375,8 +378,7 @@ final_df_colored <- final_df %>%
     background = scales::col_numeric(
       palette = viridisLite::viridis(256, alpha = 0.3),
       domain = NULL
-    )(.x),
-    extra_css = "padding: 0px 4px; border-radius: 0px;")))
+    )(.x))))
 
 # Display the data frame using kable and kableExtra for formatting
 knitr::kable(final_df_colored, escape = FALSE, caption = "Number of Genes and Matching Genes Between Biomarkers and Biosets") %>%
@@ -385,73 +387,11 @@ knitr::kable(final_df_colored, escape = FALSE, caption = "Number of Genes and Ma
   kableExtra::column_spec(1, bold = TRUE) %>%
   kableExtra::column_spec(2, bold = TRUE) %>%
   kableExtra::column_spec(3, italic = TRUE) %>%
-  kableExtra::scroll_box(width = "100%", height = "700px", fixed_thead = TRUE)
+  kableExtra::scroll_box(width = "100%", height = "800px", fixed_thead = TRUE)
 ```
 
 
 ## Running Fisher Analysis {-}
-```{r plot_RF, echo=FALSE}
-biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
-	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
-
-
-# Initialize an empty list to store ggplot objects for the combined plot
-plot_list_combined <- list()
-
-for (i in seq_along(unique(out$Biomarker))) {
-  biomarker <- unique(out$Biomarker)[i]
-  
-  if (biomarker == "HDACiTk6" || biomarker == "Genomark") {
-    threshold_hi <- 15
-    threshold_lo <- -15
-  } else {
-    threshold_hi <- 4
-    threshold_lo <- -4
-  }
-
-  j <- out %>% 
-    filter(Biomarker == biomarker) %>%
-    arrange(o, decreasing = TRUE) %>%
-    mutate(Chemical = str_extract(Chem, "^[^_]+")) %>% 
-    mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
-  
-  # Create the plot with full x-axis and y-axis labels
-  p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
-    geom_point(size = 3) +
-    geom_hline(yintercept = threshold_hi, color = "black") +
-    geom_hline(yintercept = threshold_lo, color = "black") +
-    labs(title = biomarker,
-         y = "-log10(p-value)",
-         x = "Bioset") +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-  
-  # Save the individual plot
-  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
-
-  # Append the modified plot to the list for the combined plot
-  plot_list_combined[[biomarker]] <- p
-}
-# Combine the plots using patchwork with a shared legend
-combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
-  plot_layout(guides = "collect",
-  axis_titles = "collect") +
-  plot_annotation(
-    title = NULL,
-    subtitle = NULL,
-    caption = NULL,
-    theme = theme(
-      plot.title = element_blank(),
-      plot.subtitle = element_blank(),
-      plot.caption = element_blank(),
-      axis.title.x = element_text(size = 12, face = "bold"),
-      axis.title.y = element_text(size = 12, face = "bold")
-    )
-  )
-```
-
-```{r plot_combined, echo=FALSE, fig.height=20, fig.width=10}
-combined_plot
-```
 
 ```{r threshold_setup, echo=FALSE}
 threshold4 <- c("AHR", "AR",
@@ -469,8 +409,85 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       "TGxTB")
                       
 # Define custom color palette
-custom_colors <- c("blue", "white", "red")
+custom_colors <- c("blue", "white", "red") # For heatmaps
 ```
+
+### Plots {.tabset .tabset-pills}
+```{r plot_RF, echo=FALSE, results='asis'}
+biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
+	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
+
+
+# Initialize an empty list to store ggplot objects for the combined plot
+plot_list_combined <- list()
+
+for (i in seq_along(unique(out$Biomarker))) {
+  biomarker <- unique(out$Biomarker)[i]
+  
+  if (biomarker %in% threshold15) {
+    threshold_hi <- 15
+    threshold_lo <- -15
+  } else if (biomarker %in% threshold4) {
+    threshold_hi <- 4
+    threshold_lo <- -4
+  } else {
+    threshold_hi <- 0
+    threshold_lo <- 0
+  }
+
+  j <- out %>% 
+    filter(Biomarker == biomarker) %>%
+    arrange(o, decreasing = TRUE) %>%
+    mutate(Chemical = str_extract(Chem, "^[^_]+")) %>% 
+    mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
+  
+  cat(paste0("#### ", biomarker, "\n\n"))  # Show each plot in its own tab
+
+  # Create the plot with full x-axis and y-axis labels
+  p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
+    geom_point(size = 3) +
+    geom_hline(yintercept = threshold_hi, color = "black") +
+    geom_hline(yintercept = threshold_lo, color = "black") +
+    labs(title = biomarker,
+         y = "-log10(p-value)",
+         x = "Bioset") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+  print(p)
+
+  cat("\n\n")
+  
+  # Save the individual plot
+  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
+
+  # Append the modified plot to the list for the combined plot
+  plot_list_combined[[biomarker]] <- p
+}
+```
+
+```{r plot_combined, echo=FALSE, fig.height=20, fig.width=10}
+# Combine the plots using patchwork with a shared legend
+combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
+  plot_layout(guides = "collect",
+  axis_titles = "collect") +
+  plot_annotation(
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    theme = theme(
+      plot.title = element_blank(),
+      plot.subtitle = element_blank(),
+      plot.caption = element_blank(),
+      axis.title.x = element_text(size = 12, face = "bold"),
+      axis.title.y = element_text(size = 12, face = "bold")
+    )
+  )
+
+# combined_plot
+```
+
+### Heatmaps
+
 
 ```{r heatmap_threshold15, echo = FALSE}
 # Filter the data
@@ -496,9 +513,7 @@ pheatmap(data_matrix_threshold15,
          cellheight = 10,
          main = "Heatmap for Biomarkers with Threshold -15 to 5",
          color = custom_colors,
-         breaks = c(-20, -15, 15, 20),
-         legend_breaks = c(-Inf, 0, Inf),
-         legend_labels = c("< -15", "-15 to 15", "> 15"))
+         breaks = c(-Inf, -15, 15, Inf))
 ```
 
 ```{r heatmap_threshold4, echo=FALSE}
@@ -525,9 +540,7 @@ pheatmap(data_matrix_threshold4,
          cellheight = 10,
          main = "Heatmap for Biomarkers with Threshold -4 to 4",
          color = custom_colors,
-         breaks = c(-Inf, -4, 4, Inf),
-         legend_breaks = c(-Inf, -4, 4, Inf),
-         legend_labels = c("< -4", "-4 to 0", "0 to 4", "> 4"))
+         breaks = c(-Inf, -4, 4, Inf))
 ```
 
 ```{r heatmap_thresholdunkown, echo=FALSE}
