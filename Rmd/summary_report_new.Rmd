@@ -74,12 +74,13 @@ output:
 ---
 
 
-```{r load_libraries}
+```{r load_libraries, echo=FALSE}
 library(here)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
 library(ggplot2)
+library(formattable)
 
 ```
 
@@ -284,7 +285,9 @@ fail_gic %>%
 ```
 
 
----
+   
+  
+  
 
 # Differential Expression
 
@@ -297,7 +300,7 @@ exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$c
 
 deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = FALSE)
 
-colnames(deg_counts) <- c(params$reports_facet, "contrast", "DEGs passing filters")
+colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs")
 ```
 
 There were **`r nrow(exp_contrasts)` contrasts** analyzed in this project. 
@@ -307,11 +310,9 @@ Of these, **`r nrow(deg_counts)` contrasts** had differentially expressed genes 
 The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table and figure below.
 
 ```{r DEG_table}
-
-
 deg_counts %>%
-  kable("html", caption = "DEG Table") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+  formattable(list(DEGs = color_bar("lightgreen"))) %>%
+  formattable::as.htmlwidget()
 ```
 
 
@@ -356,7 +357,7 @@ if (params$generate_tgxddi_report && file.exists(file.path(paths$summary, "tgx-d
 } else {
   ddi_run <- FALSE
 }
-# Uncomment once hdaci is implemented
+
 if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx-hdaci_results_summary.csv"))) {
   hdaci_run <- TRUE
 } else {
@@ -365,21 +366,52 @@ if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx
 ```
 
 ```{r tgxddi, eval = ddi_run}
-# What I really want is a table, each row is a group (ex BaP_1.56) and columns are the calls for different biomarkers.
-# Don't need the results of each test, just the calls.
-# Need to get the tgx-DDI stuff in here first.
-
 ddi_results <- read.csv(file.path(paths$summary, "tgx-ddi_results_summary.csv"), stringsAsFactors = FALSE)
 
-ddi_results %>%
-  kable("html", caption = "tgx-DDI Biomarker Results") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+ddi <- ddi_results %>%
+  dplyr::select(ID, Overall) %>%
+  rename(DDI_result = Overall)
+
 ```
 
 ```{r tgxhdaci, eval = hdaci_run}
 hdaci_results <- read.csv(file.path(paths$summary, "tgx-hdaci_results_summary.csv"), stringsAsFactors = FALSE)
 
-hdaci_results %>%
-  kable("html", caption = "tgx-HDACi Biomarker Results") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+hdaci <- hdaci_results %>%
+  dplyr::select(ID, Overall) %>%
+  rename(HDACi_result = Overall)
+```
+
+```{r biomarker_table}
+# If ddi_run is TRUE and hdaci_run is TRUE, merge tables on ID
+if (ddi_run && hdaci_run) {
+  biomarker_table <- merge(ddi, hdaci, by = "ID", all = TRUE)
+} else if (ddi_run && !hdaci_run) {
+  biomarker_table <- ddi
+} else if (hdaci_run && !ddi_run) {
+  biomarker_table <- hdaci
+} else if (!ddi_run && !hdaci_run) {
+  biomarker_table <- NULL
+}
+
+ddi_formatter <- formatter("span",
+                           style = x ~ ifelse(x == "DDI", 
+                                              style("background-color" = "lightblue"), 
+                                              style("background-color" = "yellow")))
+
+hdaci_formatter <- formatter("span",
+                             style = x ~ ifelse(x == "HDACi", 
+                                                style("background-color" = "lightblue"), 
+                                                style("background-color" = "yellow")))
+
+# If biomarker_table is not NULL, print the table
+if (!is.null(biomarker_table)) {
+  biomarker_table %>%
+    rename(Contrast = ID) %>%
+    formattable(list(DDI_result = ddi_formatter, HDACi_result = hdaci_formatter)) %>%
+    formattable::as.htmlwidget()
+} else {
+  print("No biomarker analyses were run.")
+}
+
 ```
