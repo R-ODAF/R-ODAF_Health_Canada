@@ -71,10 +71,11 @@ output:
     code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
+bibliography: "`r file.path(params$projectdir, 'references/references.bib')`"
 ---
 
 
-```{r load_libraries, echo=FALSE}
+```{r load_libraries, message = F, warnings = F, echo = F}
 library(here)
 library(tidyverse)
 library(knitr)
@@ -122,7 +123,7 @@ Report prepared for: `r params$researcher_name`
 
 ## Quality control criteria
 
-Quality control of each sample is performed according to the criteria laid out in Harrill et al., 2021 [cite!], plus an additional filter for the distance between samples in hierarchical clustering.
+Quality control of each sample is performed according to the criteria laid out in @harrill2021high, plus an additional filter for the distance between samples in hierarchical clustering.
 
 
 ```{r criteria_table}
@@ -197,6 +198,7 @@ passed <- qc_info %>%
 num_passed_refs <- passed %in% ref_samples %>% sum()
 num_passed_samples <- passed %in% sample_names %>% sum()
 num_passed_solvent <- passed %in% solvent_names %>% sum()
+num_passed_total <- num_passed_samples + num_passed_solvent + num_passed_refs
 
 pass_table <- data.frame(
   "Sample Type" = c("Experimental Samples", "Solvent controls","Reference RNA", "Technical Controls"),
@@ -291,8 +293,17 @@ fail_gic %>%
 
 # Differential Expression
 
-Here is a methods blurb about differential expression analysis and R-ODAF filtering criteria.
-Possibly a table as well, like the QC criteria table above?
+```{r }
+read_type <- if (params$platform == "TempO-Seq") {
+  "probes"
+} else {
+  "genes"
+}
+```
+
+A count matrix containing the $`r num_passed_total`$ samples that passed QC was imported into R for statistical analysis [@rcitation]. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], `r read_type` were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@love2014deseq2] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was ashr [@stephens2017false]. An alpha of `r params$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=overallResListAll[[1]][[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(overallResListAll[[1]][[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter_DEGs` and adjusted p-value of `r params$alpha`.
+
+
 
 ```{r DEGs}
 # read in contrasts
@@ -309,19 +320,17 @@ Of these, **`r nrow(deg_counts)` contrasts** had differentially expressed genes 
 
 The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table and figure below.
 
-```{r DEG_table}
+```{r DEG_table, }
 deg_counts %>%
-  formattable(list(DEGs = color_bar("lightgreen"))) %>%
-  formattable::as.htmlwidget()
+  formattable(
+              align = c("l", "l", "l", "l"),
+              list(DEGs = color_bar("lightgreen"))) %>%
+  formattable::as.htmlwidget(width = 500)
 ```
 
-
+## Number of DEGs per Contrast
 ```{r DEG_figures}
 facets <- R.ODAF.utils::get_facets(qc_metadata, params)
-
-# Already loaded in render_DEseq2_report.parallel.R, so I probably shouldn't load here?
-# dataFile <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-# load(dataFile) # metadata, contrasts, counts, resultsList
 
 if (!is.na(params$reports_facet)) {
   plot_list <- summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
@@ -334,6 +343,7 @@ if (!is.na(params$reports_facet)) {
 p1
 ```
 
+## DEGs filtered by R-ODAF criteria
 ```{r p2, fig.height=12}
 p2
 ```
@@ -345,9 +355,9 @@ p2
 Biomarker analysis is only available on human datasets and the biomarkers available in this workflow have only been tested on specific cell lines. 
 The results of this analysis may not be applicable to other cell lines or tissues.
 
-The TGx-DDI biomarker was developed using the **TK6** cell line and has been tested on **HepaRG**.
+The TGx-DDI biomarker was developed using the **TK6** cell line [@li2015development] and has been tested on **HepaRG** [@buick2020tgxddi_hepaRG].
 
-The TGx-HDACi biomarker was developed using the **TK6** cell line and has not been tested on other cells.
+The TGx-HDACi biomarker was developed using the **TK6** cell line [@cho_hdaci_2019] and has not been tested on other cells.
 
 <span style="color:red;">Cell line used in this study: `r params$celltype` </span>
 
@@ -414,4 +424,23 @@ if (!is.null(biomarker_table)) {
   print("No biomarker analyses were run.")
 }
 
+```
+
+
+
+
+
+
+
+
+## References {-}
+
+If these methods were used in your study, please cite the following papers as appropriate:  
+
+
+
+<div id="refs"></div>
+
+# Session Info
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```
