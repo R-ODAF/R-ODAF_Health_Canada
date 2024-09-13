@@ -91,6 +91,7 @@ library(patchwork)
 library(pheatmap)
 library(scales)
 library(viridisLite)
+library(formattable)
 ```
 
 ---
@@ -346,7 +347,7 @@ if (params$platform == "TempO-Seq") {
 
 ```
 
-```{r match_bm_bs, echo=FALSE}
+```{r match_bm_bs, echo=FALSE, fig.height=6}
 # Initialize the matrix to store the results
 # Assuming bm and bs are already defined and populated
 results <- matrix(nrow = length(bm), ncol = length(bs))
@@ -370,24 +371,23 @@ results_df$Biomarker <- rownames(results_df)
 # Merge the match_counts and results_df dataframes
 final_df <- merge(match_counts, results_df, by = "Biomarker")
 
+# Fancy formatting
+formatted_table <- final_df %>%
+  formattable::formattable(
+    align = c("l", rep("r", ncol(final_df) - 1)),
+    list(
+      area(col = 2:3) ~ formattable::formatter("span", style = ~ formattable::style(font.style = "italic")),
+      area(col = 4:ncol(final_df)) ~ formattable::color_tile("#ffffff", "#54ce89")
+    )
+  ) %>%
+  formattable::as.htmlwidget()
 
-# Apply cell_spec to color the background of columns 4 onward based on their values
-final_df_colored <- final_df %>%
-  mutate(across(4:ncol(final_df), ~ kableExtra::cell_spec(.x, "html", 
-    color = "white",
-    background = scales::col_numeric(
-      palette = viridisLite::viridis(256, alpha = 0.3),
-      domain = NULL
-    )(.x))))
+# Make table horizontally scrollable
+htmltools::div(
+  style = "overflow-x: auto; width: 100%; height: 700px;",
+  formatted_table
+)
 
-# Display the data frame using kable and kableExtra for formatting
-knitr::kable(final_df_colored, escape = FALSE, caption = "Number of Genes and Matching Genes Between Biomarkers and Biosets") %>%
-  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = FALSE, position = "left") %>%
-  kableExtra::add_header_above(c(" " = 3, "Number of matching genes" = length(bs))) %>%
-  kableExtra::column_spec(1, bold = TRUE) %>%
-  kableExtra::column_spec(2, bold = TRUE) %>%
-  kableExtra::column_spec(3, italic = TRUE) %>%
-  kableExtra::scroll_box(width = "100%", height = "800px", fixed_thead = TRUE)
 ```
 
 
