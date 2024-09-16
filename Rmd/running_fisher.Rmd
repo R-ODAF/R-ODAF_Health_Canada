@@ -114,7 +114,7 @@ Here is an explanation (that perhaps Andrew will provide?) of the Running Fisher
 ***
 ```{r functions, echo=FALSE}
 K <- function(bm, bioset){
-	#Arguements are two ranked order lists of genes
+	#Arguments are two ranked order lists of genes
 	#Return the rankings for each common gene in the bioset
 	rnk <- 1:length(bioset)
 	K <- data.frame(ID = bm, Rank = 0)
@@ -277,11 +277,17 @@ names(bs) <- new_names
 ```
 
 ```{r run_RF, echo=FALSE}
-# Need different values for N
-# Depending on the biospyder kit?
-# What about RNA-seq?
+# N defines the number of genes in the universe which is the intersection of the bioset universe and the biomarker universe.
+if (params$platform == "TempO-Seq") {
+  # Get number of unique genes (not probes) from manifest
+  N <- length(unique(params$biospyder$Gene_Symbol))
+} else {
+  # For RNA-seq, use the length of the count data
+  ## Minus the number of rows with all zeros
+  zero_count <- apply(count_data, 1, function(row) all(row == 0)) %>% sum()
+  N <- nrow(count_data) - zero_count
+}
 
-N <- 19694
 
 out <- NULL
 out2 <- data.frame(Compounds = names(bm))
@@ -298,7 +304,6 @@ for(f in 1:length(bs)){
 	}
 	out2[[nms]] <- oo$o
 }
-
 ```
 
 ## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
