@@ -413,8 +413,12 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       "PParHH", "HDACiHepaRG",
                       "TGxTB")
                       
-# Define custom color palette
-custom_colors <- c("blue", "white", "red") # For heatmaps
+# Define custom color palette for heatmaps
+custom_colors <- c("blue", "white", "red")
+continuous_colors <- colorRampPalette(c("blue", "white", "red"))(21)
+
+# Define fig heights for heatmaps
+heatmap_height <- (length(bs) / 3) + 2
 ```
 
 ### Plots {.tabset .tabset-pills}
@@ -493,154 +497,87 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
 
 ### Heatmaps
 
+```{r heatmap_function, echo=FALSE}
+make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
 
-```{r heatmap_threshold15, echo = FALSE, fig.height=heatmap_height}
-# Filter the data
-selected_data_threshold15 <- out2 %>% 
-  filter(Compounds %in% threshold15)
+  # Make matrix
+  # Exclude the 'Compounds' column and convert the remaining data frame to a matrix
+  data_matrix <- filtered_data %>%
+    select(-Compounds) %>%
+    as.matrix() %>%
+    t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
+  # Put biomarker names back in
+  colnames(data_matrix) <- filtered_data$Compounds
 
-# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
-data_matrix_threshold15 <- selected_data_threshold15 %>%
-  select(-Compounds) %>%
-  as.matrix() %>%
-  t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
+  # Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
+  layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
 
-colnames(data_matrix_threshold15) <- selected_data_threshold15$Compounds
-
-# Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
-layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
-
-# Create the heatmap using the image function
-par(mar = c(2, 10, 10, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
-image(1:ncol(data_matrix_threshold15), 1:nrow(data_matrix_threshold15), t(data_matrix_threshold15),
-      col = custom_colors, breaks = c(-100, -15, 15, 100), axes = FALSE, xlab = "", ylab = "",
-      main = "Heatmap for Biomarkers with Threshold -15 to 15")
-
-# Add row and column labels
-axis(3, at = 1:ncol(data_matrix_threshold15), labels = colnames(data_matrix_threshold15), las = 2)
-axis(2, at = 1:nrow(data_matrix_threshold15), labels = rownames(data_matrix_threshold15), las = 2)
-
-# Add borders around the cells
-for (i in 1:ncol(data_matrix_threshold15)) {
-  for (j in 1:nrow(data_matrix_threshold15)) {
-    rect(i - 0.5, j - 0.5, i + 0.5, j + 0.5, border = "grey")
+  # Set up legend and main title
+  if (threshold_hi == 4) {
+    legend_text <- c(paste0("< ", threshold_lo), paste0(threshold_lo, " to ", threshold_hi), paste0("> ", threshold_hi))
+    title <- "Heatmap for Biomarkers with Threshold -4 to 4"
+    fill = c("blue", "white", "red")
+  } else if (threshold_hi == 15) {
+    legend_text <- c(paste0("< ", threshold_lo), paste0(threshold_lo, " to ", threshold_hi), paste0("> ", threshold_hi))
+    title <- "Heatmap for Biomarkers with Threshold -15 to 15"
+    fill = c("blue", "white", "red")
+  } else {
+    # Trick to make a continuous legend in R base heatmap
+    legend_text <- seq(min(data_matrix[-1], na.rm = TRUE), max(data_matrix[-1], na.rm = TRUE), length.out = 21) %>% round()
+    title <- "Heatmap for Biomarkers with no published thresholds"
   }
-}
 
-# Create a blank plot for the legend
-par(mar = c(5, 0, 5, 0))  # Adjust margins for the legend
-plot.new()
-legend("center", legend = c("< -15", "-15 to 15", "> 5"), 
-       fill = c("blue", "white", "red"), 
-       title = "-log(p-value)")
+  # Create the heatmap using the image function
+  par(mar = c(2, 10, 14, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
+  
+  if (threshold_hi > 0) {
+    image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
+          col = colours, breaks = c(-100, threshold_lo, threshold_hi, 100), axes = FALSE, xlab = "", ylab = "",
+          main = title)
+  } else { 
+    image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
+          col = colours, axes = FALSE, xlab = "", ylab = "",
+          main = title)
+  }
+
+  # Add row and column labels
+  axis(3, at = 1:ncol(data_matrix), labels = colnames(data_matrix), las = 2)
+  axis(2, at = 1:nrow(data_matrix), labels = rownames(data_matrix), las = 2)
+
+  # Add borders around the cells
+  for (i in 1:ncol(data_matrix)) {
+    for (j in 1:nrow(data_matrix)) {
+      rect(i - 0.5, j - 0.5, i + 0.5, j + 0.5, border = "grey")
+    }
+  }
+
+  # Create a blank plot for the legend
+  par(mar = c(5, 0, 5, 0))  # Adjust margins for the legend
+  plot.new()
+  legend("center", legend = legend_text, 
+         fill = colours, 
+         title = "-log(p-value)")
+}
 ```
 
+
 ```{r heatmap_threshold4, echo=FALSE, fig.height=heatmap_height}
-# Filter the data
 selected_data_threshold4 <- out2 %>% 
   filter(Compounds %in% threshold4)
 
-# Convert to matrix (have to remove Biomarkers names then add them back in)
-data_matrix_threshold4 <- selected_data_threshold4 %>%
-  select(-Compounds) %>%
-  as.matrix() %>%
-  t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
-
-colnames(data_matrix_threshold4) <- selected_data_threshold4$Compounds
-
-# Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
-layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
-
-# Create the heatmap using the image function
-par(mar = c(2, 10, 10, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
-image(1:ncol(data_matrix_threshold4), 1:nrow(data_matrix_threshold4), t(data_matrix_threshold4),
-      col = custom_colors, breaks = c(-100, -4, 4, 100), axes = FALSE, xlab = "", ylab = "",
-      main = "Heatmap for Biomarkers with Threshold -4 to 4")
-
-# Add row and column labels
-axis(3, at = 1:ncol(data_matrix_threshold4), labels = colnames(data_matrix_threshold4), las = 2)
-axis(2, at = 1:nrow(data_matrix_threshold4), labels = rownames(data_matrix_threshold4), las = 2)
-
-# Add borders around the cells
-for (i in 1:ncol(data_matrix_threshold4)) {
-  for (j in 1:nrow(data_matrix_threshold4)) {
-    rect(i - 0.5, j - 0.5, i + 0.5, j + 0.5, border = "grey")
-  }
-}
-
-# Create a blank plot for the legend
-par(mar = c(5, 0, 5, 0))  # Adjust margins for the legend
-plot.new()
-legend("center", legend = c("< -4", "-4 to 4", "> 4"), 
-       fill = c("blue", "white", "red"), 
-       title = "-log(p-value)")
+make_heatmap(selected_data_threshold4, -4, 4, custom_colors)
 ```
 
-```{r heatmap_thresholdunkown2, echo=FALSE, fig.height=heatmap_height}
-selected_data_thresholdunknown <- out2 %>% 
-  filter(Compounds %in% thresholdunknown)
+```{r heatmap_threshold15, echo=FALSE, fig.height=heatmap_height}
+selected_data_threshold15 <- out2 %>% 
+  filter(Compounds %in% threshold15)
 
-# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
-data_matrix_thresholdunknown <- selected_data_thresholdunknown %>%
-  select(-Compounds) %>%
-  as.matrix()
-
-# Set the row names of the matrix to the values in the 'Compounds' column
-rownames(data_matrix_thresholdunknown) <- selected_data_thresholdunknown$Compounds
-
-# Create the heatmap
-pheatmap(data_matrix_thresholdunknown,
-         cluster_rows = FALSE,
-         cluster_cols = FALSE,
-         show_rownames = TRUE,
-         show_colnames = TRUE,
-         fontsize = 8,
-         cellwidth = 10,
-         cellheight = 10,
-         main = "Heatmap for Biomarkers with Unknown Threshold")
+make_heatmap(selected_data_threshold15, -15, 15, custom_colors)
 ```
 
 ```{r heatmap_thresholdunknown, echo=FALSE, fig.height=heatmap_height}
-# Assuming data_matrix_thresholdunknown is already defined and transposed if needed
 selected_data_thresholdunknown <- out2 %>% 
   filter(Compounds %in% thresholdunknown)
 
-# Exclude the 'Compounds' column and convert the remaining data frame to a matrix
-data_matrix_thresholdunknown <- selected_data_thresholdunknown %>%
-  select(-Compounds) %>%
-  as.matrix() %>%
-  t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
-
-colnames(data_matrix_thresholdunknown) <- selected_data_thresholdunknown$Compounds
-
-# Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
-layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
-
-# Define a continuous color palette
-continuous_colors <- colorRampPalette(c("blue", "white", "red"))(100)
-
-# Create the heatmap using the image function
-par(mar = c(2, 10, 14, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
-image(1:ncol(data_matrix_thresholdunknown), 1:nrow(data_matrix_thresholdunknown), t(data_matrix_thresholdunknown),
-      col = continuous_colors, axes = FALSE, xlab = "", ylab = "",
-      main = "Heatmap for Biomarkers with no published thresholds")
-
-# Add row and column labels
-axis(3, at = 1:ncol(data_matrix_thresholdunknown), labels = colnames(data_matrix_thresholdunknown), las = 2)
-axis(2, at = 1:nrow(data_matrix_thresholdunknown), labels = rownames(data_matrix_thresholdunknown), las = 2)
-
-# Add borders around the cells
-for (i in 1:ncol(data_matrix_thresholdunknown)) {
-  for (j in 1:nrow(data_matrix_thresholdunknown)) {
-    rect(i - 0.5, j - 0.5, i + 0.5, j + 0.5, border = "grey")
-  }
-}
-
-# Create a blank plot for the legend
-par(mar = c(5, 0, 5, 0))  # Adjust margins for the legend
-plot.new()
-legend("center", legend = c("Low", "Medium", "High"), 
-       fill = c("blue", "white", "red"), # colorRampPalette(c("blue", "white", "red"))(100)??
-       title = "Value")
+make_heatmap(selected_data_thresholdunknown, 0, 0, continuous_colors)
 ```
-
