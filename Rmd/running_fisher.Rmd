@@ -107,7 +107,7 @@ Report prepared by: `r params$bioinformatician_name`
 Report prepared for: `r params$researcher_name`
 
 ***
-Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in Kuperschmidt et al. (2010) [need to cite].
+Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in @kupershmidt_ontology_based_2010.
 
 Here is an explanation (that perhaps Andrew will provide?) of the Running Fisher method:
 
@@ -240,7 +240,7 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
 
   # Create the heatmap using the image function
   par(mar = c(2, 10, 14, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
-  
+
   if (threshold_hi > 0) {
     image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
           col = colours, breaks = c(-100, threshold_lo, threshold_hi, 100), axes = FALSE, xlab = "", ylab = "",
@@ -293,11 +293,6 @@ for(k in 1:length(bms)){
 ```
 
 ```{r load_biosets, echo=FALSE}
-# # uncomment code to run interactively
-# # Otherwise, the data will be loaded from bs by way of render_DESeq2_report.parallel.R
-#data_file <- file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData"))
-#load(data_file)
-
 # Select EnsemblID as ID column
 # Note ensembl ID column needs to be renamed as Gene to match Andrew's code
 select_and_rename <- function(df) {
