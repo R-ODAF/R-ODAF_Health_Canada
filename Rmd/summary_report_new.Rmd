@@ -311,7 +311,11 @@ exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$c
 
 deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = FALSE)
 
+if (!is.na(params$reports_facet)) {
 colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs")
+} else {
+  colnames(deg_counts) <- c("Contrast", "DEGs")
+}
 ```
 
 There were **`r nrow(exp_contrasts)` contrasts** analyzed in this project. 
@@ -333,19 +337,30 @@ deg_counts %>%
 facets <- R.ODAF.utils::get_facets(qc_metadata, params)
 
 if (!is.na(params$reports_facet)) {
+  show_deg_plots <- TRUE
+  
   plot_list <- summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
 
   p1 <- plot_list$p1
   p2 <- plot_list$p2
 
+} else {
+  show_deg_plots <- FALSE
 }
-# TODO: I will need to put things in conditionals for whether there are facets, whether there are even DEGs, etc.
-p1
+
+if (show_deg_plots == TRUE) {
+  p1
+}
+
+# summarize_across_facets errors when reports_facet = NA
+
 ```
 
 ## DEGs filtered by R-ODAF criteria
 ```{r p2, fig.height=12}
-p2
+if (show_deg_plots == TRUE) {
+  p2
+}
 ```
 
 
@@ -423,7 +438,6 @@ if (!is.null(biomarker_table)) {
 } else {
   print("No biomarker analyses were run.")
 }
-
 ```
 
 
