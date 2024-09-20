@@ -76,7 +76,7 @@ output:
     code_folding: show
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
-bibliography: "`r file.path(params$projectdir, 'references/tgx-hdaci-references.bib')`"
+bibliography: "`r file.path(params$projectdir, 'references/rf_references.bib')`"
 
 ---
 
@@ -536,6 +536,7 @@ for (i in seq_along(unique(out$Biomarker))) {
     labs(title = biomarker,
          y = "-log10(p-value)",
          x = "Bioset") +
+    theme_bw() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
   print(p)
@@ -571,3 +572,59 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
 # combined_plot
 ```
 
+## Biomarker Table {-}
+
+```{r create_table}
+# Sample data
+table_data <- data.frame(
+  Biomarker_name = c("AHR", "Aneugen1", "Aneugen2",
+                 "AR", "Genomark", "ERa50",
+                 "ERa46", "FattyLiver", "HIF1",
+                 "HSF1", "MTF1", "Nrf2",
+                 "PParHepaRG", "PParHH", "TGxDDI",
+                 "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA"),
+  Short_name = c("AHR", "Aneugen1", "Aneugen2",
+                 "AR", "Genomark", "ERa50",
+                 "ERa46", "FattyLiver", "HIF1",
+                 "HSF1", "MTF1", "Nrf2",
+                 "PParHepaRG", "PParHH", "TGxDDI",
+                 "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA"),
+  Organism = c("", "", "",
+              "Human", "Human", "Human",
+              "", "Human", "Human",
+              "Human", "Human", "Mouse",
+              "Human", "Human", "Human",
+              "Human", "", "", "Human"),
+  Cell_line = c("", "", "",
+                "LAPC-4", "HeapRG", "MCF7",
+                "", "HepaRG", "DU 145, PC-3, and 22Rv1",
+                "various", "various", "liver",
+                "HepaRG", "Primary hepatocytes", "TK6 and HepaRG",
+                "TK6", "", "", "MCF7"),
+  Threshold_log10_p_value = c("-4/4", "", "",
+                              "-4/4", "", "-4/4",
+                              "-4/4", "", "",
+                              "-4/4", "-4/4", "-4/4",
+                              "", "", "-4/4",
+                              "-15/15", "", "", ""),
+  Reference = c("@corton_gene_2022", "", "",
+                "@rooney_activation_2018", "@thienpont_novel_2023", "@corton_50_gene_2024",
+                "@ryan_moving_2016", "@lichtenstein_transcript_2020", "@jonsson_hypoxia-independent_2016",
+                "@cervantes_gene_2021", "@jackson_identification_2020", "@rooney_activation_2018",
+                "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_flow_2020",
+                "@cho_development_2021", "", "", "@yeakley_trichostatin_2017")
+)
+
+# Create the table with advanced formatting
+kable(table_data, col.names = c("Biomarker Name", "Short name", "Organism", "Cell line or tissue", "Threshold -log10(p-value)", "Reference")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+
+# References
+
+<div id="refs"></div>
+
+
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
+```
