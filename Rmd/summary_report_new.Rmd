@@ -128,7 +128,7 @@ Quality control of each sample is performed according to the criteria laid out i
 
 ```{r criteria_table}
 # Workaround because "get_params(context = "analysis") leaves out QC parameters
-config <- yaml::read_yaml(file.path(paths$results,  "Pipeline_record", "config.yaml"), eval.expr = TRUE)
+config <- yaml::read_yaml(here::here("inputs", "config", "config.yaml"), eval.expr = TRUE)
 
 qc_pars <- c(config$QC)
 qc_pars <- replace_nulls_in_config(qc_pars)
