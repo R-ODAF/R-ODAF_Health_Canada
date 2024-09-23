@@ -165,7 +165,15 @@ control <- contrasts_subset %>%
 # So get the ensembl IDs from the biospyder manifest
 
 if (params$platform == "TempO-Seq") {
-  biospyder_manifest_file <- paste0(params$biospyder_dbs, params$biospyder_manifest_file)
+    # Use fs package to check path to manifest
+  if (fs::is_absolute_path(params$biospyder_dbs)) {
+    biospyder_manifest_file <- file.path(params$biospyder_dbs, params$biospyder_manifest_file)
+  } else { # If relative, Ex. in config, biospyder_dbs: "./"
+    biospyder_path <- fs::path_abs(params$projectdir, params$biospyder_dbs)
+    biospyder_path <- normalizePath(biospyder_path, mustWork = TRUE)
+    biospyder_manifest_file <- file.path(biospyder_path, params$biospyder_manifest_file)
+  }
+  
   biospyder_manifest_file <- read.delim(biospyder_manifest_file, sep = ",")
 
   biospyder_IDs <- biospyder_manifest_file %>%
