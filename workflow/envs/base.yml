@@ -7,4 +7,4 @@ channels:
   - defaults
 dependencies:
   - bioconda::snakemake
-  - conda-forge::setuptools=71.0.4 # Workaround for can't import from backports error
+  - conda-forge::setuptools<71 # Workaround for can't import from backports error
