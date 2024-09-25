@@ -137,8 +137,9 @@ make_tgxddi_reports <- function(pars, paths, facet) {
 #' @export
 make_summary_report <- function(pars, paths) {
   message("Generating summary report")
+  project_title <- pars$project_title
   summary_report <- file.path(paths$projectdir, "Rmd", "summary_report_new.Rmd")
-  summary_file <- file.path(paths$summary, "summary_report.html")
+  summary_file <- file.path(paths$summary, paste0(project_title, "_summary_report.html"))
   render_report(summary_report, summary_file, pars)
 }
 
