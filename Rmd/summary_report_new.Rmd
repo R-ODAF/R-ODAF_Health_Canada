@@ -210,11 +210,9 @@ pass_table <- data.frame(
 pass_table %>%
   kable("html", caption = "Passing QC Table",
         col.names = c("Sample Type", "Total number", "Number passing QC Filters")) %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
-  footnote(footnote_as_chunk = TRUE,
-           general = "Technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters.")
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
-
+*Note: "Technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters."
 
 ```{r QC_fails}
 fail_dendro <- qc_info %>%
