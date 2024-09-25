@@ -169,21 +169,21 @@ criteria %>%
 metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, params$metadata_file), paths)
 
 tech_ctrl_names <- metadata %>%
-  dplyr::filter(.data[[qc_pars$technical_control]] == "T") %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "T" | .data[[qc_pars$technical_control]] == "TRUE") %>%
   dplyr::pull(original_names)
 
 sample_names <- metadata %>%
-  dplyr::filter(.data[[qc_pars$technical_control]] == "F") %>%
-  dplyr::filter(.data[[params$solvent_control]] == "F") %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "F" | .data[[qc_pars$technical_control]] == "FALSE") %>%
+  dplyr::filter(.data[[params$solvent_control]] == "F" | .data[[params$solvent_control]] == "FALSE") %>%
   dplyr::pull(original_names)
 
 solvent_names <- metadata %>%
-  dplyr::filter(.data[[qc_pars$technical_control]] == "F") %>%
-  dplyr::filter(.data[[params$solvent_control]] == "T") %>%
+  dplyr::filter(.data[[qc_pars$technical_control]] == "F" | .data[[qc_pars$technical_control]] == "FALSE") %>%
+  dplyr::filter(.data[[params$solvent_control]] == "T" | .data[[params$solvent_control]] == "TRUE") %>%
   dplyr::pull(original_names)
 
 ref_samples <- metadata %>%
-  dplyr::filter(.data[[qc_pars$reference_rna]] == "T") %>%
+  dplyr::filter(.data[[qc_pars$reference_rna]] == "T" | .data[[qc_pars$reference_rna]] == "TRUE") %>%
   dplyr::pull(original_names)
 
 qc_metadata <- R.ODAF.utils::get_metadata(file.path(paths$qc, "metadata.QC_applied.txt"), paths)
