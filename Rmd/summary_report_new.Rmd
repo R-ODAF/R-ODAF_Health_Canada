@@ -121,10 +121,10 @@ Report prepared for: `r params$researcher_name`
 
 # Sample Quality Control 
 
+Quality control of each sample is performed according to the criteria laid out in @harrill2021high, plus an additional filter for the distance between samples in hierarchical clustering, suggested by Andrew Williams (Health Canada). The following sections give a high-level overview of the quality control (QC) results for the samples in this study. Much greater detail on filtering criteria for each sample, along with various other QC checks, figures, and tables, can be found in the Studywide Sample QC report.
+
+
 ## Quality control criteria
-
-Quality control of each sample is performed according to the criteria laid out in @harrill2021high, plus an additional filter for the distance between samples in hierarchical clustering.
-
 
 ```{r criteria_table}
 # Workaround because "get_params(context = "analysis") leaves out QC parameters
@@ -158,12 +158,13 @@ criteria <- data.frame(
 
 # Generate and style the table
 criteria %>%
-  kable("html", caption = "Criteria Table") %>%
+  kable("html", caption = "Criteria Table",
+        col.names = c("Abbreviation", "Description", "Default Threshold", "Threshold")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 
 ```
 
-## Samples passing quality control
+## Number of samples passing quality control
 
 ```{r passing_QC}
 metadata <- R.ODAF.utils::get_metadata(file.path(paths$metadata, params$metadata_file), paths)
@@ -207,11 +208,13 @@ pass_table <- data.frame(
 )
 
 pass_table %>%
-  kable("html", caption = "Passing QC Table") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+  kable("html", caption = "Passing QC Table",
+        col.names = c("Sample Type", "Total number", "Number passing QC Filters")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  footnote(footnote_as_chunk = TRUE,
+           general = "Technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters.")
 ```
 
-*Note that technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters.
 
 ```{r QC_fails}
 fail_dendro <- qc_info %>%
@@ -241,7 +244,6 @@ fail_gic <- qc_info %>%
 
 ## Samples Failing Quality Control {.tabset .tabset-pills}
 
-More details on filtering criteria for each sample, along with various other QC checks, figures, and tables, can be found in the Studywide Sample QC report.
 
 ### Clustering Distance
 ```{r dendro_fail}
@@ -250,12 +252,18 @@ fail_dendro %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
+<br>
+<br>
+
 ### Number of Mapped Reads
 ```{r nmr_fail}
 fail_nmr %>%
   kable("html", caption = "Samples Failing Number of Mapped Reads Filter") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
+
+<br>
+<br>
 
 ### Fraction of Uniquely Mapped Reads
 ```{r fmr_fail}
@@ -265,6 +273,9 @@ fail_fmr %>%
 
 ```
 
+<br>
+<br>
+
 ### Number of Probes with at Least 5 Uniquely Mapped Reads
 ```{r ncov5_fail}
 fail_ncov5 %>%
@@ -272,12 +283,18 @@ fail_ncov5 %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
+<br>
+<br>
+
 ### Number of Probes Capturing the Top 80% of a Signal in a Sample
 ```{r nsig80_fail}
 fail_nsig80 %>%
   kable("html", caption = "Samples Failing Number of Probes Capturing the Top 80% of a Signal in a Sample Filter") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
+
+<br>
+<br>
 
 ### Gini Coefficient
 ```{r gic_fail}
@@ -287,6 +304,8 @@ fail_gic %>%
 ```
 
 
+<br>
+<br>
    
   
   
@@ -324,6 +343,8 @@ Of these, **`r nrow(deg_counts)` contrasts** had differentially expressed genes 
 
 The number of significant DEGs (i.e., those passing all filters) in each contrast is shown in the table and figure below.
 
+## Number of DEGs per Contrast
+
 ```{r DEG_table, }
 deg_counts %>%
   formattable(
@@ -332,7 +353,9 @@ deg_counts %>%
   formattable::as.htmlwidget(width = 500)
 ```
 
-## Number of DEGs per Contrast
+<br>
+<br>
+
 ```{r DEG_figures}
 facets <- R.ODAF.utils::get_facets(qc_metadata, params)
 
@@ -367,7 +390,7 @@ if (show_deg_plots == TRUE) {
 
 
 # Biomarkers
-Biomarker analysis is only available on human datasets and the biomarkers available in this workflow have only been tested on specific cell lines. 
+Biomarker analysis is **only available on human datasets** and the biomarkers available in this workflow have only been tested on specific cell lines. 
 The results of this analysis may not be applicable to other cell lines or tissues.
 
 The TGx-DDI biomarker was developed using the **TK6** cell line [@li2015development] and has been tested on **HepaRG** [@buick2020tgxddi_hepaRG].
