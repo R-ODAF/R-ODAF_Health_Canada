@@ -82,10 +82,7 @@ library(knitr)
 library(kableExtra)
 library(ggplot2)
 library(formattable)
-
 ```
-
-
 
 ```{r paths}
 ############################################################################
@@ -329,9 +326,11 @@ exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$c
 deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = FALSE)
 
 if (!is.na(params$reports_facet)) {
-colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs")
+  colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs", "Downregulated", "Upregulated")
+  deg_table_alignment <- c("l", "l", "l", "r", "l")
 } else {
-  colnames(deg_counts) <- c("Contrast", "DEGs")
+  colnames(deg_counts) <- c("Contrast", "DEGs", "Downregulated", "Upregulated")
+  deg_table_alignment <- c("l", "l", "r", "l")
 }
 ```
 
@@ -344,10 +343,42 @@ The number of significant DEGs (i.e., those passing all filters) in each contras
 ## Number of DEGs per Contrast
 
 ```{r DEG_table, }
+
+# From https://github.com/renkun-ken/formattable/issues/106#issuecomment-792383056
+bg = function(start, end, color, ...) {
+  paste("linear-gradient(90deg,transparent ",percent(start),",",
+        color, percent(start), ",", color, percent(end),
+        ", transparent", percent(end),")")
+}
+
+# Colour bar with right-aligned text and bar
+color_bar2 =  function (color = "lightgray", fun = "proportion", ...) 
+{
+    fun <- match.fun(fun)
+    formatter("span", style = function(x) style(display = "inline-block",
+                `unicode-bidi` = "plaintext", 
+                "background" = bg(1-fun(as.numeric(x), ...), 1, color), "width"="100%" ))
+}
+
+# Colour bar with left-aligned text and bar
+color_bar3 = function(color = "lightgray", fun = "proportion", ...) {
+  fun <- match.fun(fun)
+  formatter("span", style = function(x) {
+    value <- fun(as.numeric(x), ...)
+    style(display = "inline-block",
+          `unicode-bidi` = "plaintext",
+          "background" = bg(0, value, color),
+          "width" = "100%",
+          "text-align" = "left")
+  })
+}
+
 deg_counts %>%
   formattable(
-              align = c("l", "l", "l", "l"),
-              list(DEGs = color_bar("lightgreen"))) %>%
+              align = deg_table_alignment,
+              list(DEGs = color_tile("white", "lightgreen"),
+                   Upregulated = color_bar3("pink"),
+                   Downregulated = color_bar2("lightblue"))) %>%
   formattable::as.htmlwidget(width = 500)
 ```
 
