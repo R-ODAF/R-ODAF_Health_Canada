@@ -459,8 +459,7 @@ htmltools::div(
 threshold4 <- c("AHR", "AR",
                 "ERa50", "ERa46",
                 "HSF1", "MTF1",
-                "Nrf2", "TGxDDI", 
-                "TSA")
+                "Nrf2", "TGxDDI")
 
 threshold15 <- c("HDACiTk6")
 
@@ -468,7 +467,7 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       "Genomark", "FattyLiver",
                       "HIF1", "PParHepaRG",
                       "PParHH", "HDACiHepaRG",
-                      "TGxTB")
+                      "TGxTB", "TSA")
                       
 # Define custom color palette for heatmaps
 custom_colors <- c("blue", "white", "red")
