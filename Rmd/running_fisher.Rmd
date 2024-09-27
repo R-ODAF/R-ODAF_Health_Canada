@@ -209,7 +209,7 @@ RF <- function(bm, bioset, N){
 ```
 
 ```{r heatmap_function, echo=FALSE}
-make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
+make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, breaks = NULL) {
 
   # Make matrix
   # Exclude the 'Compounds' column and convert the remaining data frame to a matrix
@@ -234,8 +234,17 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
     fill = c("blue", "white", "red")
   } else {
     # Trick to make a continuous legend in R base heatmap
-    legend_text <- seq(min(data_matrix[-1], na.rm = TRUE), max(data_matrix[-1], na.rm = TRUE), length.out = 21) %>% round()
+    # With 0 in the middle (white)
+    min_logpval <- min(data_matrix, na.rm = TRUE)
+    max_logpval <- max(data_matrix, na.rm = TRUE)
+    cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
+
+    legend_text <- seq(-cont_legend_limit, cont_legend_limit, length.out = 21) %>% round()
     title <- "Heatmap for Biomarkers with no published thresholds"
+
+    # Generate the continuous color palette
+    colours <- colorRampPalette(c("blue", "white", "red"))(21)
+    breaks <- seq(-cont_legend_limit, cont_legend_limit, length.out = 22)
   }
 
   # Create the heatmap using the image function
@@ -247,7 +256,8 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
           main = title)
   } else { 
     image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
-          col = colours, axes = FALSE, xlab = "", ylab = "",
+          col = colours, breaks = breaks, 
+          axes = FALSE, xlab = "", ylab = "",
           main = title)
   }
 
@@ -269,7 +279,9 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours) {
          fill = colours, 
          title = "-log(p-value)")
 }
+
 ```
+
 
 ```{r load_biomarkers, echo=FALSE}
 bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker", full.names = TRUE)
@@ -460,7 +472,7 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       
 # Define custom color palette for heatmaps
 custom_colors <- c("blue", "white", "red")
-continuous_colors <- colorRampPalette(c("blue", "white", "red"))(21)
+
 
 # Define fig heights for heatmaps
 heatmap_height <- (length(bs) / 3) + 2
