@@ -143,7 +143,7 @@ criteria <- data.frame(
                           "> 0.5",
                           "within 3*IQR",
                           "within 3*IQR",
-                          "RNA-Seq: < 0.99, TempO-Seq: < 0.95"),
+                          "RNA-Seq: < 0.99, \nTempO-Seq: < 0.95"),
   "Threshold" = c(
     paste0("< ",qc_pars$studywide_tree_height_cutoff),
     paste0("> ",params$nmr_threshold),
@@ -431,35 +431,28 @@ The TGx-HDACi biomarker was developed using the **TK6** cell line [@cho_hdaci_20
 ```{r check_biomarkers}
 if (params$generate_tgxddi_report && file.exists(file.path(paths$summary, "tgx-ddi_results_summary.csv"))) {
   ddi_run <- TRUE
+
+  ddi_results <- read.csv(file.path(paths$summary, "tgx-ddi_results_summary.csv"), stringsAsFactors = FALSE)
+
+  ddi <- ddi_results %>%
+    dplyr::select(ID, Overall) %>%
+    rename(DDI_result = Overall)
 } else {
   ddi_run <- FALSE
 }
 
 if (params$generate_tgxhdaci_report && file.exists(file.path(paths$summary, "tgx-hdaci_results_summary.csv"))) {
   hdaci_run <- TRUE
+
+  hdaci_results <- read.csv(file.path(paths$summary, "tgx-hdaci_results_summary.csv"), stringsAsFactors = FALSE)
+
+  hdaci <- hdaci_results %>%
+    dplyr::select(ID, Overall) %>%
+    rename(HDACi_result = Overall)
 } else {
   hdaci_run <- FALSE
 }
-```
 
-```{r tgxddi, eval = ddi_run}
-ddi_results <- read.csv(file.path(paths$summary, "tgx-ddi_results_summary.csv"), stringsAsFactors = FALSE)
-
-ddi <- ddi_results %>%
-  dplyr::select(ID, Overall) %>%
-  rename(DDI_result = Overall)
-
-```
-
-```{r tgxhdaci, eval = hdaci_run}
-hdaci_results <- read.csv(file.path(paths$summary, "tgx-hdaci_results_summary.csv"), stringsAsFactors = FALSE)
-
-hdaci <- hdaci_results %>%
-  dplyr::select(ID, Overall) %>%
-  rename(HDACi_result = Overall)
-```
-
-```{r biomarker_table}
 # If ddi_run is TRUE and hdaci_run is TRUE, merge tables on ID
 if (ddi_run && hdaci_run) {
   biomarker_table <- merge(ddi, hdaci, by = "ID", all = TRUE)
@@ -473,13 +466,13 @@ if (ddi_run && hdaci_run) {
 
 ddi_formatter <- formatter("span",
                            style = x ~ ifelse(x == "DDI", 
-                                              style("background-color" = "lightblue"), 
-                                              style("background-color" = "yellow")))
+                                              style("background-color" = "pink"), 
+                                              style("background-color" = "lightblue")))
 
 hdaci_formatter <- formatter("span",
                              style = x ~ ifelse(x == "HDACi", 
-                                                style("background-color" = "lightblue"), 
-                                                style("background-color" = "yellow")))
+                                                style("background-color" = "pink"), 
+                                                style("background-color" = "lightblue")))
 
 # If biomarker_table is not NULL, print the table
 if (!is.null(biomarker_table)) {
