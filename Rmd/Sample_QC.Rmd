@@ -100,6 +100,69 @@ library(scales)
 ```
 
 
+```{r define_functions, message = F, warnings = F, echo = F}
+# Maybe these functions should be in R.ODAF.utils?
+
+# Collapse replicates, use if params$collapse_replicates == T
+collapse_reps <- function(filepath) {
+  df <- read.table(file = filepath,
+           sep = "\t",
+           header = TRUE)
+  names(df) <- gsub(pattern = "_trimmed", replacement = "", x = names(df))
+  df <- df %>% pivot_longer(cols = -c("X"),
+                names_to = c('.value', 'flowcell'),
+                names_pattern = '(.*)_(.*)')
+  df[is.na(df)] <- 0
+  sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- sd_collapse[, lapply(.SD, sum), by = "X"]
+  return(results)
+}
+
+# Calculate GC content for TempO-Seq
+calculate_gc <- function(seq) {
+  n_gc <- stringr::str_count(seq, "G")
+  n_c <- stringr::str_count(seq, "C")
+  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
+  return(pct_gc)
+}
+
+# Function for sorting dendrograms
+sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+
+# From EPA code?
+countStats <- function(
+  counts, 
+  nsig = getOption("httrStatNsig", default = 0.8)
+) {
+  # Load required pkgs
+	require(foreach)
+  # Store results in a vector
+	st <- vector()
+	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
+	counts_nz <- counts[counts > 0]
+	# Sort in decreasing order
+	counts_nz <- sort(counts_nz, decreasing = T)
+	# Compute cumulative sum of counts starting from highest count probe
+	cumCounts <- cumsum(counts_nz)
+	# Convert cumulative sums to cumulative proportions
+	cumProp <- cumCounts / sum(counts_nz)
+	# Compute the minimum number of probes to capture X% of total reads
+	if (length(nsig) > 0) {
+		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
+		names(ns) <- paste0("n_sig",nsig*100)
+		st <- append(st, ns)
+	}
+	return(st)
+}
+
+add_spaces <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string <- gsub(pattern = "-", replacement = " ", string)
+  string <- gsub(pattern = "_", replacement = " ", string)
+  string
+}
+```
+
 ```{r params, include = FALSE, echo = FALSE, message = FALSE}
 exp_groups <- unname(params[["exp_groups"]]) # Include b/c of how things are addressed throughout.
 ```
@@ -121,19 +184,6 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # A. File with read counts
 count_data_file <- file.path(paths$processed,"count_table.tsv")
 if (params$collapse_replicates == T) {
-  collapse_reps <- function(filepath) {
-  df <- read.table(file = filepath,
-                   sep = "\t",
-                   header = T)
-  names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
-  df <- df %>% pivot_longer(cols = -c("X"),
-                            names_to = c('.value','flowcell'),
-                            names_pattern = '(.*)_(.*)')
-  df[is.na(df)] <- 0
-  sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
-  results <- sd_collapse[, lapply(.SD,sum), by = "X"]
-  return(results)
-  }
   count_data <- collapse_reps(count_data_file)
   write.table(count_data,
               file = file.path(paths$processed,"count_table_collapsed.tsv"),
@@ -238,14 +288,6 @@ if (file.exists(remove_file)) {
 
 
 ```{r calculate-gc, eval=params$platform == "TempO-Seq"}
-
-
-calculate_gc <- function(seq) {
-  n_gc <- stringr::str_count(seq, "G")
-  n_c <- stringr::str_count(seq, "C")
-  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
-  return(pct_gc)
-}
 
 # load manifest
 manifest <- read.delim(
@@ -388,10 +430,6 @@ A tree height cutoff of `r params$studywide_tree_height_cutoff` is used to cut t
 Technical control samples are colored differently.
 
 ```{r dendrogram_clustering}
-############################################################################
-# Function for sorting dendrograms
-############################################################################
-sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
 message(paste0("The treatment variable is: ", params$treatment_var))
 ############################################################################
 # Re-order the data by group
@@ -772,32 +810,6 @@ The number of probes capturing 80% of the signal is first calculated, and sample
 ######################################################################################
 # Tukey's Outer Fence cutoff - 3*IQR
 # (include test samples, vehicle controls, and reference chemical treatments)
-
-### Using some of the EPA code:
-countStats <- function(
-  counts, 
-  nsig = getOption("httrStatNsig", default = 0.8)
-) {
-  # Load required pkgs
-	require(foreach)
-  # Store results in a vector
-	st <- vector()
-	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
-	counts_nz <- counts[counts > 0]
-	# Sort in decreasing order
-	counts_nz <- sort(counts_nz, decreasing = T)
-	# Compute cumulative sum of counts starting from highest count probe
-	cumCounts <- cumsum(counts_nz)
-	# Convert cumulative sums to cumulative proportions
-	cumProp <- cumCounts / sum(counts_nz)
-	# Compute the minimum number of probes to capture X% of total reads
-	if (length(nsig) > 0) {
-		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
-		names(ns) <- paste0("n_sig",nsig*100)
-		st <- append(st, ns)
-	}
-	return(st)
-}
 
 QAQC$Nsig80 <- apply(count_data, 2, countStats)
 
@@ -1679,12 +1691,7 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ### Batch
 
 ```{r plot_batch_effects, eval = !is.na(params$batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
-add_spaces <- function(string) {
-  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
-  string <- gsub(pattern = "-", replacement = " ", string)
-  string <- gsub(pattern = "_", replacement = " ", string)
-  string
-}
+
 plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
   facet_wrap(paste0("~",params$batch_var), scales = "free_y", labeller = labeller(
     .cols = add_spaces,
