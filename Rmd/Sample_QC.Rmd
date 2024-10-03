@@ -190,7 +190,7 @@ if (params$collapse_replicates == T) {
               sep = "\t",
               quote = F,
               row.names = F)
-  } else {
+} else {
   count_data <- read.table(count_data_file,
                            sep = "\t",
                            stringsAsFactors = FALSE,
@@ -199,12 +199,13 @@ if (params$collapse_replicates == T) {
                            row.names = 1,
                            check.names = FALSE)
   multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+  # NOTE won't this break if collapse_replicate is true? No multiQC loaded for later?
   multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
                    FMR = multiqc_general_stats$uniquely_mapped_percent/100)
   row.names(mu) <- mu[,1]
-  }
+}
 
 
 # B. Tab delimited sample information file with at least 2 columns:
@@ -226,6 +227,17 @@ exp_metadata <- read.delim(exp_metadata_file,
                           row.names = NULL)
 
 exp_metadata$original_names <- as.character(exp_metadata[,1])
+
+
+# C. Manifest file for TempO-Seq
+if (params$platform == "TempO-Seq") {
+  manifest <- read.delim(
+    file.path(params$biospyder_dbs, params$biospyder_manifest_file), # Assay manifest...
+    stringsAsFactors = FALSE,
+    sep = ",",
+    header = TRUE,
+    quote = "\"")
+}
 
 ############################################################################
 # Arrange tables by sample names
@@ -250,6 +262,17 @@ all(names(count_data) == d$original_names)
 # Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
 count_data <- count_data[, d$original_names]
 mu <- mu[d$original_names, ]
+
+############################################################################
+# CPM (used in dendrogram/cluster analysis)
+############################################################################
+libsize <- apply(count_data, 2, sum)
+cpm <- count_data
+for (k in 1:length(libsize)) {
+  cpm[,k] <- log2((10^6)*(count_data[,k] + 0.5)/(libsize[k] + 1))
+}
+
+
 
 ############################################################################
 #Remove samples from a list manually
@@ -287,37 +310,12 @@ if (file.exists(remove_file)) {
 ```
 
 
-```{r calculate-gc, eval=params$platform == "TempO-Seq"}
-
-# load manifest
-manifest <- read.delim(
-  file.path(params$biospyder_dbs, params$biospyder_manifest_file), # Assay manifest...
-  stringsAsFactors = FALSE,
-  sep = ",",
-  header = TRUE,
-  quote = "\"")
-  
-# Calculate the GC content for each probe, add this value as a column
-manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
-
-count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
-                                  manifest,
-                                  by = c("rowname" = "Probe_Name")) %>%
-  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
-                      names_to = "sample", values_to = "count") %>%
-  dplyr::mutate(GC_corrected_count = count/gc_content)
-
-
-
-
-```
-
-
 # Summary Statistics
 
 Below, you will find plots and a table showing the distribution of read metrics (quality, GC content, aligned reads, etc.).
 
 ```{r summary-stats}
+# NOTE won't this break if collapse_replicate is true? No multiQC loaded in load_files line 202?
 summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
 stat_metrics <- summary_stats %>%
   group_by(name) %>%
@@ -340,69 +338,74 @@ stat_metrics %>%
 
 ```
 
-## GC content
+# PCA
 
-Summary of GC content of probes (TempO-Seq only)
-
-```{r plot-gc, eval=params$platform == "TempO-Seq"}
-
-ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
-  geom_density() +
-  scale_x_log10() +
-  theme(legend.position = "none")
-
-gc_summary <- count_data_gc %>%
-  group_by(sample) %>%
-  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
-
-gc_summary_long <- gc_summary %>%
-  pivot_longer(cols=c("mean_gc","median_gc"))
-
-ggplot(gc_summary_long,
-       aes(x=name, y=value)) +
-  geom_jitter(alpha = 0.1) +
-  geom_violin(fill = "transparent") +
-  facet_wrap(name~., scales = "free")
-
-gc_summary %>%
-  kable(caption = "Summary GC statistics") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
+A PCA plot will go here once I figure out how to do it.
+It should include all samples EXCEPT those removed manually...right?
 
 
-```
 
+# Correlations
 
-## Zero count heatmap
+## All samples
 
-Heatmap showing presence of zeroes (black) in the data.
+This shows the Pearson correlation of log2-normalized CPM of read counts across all samples.
 
-```{r zero-heatmap, fig.width = 11, fig.height = 10}
+```{r correlation_1, fig.width = 11, fig.height = 10}
+ref_correlations_all <- cor(as.matrix(cpm),
+                            method = "pearson")
 
+correlation_df_all <- exp_metadata %>%
+  filter(original_names %in% colnames(ref_correlations_all))
 
-if(nrow(count_data) > 3000){
-  random_indices <- sample(nrow(count_data), 2500)
-  count_data_random <- count_data[random_indices, ]
-  count_data_is0 <- ((count_data_random==0)*1)
-} else{
-  count_data_is0 <- ((count_data==0)*1)
-}
+rownames(correlation_df_all) <- correlation_df_all$original_names
+correlation_df_all <- correlation_df_all[colnames(ref_correlations_all),]
 
-annotation_col <- exp_metadata %>%
-  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
-  tibble::column_to_rownames("original_names")
+correlation_df_all_heatmap <- correlation_df_all[,c(unlist(exp_groups[[1]]),
+                                                    params$technical_control,
+                                                    params$reference_rna,
+                                                    params$solvent_control)]
 
-pheatmap(count_data_is0,
-         color = c("white", "black"),
-         annotation_col = annotation_col,
-         treeheight_col = 30,
-         treeheight_row = 0,
-         show_rownames=F,
-         legend=F)
+pheatmap(ref_correlations_all,
+         show_rownames = F,
+         show_colnames = F,
+         border_color = NA,
+         annotation_col = correlation_df_all_heatmap)
 
 ```
 
-# Sample Filtering Code
+
+## Experimental samples
+
+This shows the Pearson correlation of log2-normalized CPM of read counts across experimental samples.  Technical controls are excluded.
+
+This first plot shows every sample in the study:
+
+```{r correlation_2, fig.width = 11, fig.height = 10}
+ref_correlations_samples <- cor(as.matrix(cpm %>%
+                                            dplyr::select(all_of(sample_names))),
+                                method = "pearson")
+
+correlation_df_samples <- exp_metadata %>%
+  filter(original_names %in% colnames(ref_correlations_samples))
+
+rownames(correlation_df_samples) <- correlation_df_samples$original_names
+correlation_df_samples <- correlation_df_samples[colnames(ref_correlations_samples),]
+
+correlation_df_samples_heatmap <- correlation_df_samples[,c(unlist(exp_groups[[1]]),
+                                                            params$technical_control,
+                                                            params$reference_rna,
+                                                            params$solvent_control)]
+
+pheatmap(ref_correlations_samples,
+         show_rownames = F,
+         show_colnames = F,
+         border_color = NA,
+         annotation_col = correlation_df_samples_heatmap)
+
+```
+
+# Sample Filtering 
 
 ## Samples Removed Manually
 
@@ -848,66 +851,7 @@ d %>%
   scroll_box(width = "100%", height = "480px")
 ```
 
-# Correlations
-
-## All samples
-
-This shows the Pearson correlation of log2-normalized CPM of read counts across all samples.
-
-```{r correlation_1, fig.width = 11, fig.height = 10}
-ref_correlations_all <- cor(as.matrix(cpm),
-                            method = "pearson")
-
-correlation_df_all <- exp_metadata %>%
-  filter(original_names %in% colnames(ref_correlations_all))
-
-rownames(correlation_df_all) <- correlation_df_all$original_names
-correlation_df_all <- correlation_df_all[colnames(ref_correlations_all),]
-
-correlation_df_all_heatmap <- correlation_df_all[,c(unlist(exp_groups[[1]]),
-                                                    params$technical_control,
-                                                    params$reference_rna,
-                                                    params$solvent_control)]
-
-pheatmap(ref_correlations_all,
-         show_rownames = F,
-         show_colnames = F,
-         border_color = NA,
-         annotation_col = correlation_df_all_heatmap)
-
-```
-
-
-## Experimental samples
-
-This shows the Pearson correlation of log2-normalized CPM of read counts across experimental samples.  Technical controls are excluded.
-
-This first plot shows every sample in the study:
-
-```{r correlation_2, fig.width = 11, fig.height = 10}
-ref_correlations_samples <- cor(as.matrix(cpm %>%
-                                            dplyr::select(all_of(sample_names))),
-                                method = "pearson")
-
-correlation_df_samples <- exp_metadata %>%
-  filter(original_names %in% colnames(ref_correlations_samples))
-
-rownames(correlation_df_samples) <- correlation_df_samples$original_names
-correlation_df_samples <- correlation_df_samples[colnames(ref_correlations_samples),]
-
-correlation_df_samples_heatmap <- correlation_df_samples[,c(unlist(exp_groups[[1]]),
-                                                            params$technical_control,
-                                                            params$reference_rna,
-                                                            params$solvent_control)]
-
-pheatmap(ref_correlations_samples,
-         show_rownames = F,
-         show_colnames = F,
-         border_color = NA,
-         annotation_col = correlation_df_samples_heatmap)
-
-```
-
+# Correlations (previously)
 ## Within Group Correlations {.tabset}
 
 These plots show correlations within each experimental grouping.  
@@ -1735,6 +1679,79 @@ nocite: '@*'
 ---
 
 <div id="refs"></div>
+
+
+
+
+# Appendix (additional plots)
+
+## GC content
+
+Summary of GC content of probes (TempO-Seq only)
+```{r plot-gc, eval=params$platform == "TempO-Seq"}
+
+# Calculate the GC content for each probe, add this value as a column
+manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
+
+count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
+                                  manifest,
+                                  by = c("rowname" = "Probe_Name")) %>%
+  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
+                      names_to = "sample", values_to = "count") %>%
+  dplyr::mutate(GC_corrected_count = count/gc_content)
+ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
+  geom_density() +
+  scale_x_log10() +
+  theme(legend.position = "none")
+
+gc_summary <- count_data_gc %>%
+  group_by(sample) %>%
+  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
+
+gc_summary_long <- gc_summary %>%
+  pivot_longer(cols=c("mean_gc","median_gc"))
+
+ggplot(gc_summary_long,
+       aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
+  geom_violin(fill = "transparent") +
+  facet_wrap(name~., scales = "free")
+
+gc_summary %>%
+  kable(caption = "Summary GC statistics") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+## Zero count heatmap
+
+Heatmap showing presence of zeroes (black) in the data.
+
+```{r zero-heatmap, fig.width = 11, fig.height = 10}
+
+
+if(nrow(count_data) > 3000){
+  random_indices <- sample(nrow(count_data), 2500)
+  count_data_random <- count_data[random_indices, ]
+  count_data_is0 <- ((count_data_random==0)*1)
+} else{
+  count_data_is0 <- ((count_data==0)*1)
+}
+
+annotation_col <- exp_metadata %>%
+  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
+  tibble::column_to_rownames("original_names")
+
+pheatmap(count_data_is0,
+         color = c("white", "black"),
+         annotation_col = annotation_col,
+         treeheight_col = 30,
+         treeheight_row = 0,
+         show_rownames=F,
+         legend=F)
+
+```
 
 
 ```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
