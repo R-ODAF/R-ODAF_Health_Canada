@@ -184,6 +184,7 @@ if (params$parallel) {
   )
 }
 
+# Write summary counts to a file
 write.table(summary_counts,
             file = file.path(paths$summary, "DEG_counts.txt"),
-            quote = FALSE, sep = "\t", col.names = FALSE, row.names = FALSE)
+            quote = FALSE, sep = "\t", col.names = TRUE, row.names = FALSE)
