@@ -92,6 +92,7 @@ library(pheatmap)
 library(scales)
 library(viridisLite)
 library(formattable)
+library(stringr)
 ```
 
 ---
@@ -248,7 +249,7 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, br
   }
 
   # Create the heatmap using the image function
-  par(mar = c(2, 10, 14, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
+  par(mar = c(2, 10, 18, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
 
   if (threshold_hi > 0) {
     image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
@@ -284,8 +285,9 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, br
 
 
 ```{r load_biomarkers, echo=FALSE}
-bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker", full.names = TRUE)
+bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker_", full.names = TRUE)
 
+biomarkers <- str_extract(bms, "(?<=Biomarker_)[^_]+")
 nms <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
 	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
@@ -300,7 +302,7 @@ for(k in 1:length(bms)){
 	tmp <- tmp[order(abs(tmp$Score), decreasing = TRUE),]
 	tmp$ID <- toupper(tmp$ID)
 	bm$tmp <- tmp
-	names(bm)[k] <- nms[k]
+	names(bm)[k] <- biomarkers[k]
 }
 ```
 
@@ -459,15 +461,15 @@ htmltools::div(
 threshold4 <- c("AHR", "AR",
                 "ERa50", "ERa46",
                 "HSF1", "MTF1",
-                "Nrf2", "TGxDDI")
+                "Nrf2", "TGx-DDI")
 
-threshold15 <- c("HDACiTk6")
+threshold15 <- c("TGx-HDACi-TK6")
 
 thresholdunknown <- c("Aneugen1", "Aneugen2",
-                      "Genomark", "FattyLiver",
-                      "HIF1", "PParHepaRG",
-                      "PParHH", "HDACiHepaRG",
-                      "TGxTB", "TSA")
+                      "Genomark", "FattyLiverDisease",
+                      "HIF1", "PPARaHepaRG",
+                      "PPARaHH", "TGx-HDACi-HepaRG",
+                      "TGx-TB", "TSA")
                       
 # Define custom color palette for heatmaps
 custom_colors <- c("blue", "white", "red")
@@ -505,10 +507,6 @@ make_heatmap(selected_data_thresholdunknown, 0, 0, continuous_colors)
 
 ### Plots {.tabset .tabset-pills}
 ```{r plot_RF, echo=FALSE, results='asis'}
-biomarkers <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
-	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
-
-
 # Initialize an empty list to store ggplot objects for the combined plot
 plot_list_combined <- list()
 
@@ -584,17 +582,11 @@ combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
 # Sample data
 table_data <- data.frame(
   Biomarker_name = c("AHR", "Aneugen1", "Aneugen2",
-                 "AR", "Genomark", "ERa50",
-                 "ERa46", "FattyLiver", "HIF1",
-                 "HSF1", "MTF1", "Nrf2",
-                 "PParHepaRG", "PParHH", "TGxDDI",
-                 "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA"),
-  Short_name = c("AHR", "Aneugen1", "Aneugen2",
-                 "AR", "Genomark", "ERa50",
-                 "ERa46", "FattyLiver", "HIF1",
-                 "HSF1", "MTF1", "Nrf2",
-                 "PParHepaRG", "PParHH", "TGxDDI",
-                 "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA"),
+                     "AR", "ERa46", "ERa50",
+                     "FattyLiverDisease", "Genomark","HIF1",
+                     "HSF1", "MTF1", "Nrf2",
+                     "PPARaHepaRG", "PPARaHH", "TGx-DDI",
+                 "TGx-HDACi-TK6", "TGx-HDACi-TK6", "TGx-TB", "TSA"),
   Organism = c("", "", "",
               "Human", "Human", "Human",
               "", "Human", "Human",
@@ -621,8 +613,11 @@ table_data <- data.frame(
                 "@cho_development_2021", "", "", "@yeakley_trichostatin_2017")
 )
 
+table_filtered <- table_data %>%
+  filter(Biomarker_name %in% biomarkers)
+
 # Create the table with advanced formatting
-kable(table_data, col.names = c("Biomarker Name", "Short name", "Organism", "Cell line or tissue", "Threshold -log10(p-value)", "Reference")) %>%
+kable(table_filtered, col.names = c("Biomarker Name", "Organism", "Cell line or tissue", "Threshold -log10(p-value)", "Reference")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
 ```
 
