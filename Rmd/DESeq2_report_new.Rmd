@@ -58,6 +58,7 @@ params:
   generate_go_pathway_report: TRUE
   generate_tgxddi_report: TRUE
   generate_tgxhdaci_report: TRUE
+  generate_summary_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
@@ -127,7 +128,7 @@ This report is meant to help explore DESeq2 results and was generated using RMar
 
 This main report displays the overall results of the experiment and contains the most commonly used visualizations. Additional statistics and graphs are available in the included "Extra stats report", and a "Data explorer report" with interactive tables and graphs to investigate specific genes is also available. Finally, the GO and KEGG pathway analysis results are contained in the "GO and pathway analysis report"
 
-The structure of this document originally extended the DESeq2 regionReport RMarkdown (Collado-Torres, Jaffe, and Leek 2017) but has been substantially reworked since then.
+The structure of this document originally extended the DESeq2 regionReport RMarkdown [@regionreport2017; @collado2015regionreport] but has been substantially reworked since then.
 
 Code sections are hidden by default but can be viewed by clicking the 'code' button.
 
@@ -474,16 +475,13 @@ for (i in head(unique(genesToPlot[["Feature_ID"]]), nBestFeatures)) {
 Please use this as a starting point for the bioinformatics/statistics section of any publications based on the data analyzed in this report. Note that there is a similar paragraph at the end of the sequencing quality control report.
 
 
-  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC was imported into R for statistical analysis. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@ggplotcitation] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type`. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter_DEGs` and adjusted p-value of `r params$alpha`.
+  A count matrix containing the $`r paste(sample_count_metadata$samples_postQC)`$ samples that passed QC filters as defined by @harrill2021high was imported into R for statistical analysis [@rcitation]. After removing samples with less than $`r params$nmr_threshold`$ reads, `r sample_count_metadata$samples_filtered` samples were left. Following the recommendations set out by the Omics Data Analysis Frameworks for Regulatory application (R-ODAF) guidelines [@VERHEIJEN2022105143], genes were filtered to include only those where 75% of at least one experimental group were above `r params$MinCount` CPM, and spurious spikes were removed in which (max - median) of counts were less than (sum of counts)/(number of replicates + 1). We used DESeq2 `r packageVersion("DESeq2")` [@love2014deseq2] to test for differentially abundant genes within the `r params$platform` data. The log2FoldChange shrinkage procedure used was `r resultsListAll[[1]]@priorInfo$type` [@stephens2017false]. An alpha of `r resultsListAll[[1]]@metadata$alpha` was used to extract raw results, which are reported as the `r gsub(mcols(x=resultsListAll[[1]])$description[[4]],pattern=":.*",replacement="")`. To account for multiple testing, `r mcols(resultsListAll[[1]])$description[5]` are reported. Cook's cutoff was set to `r params$cooks` in this analysis (a value of FALSE indicates that Cook's distance filtering was disabled). Differentially expressed genes (DEGs) were filtered using a linear fold change cutoff of `r params$linear_fc_filter_DEGs` and adjusted p-value of `r params$alpha`. Figures were produced using ggplot2 [@ggplotcitation] and pheatmap [@pheatmapcitation] packages.
 
 
 ## References {-}
 
 If these methods were used in your study, please cite the following papers as appropriate:  
 
----
-nocite: '@*'
----
 
 <div id="refs"></div>
 
