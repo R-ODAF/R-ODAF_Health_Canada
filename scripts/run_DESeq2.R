@@ -127,7 +127,9 @@ if (is.na(params$deseq_facet)) {
   for (comp in comparisons) { # by comparison
     res <- resList[[comp]]
     counts <- nrow(res)
-    row <- data.frame(comparison=comp, DEG=counts)
+    upreg <- nrow(res[res$log2FoldChange > 0,])
+    downreg <- nrow(res[res$log2FoldChange < 0,])
+    row <- data.frame(comparison=comp, DEG=counts, Downregulated=downreg, Upregulated=upreg)
     summary_counts <- rbind(summary_counts, row)
   }
 } else {
