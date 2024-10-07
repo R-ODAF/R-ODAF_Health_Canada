@@ -89,6 +89,7 @@ if (is.na(params$deseq_facet)){
   rldList[['all']] <- rld
   mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
   filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  bioset_input[['all']] <- DESeq_results$bioset_input
 } else {
   for (current_filter in facets) {
     message(paste0("### Learning model for ", current_filter, ". ###"))

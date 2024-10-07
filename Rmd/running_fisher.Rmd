@@ -59,6 +59,7 @@ params:
   generate_tgxddi_report: TRUE
   generate_tgxhdaci_report: TRUE
   generate_runningfisher_report: TRUE
+  generate_summary_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
@@ -476,7 +477,7 @@ custom_colors <- c("blue", "white", "red")
 
 
 # Define fig heights for heatmaps
-heatmap_height <- (length(bs) / 3) + 2
+heatmap_height <- (length(bs) / 4) + 5
 ```
 
 ### Heatmaps {.tabset .tabset-pills}
