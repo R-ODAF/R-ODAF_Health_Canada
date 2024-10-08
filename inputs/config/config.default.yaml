@@ -92,5 +92,6 @@ DESeq2:
   generate_tgxddi_report: FALSE
   generate_tgxhdaci_report: FALSE
   generate_summary_report: TRUE
+  generate_runningfisher_report: TRUE
   output_digits: 5 # control rounding of DEG output. Primarily used to suppress RNG variability so our tests don't fail :)
   parallel: FALSE

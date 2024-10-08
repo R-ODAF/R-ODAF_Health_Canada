@@ -13,7 +13,8 @@ prepare_data_case2(
   mergedDEGsList,
   exp_metadata,
   designList,
-  contrasts
+  contrasts,
+  biomarkers
 )
 }
 \arguments{
