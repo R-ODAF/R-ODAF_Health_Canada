@@ -214,13 +214,13 @@ RF <- function(bm, bioset, N){
 make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, breaks = NULL) {
 
   # Make matrix
-  # Exclude the 'Compounds' column and convert the remaining data frame to a matrix
+  # Exclude the 'Biomarker' column and convert the remaining data frame to a matrix
   data_matrix <- filtered_data %>%
-    select(-Compounds) %>%
+    select(-Biomarker) %>%
     as.matrix() %>%
     t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
   # Put biomarker names back in
-  colnames(data_matrix) <- filtered_data$Compounds
+  colnames(data_matrix) <- filtered_data$Biomarker
 
   # Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
   layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
@@ -350,7 +350,7 @@ if (params$platform == "TempO-Seq") {
 
 
 out <- NULL
-out2 <- data.frame(Compounds = names(bm))
+out2 <- data.frame(Biomarker = names(bm))
 
 for(f in 1:length(bs)){
 	x <- bs[f][[1]]
@@ -364,6 +364,9 @@ for(f in 1:length(bs)){
 	}
 	out2[[nms]] <- oo$o
 }
+
+# Export the results to a file
+write.table(out2, file = file.path(paths$BMD_output, "RF_results.txt"), sep = "\t", row.names = FALSE)
 ```
 
 ## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
@@ -485,7 +488,7 @@ heatmap_height <- (length(bs) / 4) + 5
 #### Threshold -4 to 4
 ```{r heatmap_threshold4, echo=FALSE, fig.height=heatmap_height}
 selected_data_threshold4 <- out2 %>% 
-  filter(Compounds %in% threshold4)
+  filter(Biomarker %in% threshold4)
 
 make_heatmap(selected_data_threshold4, -4, 4, custom_colors)
 ```
@@ -493,7 +496,7 @@ make_heatmap(selected_data_threshold4, -4, 4, custom_colors)
 #### Threshold -15 to 15
 ```{r heatmap_threshold15, echo=FALSE, fig.height=heatmap_height}
 selected_data_threshold15 <- out2 %>% 
-  filter(Compounds %in% threshold15)
+  filter(Biomarker %in% threshold15)
 
 make_heatmap(selected_data_threshold15, -15, 15, custom_colors)
 ```
@@ -501,7 +504,7 @@ make_heatmap(selected_data_threshold15, -15, 15, custom_colors)
 #### No published thresholds
 ```{r heatmap_thresholdunknown, echo=FALSE, fig.height=heatmap_height}
 selected_data_thresholdunknown <- out2 %>% 
-  filter(Compounds %in% thresholdunknown)
+  filter(Biomarker %in% thresholdunknown)
 
 make_heatmap(selected_data_thresholdunknown, 0, 0, continuous_colors)
 ```
