@@ -62,7 +62,7 @@ Report prepared for: `r params$researcher_name`
 
 ***
 
-Modified from code provided by Andrew Williams (Health Canada) and recommendations from Joshua Harrill (US EPA). See [References].  
+Modified from code provided by Andrew Williams (Health Canada) and recommendations from Joshua Harrill (US EPA) [@harrill2021high]. See [References].  
 
 This script should be run prior to DEG/BMD analysis to remove any suspect samples from across the entire study.  
 
@@ -1674,9 +1674,7 @@ plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of p
 
 If these methods were used in your study, please cite the following papers as appropriate:  
 
----
-nocite: '@*'
----
+
 
 <div id="refs"></div>
 

@@ -74,8 +74,8 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          ylab("Number of DEGs") +
          xlab("Facet: contrast")
    }
-   ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "DEG_summary_plot.png")), p1,
-      width = plot_size, height = plot_size, units = "in", dpi = 300)
+   # ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "DEG_summary_plot.png")), p1,
+   #    width = plot_size, height = plot_size, units = "in", dpi = 300)
 
 
    # plot filter stats
@@ -95,29 +95,29 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          geom_bar(stat = "identity", position = "dodge") +
          facet_wrap(~name, scales = "free") +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Contrast")
 
    } else if (length(facets) < 10) {
       p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free") +
+         facet_wrap(~name, scales = "free_y", ncol = 1) +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Facet: contrast")
    } else {
       p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free") +
+         facet_wrap(~name, scales = "free_y", ncol = 1) +
          theme(axis.text.x = element_blank(),
             legend.position = "none") +
-         ylab("Percent of all reads") +
+         ylab("Number of genes") +
          xlab("Facet: contrast")
    }
 
-   ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "filter_summary_plot.png")), p2,
-      width = plot_size, height = plot_size, units = "in", dpi = 300)
-
+   # ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "filter_summary_plot.png")), p2,
+   #    width = plot_size, height = plot_size, units = "in", dpi = 300)
+  return(list(p1 = p1, p2 = p2))
 }

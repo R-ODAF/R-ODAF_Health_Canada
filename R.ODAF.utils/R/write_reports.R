@@ -127,6 +127,21 @@ make_tgxddi_reports <- function(pars, paths, facet) {
     render_report(tgxddi_report, tgxddi_file, pars)
   }
 }
+#' Generate Summary Report
+#'
+#' Renders the Summary report HTML file for the whole project using the specified parameters.
+#'
+#' @param pars A list of parameters used for report generation.
+#' @param paths A list of paths used throughout the analysis.
+#' @return Invisible NULL. The function is called for its side effect of rendering an HTML report.
+#' @export
+make_summary_report <- function(pars, paths) {
+  message("Generating summary report")
+  project_title <- pars$project_title
+  summary_report <- file.path(paths$projectdir, "Rmd", "summary_report_new.Rmd")
+  summary_file <- file.path(paths$summary, paste0(project_title, "_summary_report.html"))
+  render_report(summary_report, summary_file, pars)
+}
 
 #' Generate TGx-HDACi Report
 #'
