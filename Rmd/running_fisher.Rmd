@@ -289,8 +289,6 @@ make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, br
 bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker_", full.names = TRUE)
 
 biomarkers <- str_extract(bms, "(?<=Biomarker_)[^_]+")
-nms <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
-	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
 # Nested list of biomarkers with genes and scores
 bm <- NULL
@@ -465,7 +463,8 @@ htmltools::div(
 threshold4 <- c("AHR", "AR",
                 "ERa50", "ERa46",
                 "HSF1", "MTF1",
-                "Nrf2", "TGx-DDI")
+                "Nrf2-mouse", "TGx-DDI",
+                "Nrf2-human")
 
 threshold15 <- c("TGx-HDACi-TK6")
 
@@ -531,13 +530,13 @@ for (i in seq_along(unique(out$Biomarker))) {
   j <- out %>% 
     filter(Biomarker == biomarker) %>%
     arrange(o, decreasing = TRUE) %>%
-    mutate(Chemical = str_extract(Chem, "^[^_]+")) %>% 
+    mutate(Group = str_extract(Chem, "^[^_]+")) %>% 
     mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
   
   cat(paste0("#### ", biomarker, "\n\n"))  # Show each plot in its own tab
 
   # Create the plot with full x-axis and y-axis labels
-  p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
+  p <- ggplot(j, aes(x = Chem, y = o, color = Group)) +
     geom_point(size = 3) +
     geom_hline(yintercept = threshold_hi, color = "black") +
     geom_hline(yintercept = threshold_lo, color = "black") +
@@ -588,33 +587,38 @@ table_data <- data.frame(
   Biomarker_name = c("AHR", "Aneugen1", "Aneugen2",
                      "AR", "ERa46", "ERa50",
                      "FattyLiverDisease", "Genomark","HIF1",
-                     "HSF1", "MTF1", "Nrf2",
+                     "HSF1", "MTF1", "Nrf2-mouse",
                      "PPARaHepaRG", "PPARaHH", "TGx-DDI",
-                 "TGx-HDACi-TK6", "TGx-HDACi-TK6", "TGx-TB", "TSA"),
+                 "TGx-HDACi-TK6", "TGx-HDACi-HDACi", "TGx-TB", 
+                 "TSA", "Nrf2-human"),
   Organism = c("", "", "",
               "Human", "Human", "Human",
               "", "Human", "Human",
               "Human", "Human", "Mouse",
               "Human", "Human", "Human",
-              "Human", "", "", "Human"),
+              "Human", "Human", "", 
+              "Human", "Human"),
   Cell_line = c("", "", "",
                 "LAPC-4", "HeapRG", "MCF7",
                 "", "HepaRG", "DU 145, PC-3, and 22Rv1",
                 "various", "various", "liver",
                 "HepaRG", "Primary hepatocytes", "TK6 and HepaRG",
-                "TK6", "", "", "MCF7"),
+                "TK6", "HDAci", "", 
+                "MCF7", "various"),
   Threshold_log10_p_value = c("-4/4", "", "",
                               "-4/4", "", "-4/4",
                               "-4/4", "", "",
                               "-4/4", "-4/4", "-4/4",
                               "", "", "-4/4",
-                              "-15/15", "", "", ""),
+                              "-15/15", "", "", 
+                              "", "-4/4"),
   Reference = c("@corton_gene_2022", "", "",
-                "@rooney_activation_2018", "@thienpont_novel_2023", "@corton_50_gene_2024",
-                "@ryan_moving_2016", "@lichtenstein_transcript_2020", "@jonsson_hypoxia-independent_2016",
+                "@rooney_activation_2018", "@ryan_moving_2016", "@corton_50_gene_2024",
+                "@lichtenstein_transcript_2020", "@thienpont_novel_2023", "@jonsson_hypoxia-independent_2016",
                 "@cervantes_gene_2021", "@jackson_identification_2020", "@rooney_activation_2018",
                 "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_flow_2020",
-                "@cho_development_2021", "", "", "@yeakley_trichostatin_2017")
+                "@cho_development_2021", "", "",
+                "@yeakley_trichostatin_2017", "@rooney_mining_2020")
 )
 
 table_filtered <- table_data %>%
