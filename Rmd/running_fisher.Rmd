@@ -401,40 +401,6 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       "HIF1", "PPARaHepaRG",
                       "PPARaHH", "TGx-HDACi-HepaRG",
                       "TGx-TB", "TSA")
-                      
-# Define custom color palette for heatmaps
-custom_colors <- c("blue", "white", "red")
-
-
-# Define fig heights for heatmaps
-heatmap_height <- (length(bs) / 4) + 2
-```
-
-### Heatmaps
-
-The heatmaps below show the -log10(p-value) for each biomarker and bioset combination. 
-For biomarkers that have published threshold scores, the symbols indicate values above the positive threshold (filled dot) and below the negative threshold (x).
-For more information, see the table below and references therein.
-
-Biomarkers with 4 (positive) and -4 (negative) thresholds: `r paste(threshold4, collapse = ", ")`
-
-Biomarkers with 15 (positive) and -15 (negative) thresholds: `r paste(threshold15, collapse = ", ")`
-
-Biomarkers without published threshold (no symbols will appear on heatmap): `r paste(thresholdunknown, collapse = ", ")`
-
-
-```{r complex_heatmap, echo=FALSE, fig.height=heatmap_height}
-selected_data <- out2 %>%
-  select(-Biomarker) %>%
-  as.matrix() %>%
-  t()
-
-colnames(selected_data) <- biomarkers
-
-
-min_logpval <- min(selected_data, na.rm = TRUE)
-max_logpval <- max(selected_data, na.rm = TRUE)
-cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
 
 thresholds <- c("AHR" = 4,
                 "AR" = 4,
@@ -447,39 +413,118 @@ thresholds <- c("AHR" = 4,
                 "Nrf2-human" = 4,
                 "TGx-HDACi-TK6" = 15)
 
-heatmap <- ComplexHeatmap::Heatmap(selected_data,
-                   name = "-log10(p-value)",
-                   col = colorRamp2(c(-cont_legend_limit, 0, cont_legend_limit), c("blue", "white", "red")),
-                   row_names_gp = gpar(fontsize = 10),
-                   column_names_gp = gpar(fontsize = 10),
-                   show_column_names = TRUE,
-                   show_row_names = TRUE,
-                   cluster_rows = FALSE,
-                   cluster_columns = FALSE,
-                   column_title = "Biomarkers",
-                   row_title = "Biosets",
-                   row_title_side = "left",
-                   column_title_side = "top",
-                  #  width = unit(10, "cm"),
-                  #  height = unit(10, "cm"),
-                   # Add symbols for values above and below thresholds
-                   cell_fun = function(j, i, x, y, width, height, fill) {
-                   threshold <- thresholds[colnames(selected_data)[j]]
-                   if (!is.na(threshold)) {
-                     if (selected_data[i, j] > threshold) {
-                     grid.points(x, y, pch = 16, size = unit(2, "mm"), gp = gpar(col = "black"))
-                     } else if (selected_data[i, j] < -threshold) {
-                     grid.text("x", x, y, gp = gpar(col = "black", fontsize = 10))
-                     }
-                   }
-                   })
+# Define fig heights for heatmaps
+heatmap_height <- (length(bs) / 6) + 5
+```
 
-draw(heatmap)
+### Heatmap {.tabset .tabset-pills}
+
+The heatmaps below show the -log10(p-value) for each biomarker and bioset combination. 
+For biomarkers that have published threshold scores, the symbols indicate values **above the positive threshold (filled dot)** and **below the negative threshold (x)**.
+For more information, see the table below and references therein.
+
+Biomarkers with 4 (positive) and -4 (negative) thresholds: `r paste(threshold4, collapse = ", ")`
+
+Biomarkers with 15 (positive) and -15 (negative) thresholds: `r paste(threshold15, collapse = ", ")`
+
+Biomarkers without published threshold (no symbols will appear on heatmap): `r paste(thresholdunknown, collapse = ", ")`
+
+```{r heatmap_function, echo=FALSE}
+
+make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, cluster_rows = FALSE, cluster_columns = FALSE) {
+  
+  ComplexHeatmap::Heatmap(
+  matrix_data,
+  name = "-log10(p-value)",
+  col = colorRamp2(c(-cont_legend_limit, 0, cont_legend_limit), c("blue", "white", "red")),
+  row_names_gp = gpar(fontsize = 10),
+  column_names_gp = gpar(fontsize = 10),
+  show_column_names = TRUE,
+  show_row_names = TRUE,
+  cluster_rows = cluster_rows,
+  cluster_columns = cluster_columns,
+  column_title = "Biomarkers",
+  row_title = "Biosets",
+  row_title_side = "left",
+  column_title_side = "top",
+  # Add symbols for values above and below thresholds
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    threshold <- thresholds[colnames(selected_data)[j]]
+    if (!is.na(threshold)) {
+      if (selected_data[i, j] > threshold) {
+        grid.points(x, y, pch = 16, size = unit(2, "mm"), gp = gpar(col = "black"))
+      } else if (selected_data[i, j] < -threshold) {
+        grid.text("x", x, y, gp = gpar(col = "black", fontsize = 10))
+      }
+    }
+  },
+  # Add annotations for thresholds across top of heatmap
+  top_annotation = HeatmapAnnotation(
+    thresholds = anno_text(as.character(thresholds[colnames(selected_data)]), 
+                           rot = 0, 
+                           just = "center", 
+                           gp = gpar(fontsize = 10))
+  )
+)
+}
 
 ```
 
+#### Unclustered Heatmap {-}
 
-### Plots {.tabset .tabset-pills}
+```{r unclust_heatmap, fig.height=heatmap_height}
+selected_data <- out2 %>%
+  select(-Biomarker) %>%
+  as.matrix() %>%
+  t()
+
+colnames(selected_data) <- biomarkers
+
+# Set up color palette so zero is white
+min_logpval <- min(selected_data, na.rm = TRUE)
+max_logpval <- max(selected_data, na.rm = TRUE)
+cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
+
+
+heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit)
+
+draw(heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("heatmap.pdf", width = 10, height = 10)
+# draw(heatmap)
+# dev.off()
+
+```
+
+#### Heatmap, clustered rows {-}
+
+```{r rowclust_heatmap, fig.height=heatmap_height}
+rowclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_rows = TRUE)
+
+draw(rowclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("rowclust_heatmap.pdf", width = 10, height = 10)
+# draw(rowclust_heatmap)
+# dev.off()
+```
+
+#### Heatmap, clustered columns {-}
+
+```{r colclust_heatmap, fig.height=heatmap_height}
+colclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_columns = TRUE)
+
+draw(colclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("colclust_heatmap.pdf", width = 10, height = 10)
+# draw(colclust_heatmap)
+# dev.off()
+```
+
+
+### Individual plots {.tabset .tabset-pills}
 
 These plots show a more detailed view of the -log10(p-value) scores for each bioset and biomarker combination.
 
