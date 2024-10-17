@@ -432,11 +432,15 @@ Biomarkers without published threshold (no symbols will appear on heatmap): `r p
 ```{r heatmap_function, echo=FALSE}
 
 make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, cluster_rows = FALSE, cluster_columns = FALSE) {
-  
+  print(cont_legend_limit)
+
+  legend_values <- round(seq(-cont_legend_limit, cont_legend_limit, length.out = 5), digits = 1)
+
   ComplexHeatmap::Heatmap(
   matrix_data,
   name = "-log10(p-value)",
   col = colorRamp2(c(-cont_legend_limit, 0, cont_legend_limit), c("blue", "white", "red")),
+  heatmap_legend_param = list(at = legend_values),
   row_names_gp = gpar(fontsize = 10),
   column_names_gp = gpar(fontsize = 10),
   show_column_names = TRUE,
