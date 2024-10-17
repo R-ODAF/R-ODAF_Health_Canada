@@ -46,6 +46,8 @@ overallResListDEGs <- data_env$overallResListDEGs
 exp_contrasts <- data_env$exp_contrasts
 filtered_table <-  data_env$filtered_table
 allBiomarkers <- data_env$allBiomarkers
+count_data <- data_env$count_data
+bs <- data_env$bs
 rm(data_env)
 gc()
 
@@ -104,8 +106,10 @@ if (params$generate_tgxddi_report) {
     # Concatenate all the TGxDDI output csv files into one
     tgxddi_files <- list.files(paths$reports_dir, pattern = "_tgx-ddi_results.csv", full.names = TRUE)
     tgxddi_df <- readr::read_csv(tgxddi_files[1], show_col_types = FALSE)
-    for (i in 2:length(tgxddi_files)) {
-      tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
+    if (length(tgxddi_files) > 1) {
+      for (i in 2:length(tgxddi_files)) {
+        tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
+      }
     }
     # Write out the concatenated file
     readr::write_csv(tgxddi_df, file.path(paths$summary, paste0("tgx-ddi_results_summary.csv")))
@@ -123,8 +127,10 @@ if (params$generate_tgxhdaci_report) {
     # Concatenate all the TGxHDACi output csv files into one
     tgxhdaci_files <- list.files(paths$reports_dir, pattern = "_tgx-HDACi_results.csv", full.names = TRUE)
     tgxhdaci_df <- readr::read_csv(tgxhdaci_files[1], show_col_types = FALSE)
-    for (i in 2:length(tgxhdaci_files)) {
-      tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
+    if (length(tgxhdaci_files) > 1) {
+      for (i in 2:length(tgxhdaci_files)) {
+        tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
+      }
     }
     # Write out the concatenated file
     readr::write_csv(tgxhdaci_df, file.path(paths$summary, paste0("tgx-hdaci_results_summary.csv")))
@@ -134,6 +140,10 @@ if (params$generate_tgxhdaci_report) {
   else {
     message("TGx-HDACi report generation is currently only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")
   }
+}
+
+if (params$write_additional_output && params$generate_runningfisher_report) {
+  make_runningfisher_report(pars = params, paths = paths, input = bs)
 }
 
 if (!is.na(params$reports_facet)) {
