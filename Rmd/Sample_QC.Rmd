@@ -872,24 +872,23 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 
-# Grouped dendrograms
+## Dendrogram filtering within groups {.tabset}
 
-```{r group-correlation-setup, }
+```{r group-correlation-setup, results='asis', echo=FALSE}
 facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
 cor_list <- list()
 
 # Create list to populate with dataframes for each treatment_var group
 df_groupdendro_list <- list()
-
-for (i in seq_along(facets)) {
-  cat("###", facets[i], "  \n\n")
-  samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
-                                            "original_names"]
-  cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
+if(!is.na(params$group_tree_height_cutoff)) {
+  for (i in seq_along(facets)) {
+    cat("### ", facets[i], "\n\n")
+    samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
+                                              "original_names"]
+    cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
 
   ### Filtering by dendrogram distance within each treatment group ###
-  if(!is.na(params$group_tree_height_cutoff)) {
-    dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
+      dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
     dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
     dendro_facet <- as.dendrogram(dendro_facet)
 
@@ -912,24 +911,17 @@ for (i in seq_along(facets)) {
     d_facet$flag_cluster_facet <- flag_cluster_facet
 
     df_groupdendro_list[[i]] <- d_facet
-
-
-    # Output dendrograms per facet (currently it's by params$treatment_group!)
-    facet_dendro_filename = paste0("dendrogram_",facets[i],".pdf")
-    CairoPDF(file = file.path(paths$details, facet_dendro_filename),
-          width = 14,
-          height = 8.5,
-          family = "Courier")
-    
+    # Plot dendrogram
     par(cex = 0.75, mar = c(25, 4, 4, 2))
     plot(dendro_facet %>%
           dendextend::set("labels_cex", 1),
         main = "log2 CPM",
         horiz = F)
     abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
-    invisible(dev.off())  
+    cat('\n\n')
   }
 }
+
 # Do we want a separate config param from params$treatment_var for the within-group tree cutoff?
 # Or to use the deseq_facet?
 ```
@@ -966,7 +958,7 @@ NOTE the within-group correlations are all wrapped up with the group dendrograms
 
 
 for (i in seq_along(facets)) {
-  cat("###", facets[i], "  \n\n")
+  cat("### ", facets[i], "  \n\n")
   samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
                                             "original_names"]
   if (length(samples_in_facet) < 2) { next }
