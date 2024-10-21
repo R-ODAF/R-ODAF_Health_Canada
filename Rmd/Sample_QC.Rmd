@@ -97,6 +97,7 @@ library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
 library(ggh4x)
 library(scales)
+library(plotly)
 ```
 
 
@@ -372,6 +373,47 @@ A PCA plot will go here once I figure out how to do it.
 It should include all samples EXCEPT those removed manually...right?
 
 
+```{r pca_plot, fig.width = 11, fig.height = 10, echo=FALSE}
+# Right now this only works for projects with chemical and dose
+# Need to generalize,  maybe add parameters for which columns to use?
+
+# Filter CPM data for experimental samples
+experimental_samples <- exp_metadata %>%
+  filter(!technical_control & !reference_rna & !solvent_control) %>%
+  pull(original_names)
+
+cpm_experimental <- cpm %>%
+  dplyr::select(all_of(experimental_samples))
+
+# Perform PCA
+pca_result <- prcomp(t(cpm_experimental), scale. = TRUE)
+
+# Create a data frame for plotting
+pca_data <- as.data.frame(pca_result$x)
+pca_data$sample <- rownames(pca_data)
+pca_data <- merge(pca_data, exp_metadata, by.x = "sample", by.y = "original_names")
+
+# Create a new column for dose levels
+pca_data <- pca_data %>%
+  mutate(chemical_dose = paste(chemical, dose, sep = "_")) %>%
+  group_by(chemical) %>%
+  mutate(dose_level = dense_rank(dose)) %>%
+  ungroup()
+
+# Convert dose_level to a factor
+pca_data$dose_level <- as.factor(pca_data$dose_level)
+
+# Plot PCA
+p_pca <- ggplot(pca_data, aes(x = PC1, y = PC2, color = chemical, shape = dose_level)) +
+  geom_point(size = 3) +
+  labs(title = "PCA of Experimental Samples",
+       x = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)"),
+       y = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")) +
+  theme_minimal()
+
+plotly::ggplotly(p_pca)
+
+```
 
 # Correlations
 
