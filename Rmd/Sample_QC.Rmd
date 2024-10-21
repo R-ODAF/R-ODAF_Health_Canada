@@ -316,9 +316,6 @@ if (file.exists(remove_file)) {
 }
 ```
 
-### Splitting metadata into groups: technical controls and experimental samples
-
-This section obtains sample names for technical controls, experimental samples, and reference RNA samples.
 
 ```{r split_metadata}
 ############################################################################
@@ -338,6 +335,7 @@ ref_samples <- exp_metadata %>%
   dplyr::pull(original_names)
 
 ```
+
 
 
 # Summary Statistics
@@ -469,6 +467,51 @@ annotation_col <- HeatmapAnnotation(df = correlation_df) # NOTE: I don't think t
 
 
 # Sample Filtering 
+
+## Quality control criteria
+
+Quality control of each sample is performed according to the criteria laid out in @harrill2021high, 
+plus an additional filter for the distance between samples in hierarchical clustering, suggested by Andrew Williams (Health Canada). 
+In some projects, using a whole-study clustering distance cutoff may not be appropriate.
+For example, if your study includes multiple cell lines, the whole-study clustering distance will be high because the cell lines are biologically distinct.
+In that case, the whole-study clustering distance cutoff should be set high (for example, 0.9), and group-specific clustering distance cutoff should be used instead.
+
+```{r criteria_table}
+
+criteria <- data.frame(
+  Abbreviation = c("Dendrogram", "Group Dendrogram", "NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Description = c("All-samples clustering distance",
+                  "Group-specific clustering distance",
+                  "Number of mapped reads",
+                  "Fraction of uniquely mapped reads", 
+                  "Number of probes with at least 5 uniquely mapped reads", 
+                  "Number of probes capturing the top 80% of a signal in a sample", 
+                  "Gini coefficient"),
+  "Default Threshold" = c("< 0.1",
+                          "N/A",
+                          "> 10% of target read depth",
+                          "> 0.5",
+                          "within 3*IQR",
+                          "within 3*IQR",
+                          "RNA-Seq: < 0.99, \nTempO-Seq: < 0.95"),
+  "Threshold" = c(
+    paste0("< ",params$studywide_tree_height_cutoff),
+    paste0("<", params$group_tree_height_cutoff),
+    paste0("> ",params$nmr_threshold),
+    paste0("> ",params$align_threshold), 
+    "within 3*IQR", "within 3*IQR", 
+    paste0("< ",params$gini_cutoff)
+  )
+)
+
+# Generate and style the table
+criteria %>%
+  kable("html", caption = "Criteria Table",
+        col.names = c("Abbreviation", "Description", "Default Threshold", "Threshold")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+```
+
 
 ## Samples Removed Manually
 
@@ -875,6 +918,9 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ## Dendrogram filtering within groups {.tabset}
 
 ```{r group-correlation-setup, results='asis', echo=FALSE}
+# I really need to move this higher so I can plot samples failing these dendros in the tables
+# But how to do that higher up, but have the dendros appear down here in the report?
+
 facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
 cor_list <- list()
 
