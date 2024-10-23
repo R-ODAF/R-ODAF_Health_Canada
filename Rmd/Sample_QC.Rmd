@@ -573,6 +573,24 @@ if (nrow(cytotoxic) >= 1) {
 
 Click on the tabs below to view samples removed by each metric.
 
+```{r create_qaqc, results='asis', echo=FALSE}
+# Initial Creation of QAQC
+QAQC <- data.frame(Sample = names(count_data), NMR = apply(count_data, 2, sum))
+
+# Adding Fraction of Mapped Reads (FMR)
+QAQC <- QAQC %>% left_join(mu, by = "Sample")
+
+# Adding Number of Active Probes (Ncov5)
+n_genes <- nrow(count_data)
+QAQC$Ncov5 <- apply(count_data, 2, function(x) length(x[x > 4])) / nrow(count_data)
+
+# Adding Number of Probes Capturing 80% of Signal (Nsig80)
+QAQC$Nsig80 <- apply(count_data, 2, countStats)
+
+# Adding Gini Coefficient
+QAQC$Gini <- apply(count_data, 2, function(x) gini(x))
+```
+
 ### Clustering Distance Cutoff
 
 A `r params$clust_method` distance of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
@@ -606,6 +624,91 @@ if (!is.null(dim(n))) {
       scroll_box(width = "100%", height = "480px")
   }
 }
+
+QAQC$dendrogram <- "PASS"
+if (exists("flag_cluster")) {
+  QAQC$dendrogram[which(QAQC$Sample %in% d$original_names[flag_cluster])] <- "FAIL"
+}
+
+```
+
+
+### Group-specific Clustering Distance Cutoff
+```{r group-correlation-setup}
+# Perform the analysis, save results into QAQC dataframe, and generate dendrograms
+
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+
+facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
+cor_list <- list()
+
+# Create list to populate with dataframes for each treatment_var group
+df_groupdendro_list <- list()
+dendrograms <- list()
+
+if(!is.na(params$group_tree_height_cutoff)) {
+  for (i in seq_along(facets)) {
+    samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
+                                                 "original_names"]
+    if (length(samples_in_facet) < 2) { next }
+    cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
+
+    ### Filtering by dendrogram distance within each treatment group ###
+    dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
+    dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
+    dendro_facet <- as.dendrogram(dendro_facet)
+
+    facet_tree_groups <- cutree(dendro_facet, h = params$group_tree_height_cutoff)
+    n_facet <- table(facet_tree_groups)
+    n_facet <- sort(n_facet, decreasing = T)
+
+    d_facet <- d %>% dplyr::filter(original_names %in% samples_in_facet)
+    if (!is.null(dim(n_facet))) {
+      n_facet <- n_facet[2:dim(n_facet)]
+
+      if (length(n_facet > 0)) {
+        flag_cluster_facet <- d_facet$original_names %in% names(facet_tree_groups[facet_tree_groups %in% as.integer(names(n_facet))])
+      }
+    } else {
+      flag_cluster_facet <- rep(FALSE, nrow(d_facet))
+    }
+
+    # Add clustering results column to dataframe
+    d_facet$flag_cluster_facet <- flag_cluster_facet
+
+    df_groupdendro_list[[i]] <- d_facet
+
+    # Save dendrogram
+    dendrograms[[facets[i]]] <- dendro_facet
+  }
+}
+
+if(!is.na(params$group_tree_height_cutoff)) {
+  df_groupdendro <- do.call(rbind, df_groupdendro_list)
+  df_groupdendro <- df_groupdendro %>% 
+    dplyr::select(sample_ID, flag_cluster_facet) %>%
+    dplyr::rename(group_dendrogram = flag_cluster_facet)
+  df_groupdendro$group_dendrogram <- ifelse(df_groupdendro$group_dendrogram, "FAIL", "PASS")
+} else {
+  # If no tree height cutoff is specified, all samples are considered to pass
+  df_groupdendro <- exp_metadata %>% 
+    dplyr::select(sample_ID) %>%
+    dplyr::mutate(group_dendrogram = "PASS")
+}
+
+# Incorporate info into QAQC table
+QAQC <- merge(QAQC, df_groupdendro, by.x = "Sample", by.y = "sample_ID", all.x = TRUE)
+
+# Table of samples failing
+failed_groupdendro <- QAQC[QAQC$group_dendrogram == "FAIL",]
+
+d %>%
+  dplyr::filter(original_names %in% failed_groupdendro$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged with too few mapped reads") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
 ```
 
 
@@ -619,10 +722,9 @@ Samples with less than `r params$nmr_threshold` aligned reads removed.
 ######################################################################################
 # NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
 ######################################################################################
-# Reject < 300000 or Threshold = 10% of target depth
+# Reject < 10% of target depth
 # Removes various types of failed samples
 
-QAQC <- data.frame(Sample = names(count_data), NMR = apply(count_data, 2, sum))
 failed_read_threshold <- QAQC[QAQC$NMR < params$nmr_threshold,]
 
 # Samples failing
@@ -640,7 +742,6 @@ d %>%
 Samples less than `r params$align_threshold` aligned reads removed.
 
 ```{r fraction_mapped_reads}
-QAQC <- QAQC %>% left_join(mu, by = "Sample")
 failed_alignment_threshold <- QAQC[QAQC$FMR < params$align_threshold,]
   
 # Samples failing
@@ -661,8 +762,6 @@ The number of probes having >5 uniquely mapped reads are calculated. Outliers on
 # Ncov5 The number of probes with at least 5 uniquely mapped reads.
 ######################################################################################
 # Tukey's Outer Fence cutoff - 3*IQR
-n_genes <- nrow(count_data)
-QAQC$Ncov5 <- apply(count_data, 2, function(x) length(x[x > 4]))/n_genes
 percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
 failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
 
@@ -685,8 +784,6 @@ The number of probes capturing 80% of the signal is first calculated, and sample
 ######################################################################################
 # Tukey's Outer Fence cutoff - 3*IQR
 # (include test samples, vehicle controls, and reference chemical treatments)
-
-QAQC$Nsig80 <- apply(count_data, 2, countStats)
 
 probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
 failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
@@ -711,7 +808,6 @@ The Gini coefficient is computed for each sample based on the distribution of ra
 # raw counts for all probes including those with 0 aligned reads
 ######################################################################################
 # Reject > 0.95
-QAQC$Gini <- apply(count_data, 2, function(x) gini(x))
 failed_gini <- QAQC[QAQC$Gini > params$gini_cutoff,]
 
 # Samples failing
@@ -725,6 +821,162 @@ d %>%
 
 
 
+```{r return_data}
+
+################################################################################
+# Add Dendrogram Clustering Pass/Fail to QAQC
+################################################################################
+
+failed_dendro_clustering <- QAQC[QAQC$Denodogram == "FAIL",]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_dendro_clustering$Sample) %>%
+  dplyr::pull(params$treatment_var)
+
+################################################################################
+# Removing Outliers
+################################################################################
+QAQC_pass_fail <- QAQC
+QAQC_pass_fail$NMR <- cut(QAQC$NMR,
+                          c(-Inf, params$nmr_threshold, Inf),
+                          labels = c("FAIL", "PASS"), right = F)
+QAQC_pass_fail$FMR <- cut(QAQC$FMR,
+                          c(-Inf, params$align_threshold, Inf),
+                          labels = c("FAIL", "PASS"), right = F)
+QAQC_pass_fail$Ncov5 <- cut(QAQC$Ncov5,
+                            c(-Inf, percent_active_probes$stats[1,1], Inf),
+                            labels = c("FAIL", "PASS"), right = F)
+QAQC_pass_fail$Nsig80 <- cut(QAQC$Nsig80,
+                             c(-Inf, probes_capturing_top_80$stats[1,1], Inf),
+                             labels = c("FAIL", "PASS"), right = F)
+QAQC_pass_fail$Gini <- cut(QAQC$Gini,
+                           c(-Inf, params$gini_cutoff, Inf),
+                           labels = c("PASS", "FAIL"), right = F)
+
+
+QAQC_failed <- QAQC_pass_fail %>%
+  dplyr::rowwise() %>% 
+  dplyr::filter_all(any_vars(str_detect(., pattern = "FAIL")))
+
+#QAQC_failed_logical <- as.data.frame(QAQC_failed)
+QAQC_failed_logical <- lapply(QAQC_failed, as.character)
+QAQC_failed_logical <- as.data.frame(QAQC_failed_logical)
+QAQC_failed_logical[QAQC_failed_logical == "FAIL"] <- 1
+QAQC_failed_logical[QAQC_failed_logical == "PASS"] <- 0
+#apply(QAQC_failed_logical_matrix, 2, as.numeric)
+
+QAQC_failed_logical <- QAQC_failed_logical %>%
+  dplyr::left_join(d %>% dplyr::select(original_names, exp_groups[[1]][1]),
+                   by = (c("Sample" = "original_names"))) %>%
+  dplyr::mutate(NMR = as.numeric(NMR),
+                FMR = as.numeric(FMR),
+                Ncov5 = as.numeric(Ncov5),
+                Nsig80 = as.numeric(Nsig80),
+                Gini = as.numeric(Gini),
+                dendrogram = as.numeric(dendrogram))
+
+```
+
+```{r QAQC_annotated}
+
+QAQC_annotated <- dplyr::left_join(exp_metadata,
+                                   QAQC_pass_fail,
+                                   by = c("original_names" = "Sample")) %>%
+  dplyr::right_join(QAQC, by = c("original_names" = "Sample"),
+                   suffix = c("", "_data"))
+
+QAQC_annotated$Any <- apply(QAQC_annotated,
+                            MARGIN = 1,
+                            FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
+
+
+outliers <- QAQC_failed$Sample
+
+outlier_metadata <- exp_metadata[exp_metadata$original_names %in% outliers,]
+metadata_outliers_removed <- exp_metadata[!exp_metadata$original_names %in% outliers,] %>%
+  filter(.data[[params$technical_control]] == F)
+
+```
+
+
+## Metadata of samples identified as outliers
+
+```{r table_metadata}
+knitr::kable(outlier_metadata,
+             caption = "Samples Removed") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
+
+QAQC_failed_kable <- outlier_metadata %>%
+  dplyr::select(original_names,
+                .data[[params$treatment_var]],
+                .data[[params$dendro_color_by]]) %>%
+  left_join(QAQC_failed, by = (c("original_names" = "Sample")))
+```
+
+## Sample groups summary - numbers of outliers in each group
+
+```{r table_by_groups}
+knitr::kable(QAQC_annotated %>%
+               dplyr::group_by(.data[[params$treatment_var]],
+                               .data[[params$dose]], Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
+               tally() %>% dplyr::arrange(Any),
+             caption = "Groups Summary") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
+```
+
+
+## Pass/fail table for samples identified as outliers
+
+```{r table_pass_fail}
+knitr::kable(QAQC_failed_kable,
+             caption = "Which samples were removed and why?") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+## Overall summary of pass/fail for each test
+
+```{r pass_fail_summary}
+QAQC_annotated %>%
+  dplyr::group_by(dendrogram, group_dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
+  tally() %>%
+  knitr::kable(caption = "Summary of pass/fail results") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+## Pass/fail for each test, broken up by sample groups
+
+```{r pass_fail_by_group}
+QAQC_annotated %>%
+  dplyr::group_by(dendrogram, group_dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
+  tally() %>%
+  knitr::kable(caption = "Pass/fail results by group") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+### Vtree Summary
+
+```{r vtree}
+
+vtree(QAQC_annotated,
+      "Any dendrogram group_dendrogram NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
+      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
+      pngknit = FALSE) # This is not ideal - but the tmp files didn't work when rendering externally.
+
+vtree(QAQC_annotated,
+      "dendrogram group_dendrogram NMR FMR Ncov5 Nsig80 Gini",
+      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
+      pattern = T,
+      pngknit = FALSE)
+
+```
 
 ## Dendrogram and distance based filtering
 
@@ -868,8 +1120,6 @@ CairoPDF(file = file.path(paths$details,
 dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
                                   method = "spearman")
 
-exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
-
 dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
 
 dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
@@ -952,81 +1202,27 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
-
 ## Dendrogram filtering within groups {.tabset}
 
-```{r group-correlation-setup, results='asis', echo=FALSE}
-# I really need to move this higher so I can plot samples failing these dendros in the tables
-# But how to do that higher up, but have the dendros appear down here in the report?
+```{r display-dendrograms, results='asis', echo=FALSE}
+# Display the saved dendrograms
 
-facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
-cor_list <- list()
+for (facet in names(dendrograms)) {
+  cat("### ", facet, "  \n\n")
+  dendro_facet <- dendrograms[[facet]]
 
-# Create list to populate with dataframes for each treatment_var group
-df_groupdendro_list <- list()
-if(!is.na(params$group_tree_height_cutoff)) {
-  for (i in seq_along(facets)) {
-    cat("### ", facets[i], "\n\n")
-    samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
-                                              "original_names"]
-    cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
-
-  ### Filtering by dendrogram distance within each treatment group ###
-      dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
-    dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
-    dendro_facet <- as.dendrogram(dendro_facet)
-
-    facet_tree_groups <- cutree(dendro_facet, h = params$group_tree_height_cutoff)
-    n_facet <- table(facet_tree_groups)
-    n_facet <- sort(n_facet, decreasing = T)
-
-    d_facet <- d %>% dplyr::filter(original_names %in% samples_in_facet)
-    if (!is.null(dim(n_facet))) {
-      n_facet <- n_facet[2:dim(n_facet)]
-
-      if (length(n_facet > 0)) {
-        flag_cluster_facet <- d_facet$original_names %in% names(facet_tree_groups[facet_tree_groups %in% as.integer(names(n_facet))])
-      }
-    } else {
-      flag_cluster_facet <- rep(FALSE, nrow(d_facet))
-    }
-
-    # Add clustering results column to dataframe
-    d_facet$flag_cluster_facet <- flag_cluster_facet
-
-    df_groupdendro_list[[i]] <- d_facet
-    # Plot dendrogram
-    par(cex = 0.75, mar = c(25, 4, 4, 2))
-    plot(dendro_facet %>%
-          dendextend::set("labels_cex", 1),
-        main = "log2 CPM",
-        horiz = F)
-    abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
-    cat('\n\n')
-  }
+  # Plot dendrogram
+  par(cex = 0.75, mar = c(25, 4, 4, 2))
+  plot(dendro_facet %>%
+         dendextend::set("labels_cex", 1),
+       main = "log2 CPM",
+       horiz = F)
+  abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
+  cat('\n\n')
 }
-
-# Do we want a separate config param from params$treatment_var for the within-group tree cutoff?
-# Or to use the deseq_facet?
 ```
 
-```{r add_group_dendro_to_QCAC}
-if(!is.na(params$group_tree_height_cutoff)) {
-  df_groupdendro <- do.call(rbind, df_groupdendro_list)
-  df_groupdendro <- df_groupdendro %>% 
-    dplyr::select(sample_ID, flag_cluster_facet) %>%
-    dplyr::rename(group_tree = flag_cluster_facet)
-  df_groupdendro$group_tree <- ifelse(df_groupdendro$group_tree, "FAIL", "PASS")
-} else {
-  # If no tree height cutoff is specified, all samples are considered to pass
-  df_groupdendro <- exp_metadata %>% 
-    dplyr::select(sample_ID) %>%
-    dplyr::mutate(group_tree = "PASS")
-}
 
-# Incorporate info into QAQC table
-QAQC <- merge(QAQC, df_groupdendro, by.x = "Sample", by.y = "sample_ID", all.x = TRUE)
-```
 
 # Correlations 
 ## Within Group Correlations {.tabset}
@@ -1123,112 +1319,12 @@ ggplotly(cor_plot_2)
 
 # Compose tables
 
-```{r return_data}
-
-################################################################################
-# Add Dendrogram Clustering Pass/Fail to QAQC
-################################################################################
-QAQC$dendrogram <- "PASS"
-if (exists("flag_cluster")) {
-  QAQC$dendrogram[which(QAQC$Sample %in% d$original_names[flag_cluster])] <- "FAIL"
-}
-
-failed_dendro_clustering <- QAQC[QAQC$Denodogram == "FAIL",]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_dendro_clustering$Sample) %>%
-  dplyr::pull(params$treatment_var)
-
-################################################################################
-# Removing Outliers
-################################################################################
-QAQC_pass_fail <- QAQC
-QAQC_pass_fail$NMR <- cut(QAQC$NMR,
-                          c(-Inf, params$nmr_threshold, Inf),
-                          labels = c("FAIL", "PASS"), right = F)
-QAQC_pass_fail$FMR <- cut(QAQC$FMR,
-                          c(-Inf, params$align_threshold, Inf),
-                          labels = c("FAIL", "PASS"), right = F)
-QAQC_pass_fail$Ncov5 <- cut(QAQC$Ncov5,
-                            c(-Inf, percent_active_probes$stats[1,1], Inf),
-                            labels = c("FAIL", "PASS"), right = F)
-QAQC_pass_fail$Nsig80 <- cut(QAQC$Nsig80,
-                             c(-Inf, probes_capturing_top_80$stats[1,1], Inf),
-                             labels = c("FAIL", "PASS"), right = F)
-QAQC_pass_fail$Gini <- cut(QAQC$Gini,
-                           c(-Inf, params$gini_cutoff, Inf),
-                           labels = c("PASS", "FAIL"), right = F)
-
-
-QAQC_failed <- QAQC_pass_fail %>%
-  dplyr::rowwise() %>% 
-  dplyr::filter_all(any_vars(str_detect(., pattern = "FAIL")))
-
-#QAQC_failed_logical <- as.data.frame(QAQC_failed)
-QAQC_failed_logical <- lapply(QAQC_failed, as.character)
-QAQC_failed_logical <- as.data.frame(QAQC_failed_logical)
-QAQC_failed_logical[QAQC_failed_logical == "FAIL"] <- 1
-QAQC_failed_logical[QAQC_failed_logical == "PASS"] <- 0
-#apply(QAQC_failed_logical_matrix, 2, as.numeric)
-
-QAQC_failed_logical <- QAQC_failed_logical %>%
-  dplyr::left_join(d %>% dplyr::select(original_names, exp_groups[[1]][1]),
-                   by = (c("Sample" = "original_names"))) %>%
-  dplyr::mutate(NMR = as.numeric(NMR),
-                FMR = as.numeric(FMR),
-                Ncov5 = as.numeric(Ncov5),
-                Nsig80 = as.numeric(Nsig80),
-                Gini = as.numeric(Gini),
-                dendrogram = as.numeric(dendrogram))
-
-```
 
 # Tables and plots
 
 This section shows several tables of the outlier data.  
 
-## vtree plot of outliers
 
-This plot shows the various QC metrics that may result in sample removal, along with the numbers of samples that were removed for one or more of those filters.  
-
-
-```{r QAQC_annotated}
-
-QAQC_annotated <- dplyr::left_join(exp_metadata,
-                                   QAQC_pass_fail,
-                                   by = c("original_names" = "Sample")) %>%
-  dplyr::right_join(QAQC, by = c("original_names" = "Sample"),
-                   suffix = c("", "_data"))
-
-QAQC_annotated$Any <- apply(QAQC_annotated,
-                            MARGIN = 1,
-                            FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
-
-```
-
-### Vtree Summary
-
-```{r vtree}
-
-vtree(QAQC_annotated,
-      "Any dendrogram group_tree NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
-      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
-      pngknit = FALSE) # This is not ideal - but the tmp files didn't work when rendering externally.
-
-vtree(QAQC_annotated,
-      "dendrogram group_tree NMR FMR Ncov5 Nsig80 Gini",
-      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
-      pattern = T,
-      pngknit = FALSE)
-
-outliers <- QAQC_failed$Sample
-
-outlier_metadata <- exp_metadata[exp_metadata$original_names %in% outliers,]
-metadata_outliers_removed <- exp_metadata[!exp_metadata$original_names %in% outliers,] %>%
-  filter(.data[[params$technical_control]] == F)
-
-```
 
 
 ## Potential covariates
@@ -1416,65 +1512,6 @@ custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
 ```
 
 
-## Metadata of samples identified as outliers
-
-```{r table_metadata}
-knitr::kable(outlier_metadata,
-             caption = "Samples Removed") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  kableExtra::scroll_box(width = "100%", height = "480px")
-
-QAQC_failed_kable <- outlier_metadata %>%
-  dplyr::select(original_names,
-                .data[[params$treatment_var]],
-                .data[[params$dendro_color_by]]) %>%
-  left_join(QAQC_failed, by = (c("original_names" = "Sample")))
-```
-
-## Sample groups summary - numbers of outliers in each group
-
-```{r table_by_groups}
-knitr::kable(QAQC_annotated %>%
-               dplyr::group_by(.data[[params$treatment_var]],
-                               .data[[params$dose]], Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
-               tally() %>% dplyr::arrange(Any),
-             caption = "Groups Summary") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  kableExtra::scroll_box(width = "100%", height = "480px")
-```
-
-
-## Pass/fail table for samples identified as outliers
-
-```{r table_pass_fail}
-knitr::kable(QAQC_failed_kable,
-             caption = "Which samples were removed and why?") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
-
-
-## Overall summary of pass/fail for each test
-
-```{r pass_fail_summary}
-QAQC_annotated %>%
-  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
-  tally() %>%
-  knitr::kable(caption = "Summary of pass/fail results") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
-
-## Pass/fail for each test, broken up by sample groups
-
-```{r pass_fail_by_group}
-QAQC_annotated %>%
-  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
-  tally() %>%
-  knitr::kable(caption = "Pass/fail results by group") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
 
 ## Write tables to disk
 
