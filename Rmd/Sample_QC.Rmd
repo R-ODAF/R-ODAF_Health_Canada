@@ -918,11 +918,12 @@ QAQC_failed_kable <- outlier_metadata %>%
 ## Sample groups summary - numbers of filtered samples in each group
 
 ```{r table_by_groups}
+
 knitr::kable(QAQC_annotated %>%
                dplyr::group_by(.data[[params$treatment_var]],
                                .data[[params$dose]], Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
-               tally() %>% dplyr::arrange(Any),
-             caption = "Groups Summary") %>%
+               tally() %>% dplyr::arrange(Any) %>%
+               tidyr::pivot_wider(names_from = Any, values_from = n, values_fill = 0)) %>% # wide table instead of long
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
   kableExtra::scroll_box(width = "100%", height = "480px")
 ```
