@@ -900,7 +900,7 @@ metadata_outliers_removed <- exp_metadata[!exp_metadata$original_names %in% outl
 ```
 
 
-## Metadata of samples identified as outliers
+## Metadata of samples removed by filters
 
 ```{r table_metadata}
 knitr::kable(outlier_metadata,
@@ -915,7 +915,7 @@ QAQC_failed_kable <- outlier_metadata %>%
   left_join(QAQC_failed, by = (c("original_names" = "Sample")))
 ```
 
-## Sample groups summary - numbers of outliers in each group
+## Sample groups summary - numbers of filtered samples in each group
 
 ```{r table_by_groups}
 knitr::kable(QAQC_annotated %>%
@@ -928,7 +928,8 @@ knitr::kable(QAQC_annotated %>%
 ```
 
 
-## Pass/fail table for samples identified as outliers
+## Pass/fail table for samples removed by filters
+
 
 ```{r table_pass_fail}
 knitr::kable(QAQC_failed_kable,
@@ -967,6 +968,118 @@ vtree(QAQC_annotated,
       pngknit = FALSE)
 
 ```
+
+
+## Plate position effects {.tabset}
+
+Click on the tabs below to view the plate layout for the experiment (if any was provided) and the corresponding quality metrics according to position.
+
+```{r is-there-plate-info, echo = F, warning = F}
+are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = T))
+
+if (!is.na(params$batch_var)) {
+  batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
+} else{
+  batch_length <- 1
+}
+```
+
+```{r plate_pos, eval = are_there_plates}
+colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
+rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
+colname <- names(QAQC_annotated[colnum])
+rowname <- names(QAQC_annotated[rownum])
+plate_plot <- ggplot(QAQC_annotated, aes(x = factor(.data[[colname]]),
+                                         y = factor(.data[[rowname]], levels = rev(levels(factor(.data[[rowname]])))),
+                                         name = original_names,
+                                         treat = .data[[params$treatment_var]],
+                                         dose = .data[[params$dose]])) +
+  theme(legend.position = "right",
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.spacing = unit(2, "lines")) +
+  scale_x_discrete(position = "top")
+
+if (!is.na(params$batch_var)) {
+  plate_plot <- plate_plot + facet_wrap2(
+    ~ .data[[params$batch_var]], 
+    scales = "free", axes = "all", remove_labels = FALSE, 
+    ncol = 2)
+} else {
+  plate_plot <- plate_plot + theme(
+    plot.margin = margin(0, 0, 0, 0, "cm"),
+    legend.text = element_text(size = 8)
+  )
+}
+
+```
+
+
+```{r}
+custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
+
+# Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
+custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
+
+```
+
+### Number of Mapped Reads
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Number of mapped reads"))  %>%
+  ggplotly(tooltip = c("name", "treat", "dose", "val"))
+```
+
+### Fraction of Mapped Reads
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Fraction of mapped reads")) %>%
+  ggplotly(tooltip = c("name","treat","dose","val"))
+```
+
+### Nsig80
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Nsig80")) %>%
+  ggplotly(tooltip = c("name", "treat", "dose", "val"))
+```
+
+### Ncov5
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Ncov5")) %>%
+  ggplotly(tooltip = c("name", "treat", "dose", "val"))
+```
+
+### Gini
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
+  ggtitle("Gini")) %>%
+  ggplotly(tooltip = c("name", "treat", "dose", "val"))
+```
+
+### Any samples which failed
+
+```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
+(plate_plot +
+  geom_tile(mapping = aes(fill = log(.data[[params$dose]] + 1)),
+            data = QAQC_annotated) +   
+  scale_fill_gradient(low = "grey", high = "black") +
+  geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
+  ggtitle("Any samples failed")) %>%
+  ggplotly(tooltip = c("name", "treat", "dose", "val"))
+```
+
 
 ## Dendrogram and distance based filtering
 
@@ -1390,116 +1503,6 @@ if (length(exp_groups) > 1 & !is.na(params$batch_var)) {
 
 ```
 
-
-## Plate position effects {.tabset}
-
-Click on the tabs below to view the plate layout for the experiment (if any was provided) and the corresponding quality metrics according to position.
-
-```{r is-there-plate-info, echo = F, warning = F}
-are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = T))
-
-if (!is.na(params$batch_var)) {
-  batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
-} else{
-  batch_length <- 1
-}
-```
-
-```{r plate_pos, eval = are_there_plates}
-colnum <- which(grepl("column", colnames(QAQC_annotated), ignore.case = T))[1]
-rownum <- which(grepl("row", colnames(QAQC_annotated), ignore.case = T))[1]
-colname <- names(QAQC_annotated[colnum])
-rowname <- names(QAQC_annotated[rownum])
-plate_plot <- ggplot(QAQC_annotated, aes(x = factor(.data[[colname]]),
-                                         y = factor(.data[[rowname]], levels = rev(levels(factor(.data[[rowname]])))),
-                                         name = original_names,
-                                         treat = .data[[params$treatment_var]],
-                                         dose = .data[[params$dose]])) +
-  theme(legend.position = "right",
-        axis.title = element_blank(),
-        axis.ticks = element_blank(),
-        panel.spacing = unit(2, "lines")) +
-  scale_x_discrete(position = "top")
-
-if (!is.na(params$batch_var)) {
-  plate_plot <- plate_plot + facet_wrap2(
-    ~ .data[[params$batch_var]], 
-    scales = "free", axes = "all", remove_labels = FALSE, 
-    ncol = 2)
-} else {
-  plate_plot <- plate_plot + theme(
-    plot.margin = margin(0, 0, 0, 0, "cm"),
-    legend.text = element_text(size = 8)
-  )
-}
-
-```
-
-
-```{r}
-custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
-
-# Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
-custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
-
-```
-
-### Number of Mapped Reads
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Number of mapped reads"))  %>%
-  ggplotly(tooltip = c("name", "treat", "dose", "val"))
-```
-
-### Fraction of Mapped Reads
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Fraction of mapped reads")) %>%
-  ggplotly(tooltip = c("name","treat","dose","val"))
-```
-
-### Nsig80
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Nsig80")) %>%
-  ggplotly(tooltip = c("name", "treat", "dose", "val"))
-```
-
-### Ncov5
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Ncov5")) %>%
-  ggplotly(tooltip = c("name", "treat", "dose", "val"))
-```
-
-### Gini
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Gini")) %>%
-  ggplotly(tooltip = c("name", "treat", "dose", "val"))
-```
-
-### Any samples which failed
-
-```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
-(plate_plot +
-  geom_tile(mapping = aes(fill = log(.data[[params$dose]] + 1)),
-            data = QAQC_annotated) +   
-  scale_fill_gradient(low = "grey", high = "black") +
-  geom_point(mapping = aes(color = Any, val = Any), data = QAQC_annotated, size = 3) +
-  ggtitle("Any samples failed")) %>%
-  ggplotly(tooltip = c("name", "treat", "dose", "val"))
-```
 
 
 
