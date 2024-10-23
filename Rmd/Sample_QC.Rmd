@@ -938,16 +938,6 @@ knitr::kable(QAQC_failed_kable,
 ```
 
 
-## Overall summary of pass/fail for each test
-
-```{r pass_fail_summary}
-QAQC_annotated %>%
-  dplyr::group_by(dendrogram, group_dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
-  tally() %>%
-  knitr::kable(caption = "Summary of pass/fail results") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
 
 ## Pass/fail for each test, broken up by sample groups
 
