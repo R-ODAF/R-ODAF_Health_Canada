@@ -343,6 +343,8 @@ ref_samples <- exp_metadata %>%
 
 Below, you will find plots and a table showing the distribution of read metrics (quality, GC content, aligned reads, etc.).
 
+Details on each sample can be seen in the MultiQC report.
+
 ```{r summary-stats}
 # NOTE won't this break if collapse_replicate is true? No multiQC loaded in load_files line 202?
 summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
@@ -369,7 +371,13 @@ stat_metrics %>%
 
 # PCA
 
-```{r pca_plot, fig.height = 7, echo=FALSE}
+The PCA plot below shows the distribution of samples in the study. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+
+Marker colour and shape are determined by the experimental groups defined in the config file.In this plot, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
+
+The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
+
+```{r pca_plot, fig.width = 11, fig.height = 8, echo=FALSE}
 # Right now this only works for projects with chemical and dose
 # Need to generalize,  maybe add parameters for which columns to use?
 
@@ -389,23 +397,29 @@ pca_data <- as.data.frame(pca_result$x)
 pca_data$sample <- rownames(pca_data)
 pca_data <- merge(pca_data, exp_metadata, by.x = "sample", by.y = "original_names")
 
+# Colour and shape by exp_groups defined in config
+expgroup1 <- params$exp_groups[[1]][1]
+exp_group2 <- params$exp_groups[[1]][2]
+
 # Create a new column for dose levels
 # Otherwise there can be way too many doses to plot
 pca_data <- pca_data %>%
-  mutate(chemical_dose = paste(chemical, dose, sep = "_")) %>%
-  group_by(chemical) %>%
-  mutate(dose_level = dense_rank(dose)) %>%
+  group_by(across(all_of(expgroup1))) %>%
+  mutate(level = dense_rank(across(all_of(exp_group2)))) %>%
   ungroup()
 
 # Convert dose_level to a factor
-pca_data$dose_level <- as.factor(pca_data$dose_level)
+pca_data$level <- as.factor(pca_data$level)
 
-p_pca <- plot_ly(data = pca_data, x = ~PC1, y = ~PC2,
-color = ~chemical, symbol = ~dose_level, text = ~sample,
-size = 3) %>%
-layout(title = "PCA of Experimental Samples",
+p_pca <- plot_ly(data = pca_data, type = "scatter", mode = "markers",
+                 x = ~PC1, y = ~PC2,
+                 color = as.formula(paste0("~", expgroup1)), symbol = ~level, text = ~sample,
+                 size = 3) %>%
+  layout(title = "PCA of Experimental Samples",
          xaxis = list(title = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)")),
-         yaxis = list(title = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")))
+         yaxis = list(title = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")),
+         legend = list(x = 1.1, y = 1, xanchor = "left", yanchor = "top", orientation = "v"))
+
 
 plotly::highlight(p_pca, on = "plotly_click", off = "plotly_doubleclick", color = "red")
 
@@ -444,8 +458,6 @@ pheatmap(ref_correlations_all,
 ## Experimental samples
 
 This shows the Pearson correlation of log2-normalized CPM of read counts across experimental samples.  Technical controls are excluded.
-
-This first plot shows every sample in the study:
 
 ```{r correlation_2, fig.width = 11, fig.height = 10}
 ref_correlations_samples <- cor(as.matrix(cpm %>%
@@ -915,7 +927,7 @@ QAQC_failed_kable <- outlier_metadata %>%
   left_join(QAQC_failed, by = (c("original_names" = "Sample")))
 ```
 
-## Sample groups summary - numbers of filtered samples in each group
+## Number of filtered samples in each group
 
 ```{r table_by_groups}
 
