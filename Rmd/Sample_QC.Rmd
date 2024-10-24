@@ -371,7 +371,7 @@ stat_metrics %>%
 
 # PCA
 
-The PCA plot below shows the distribution of samples in the study. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+The PCA plot below shows the distribution of samples in the study. It includes all experimental samples except those manually removed. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
 Marker colour and shape are determined by the experimental groups defined in the config file.In this plot, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
 
@@ -571,7 +571,7 @@ In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the 
 
 `r if (!is.null(remove)) { print(remove) }`
 
-```{r}
+```{r manually_removed}
 if (nrow(cytotoxic) >= 1) {
   cytotoxic %>%
     kable(caption = "Samples removed manually before this report was generated.") %>%
@@ -833,7 +833,7 @@ d %>%
 
 
 
-```{r return_data}
+```{r QAQC_setup}
 
 ################################################################################
 # Add Dendrogram Clustering Pass/Fail to QAQC
@@ -1028,7 +1028,7 @@ if (!is.na(params$batch_var)) {
 ```
 
 
-```{r}
+```{r platefig_size}
 custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
 
 # Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
@@ -1103,7 +1103,7 @@ A tree height cutoff of `r params$studywide_tree_height_cutoff` is used to cut t
 Technical control samples are colored differently.
 
 ### Pre-filtering
-```{r dendrogram_clustering}
+```{r dendrogram_all_before}
 message(paste0("The treatment variable is: ", params$treatment_var))
 
 
@@ -1321,7 +1321,7 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ### Prefiltering, coloured by dose
 
-```{r}
+```{r dendro_samples_before_dose}
 
 ############################################################################
 # Experimental Samples, Prefiltering, Colored by Dose
@@ -1655,7 +1655,7 @@ These plots show correlations within each experimental grouping.
 Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
 
 NOTE the within-group correlations are all wrapped up with the group dendrograms. I need to separate this out.
-```{r, fig.width = 11, fig.height = 10, results='asis'}
+```{r correlations_group, fig.width = 11, fig.height = 10, results='asis'}
 ### To view correlations for groups of interest...
 
 
@@ -1708,7 +1708,7 @@ In other words, for each sample, what is its mean correlation with **every other
 
 Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
 
-```{r,  fig.width = 9, fig.height = 10}
+```{r correlations_group2,  fig.width = 9, fig.height = 10}
 cor_df1 <- as.data.frame(ref_correlations_samples)
 cor_df1$original_names <- row.names(cor_df1)
 cor_df2 <- exp_metadata_exp_samples[c(params$treatment_var,"original_names")]
@@ -1729,7 +1729,7 @@ ggplotly(cor_plot)
 
 In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
 
-```{r,  fig.width = 9, fig.height = 10}
+```{r correlations_group3,  fig.width = 9, fig.height = 10}
 # MEANS BY CHEMICAL
 cor_means_by_chem <- data.table::rbindlist(cor_list)
 cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
