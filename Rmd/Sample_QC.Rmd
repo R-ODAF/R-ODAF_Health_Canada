@@ -377,7 +377,7 @@ Marker colour and shape are determined by the experimental groups defined in the
 
 The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
 
-```{r pca_plot, fig.width = 9, fig.height = 8, echo=FALSE}
+```{r pca_plot, fig.width = 9, fig.height = 8}
 # Right now this only works for projects with chemical and dose
 # Need to generalize,  maybe add parameters for which columns to use?
 
@@ -508,10 +508,6 @@ pheatmap(ref_correlations,
          display_numbers = T)
          #cutree_cols = 2, # This is nice to have but won't work with small groups
          #cutree_rows = 2)
-
-heatmap_colors <- circlize::colorRamp2(c(0.7, 1), c("blue", "red")) # NOTE: This never gets used...
-
-annotation_col <- HeatmapAnnotation(df = correlation_df) # NOTE: I don't think this gets used either
 
 ```
 
@@ -646,6 +642,8 @@ if (exists("flag_cluster")) {
 
 
 ### Group-specific Clustering Distance Cutoff
+
+A `r params$clust_method` distance of `r params$group_tree_height_cutoff` is used to cut the tree and separate outliers.
 ```{r group-dendrograms}
 # Perform the analysis, save results into QAQC dataframe, and generate dendrograms
 
@@ -840,11 +838,6 @@ d %>%
 ################################################################################
 
 failed_dendro_clustering <- QAQC[QAQC$Denodogram == "FAIL",]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_dendro_clustering$Sample) %>%
-  dplyr::pull(params$treatment_var)
 
 ################################################################################
 # Removing Outliers
@@ -1481,6 +1474,10 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ## Group-based Dendrogram Filtering  {.tabset}
 
+If you set a group tree height cutoff in the config file, then any sample separating from the rest of its group at a height heigher than `r params$group_tree_height_cutoff` will be filtered out.
+
+All dendrograms below are pre-filtering.
+
 ```{r display-dendrograms, results='asis', echo=FALSE}
 # Display the saved dendrograms from chunk "group-dendrograms"
 
@@ -1647,21 +1644,20 @@ pheatmap(count_data_is0,
 ```
 
 
-# Correlations 
-## Within Group Correlations {.tabset}
+## Correlations 
+### Within Group Correlations {.tabset}
 
 These plots show correlations within each experimental grouping.  
 
 Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
 
-NOTE the within-group correlations are all wrapped up with the group dendrograms. I need to separate this out.
 ```{r correlations_group, fig.width = 11, fig.height = 10, results='asis'}
 ### To view correlations for groups of interest...
 
 
 
 for (i in seq_along(facets)) {
-  cat("### ", facets[i], "  \n\n")
+  cat("#### ", facets[i], "  \n\n")
   samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
                                             "original_names"]
   if (length(samples_in_facet) < 2) { next }
@@ -1700,15 +1696,15 @@ for (i in seq_along(facets)) {
 
 
 
-## Distribution of correlations
+### Distribution of correlations
 
-### Mean of per-sample correlations with every other sample in the study
+#### Mean of per-sample correlations with every other sample in the study
 
 In other words, for each sample, what is its mean correlation with **every other sample in the study**?
 
 Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
 
-```{r correlations_group2,  fig.width = 9, fig.height = 10}
+```{r correlations_group2,  fig.width = 9, fig.height = 8}
 cor_df1 <- as.data.frame(ref_correlations_samples)
 cor_df1$original_names <- row.names(cor_df1)
 cor_df2 <- exp_metadata_exp_samples[c(params$treatment_var,"original_names")]
@@ -1725,11 +1721,11 @@ ggplotly(cor_plot)
 # https://github.com/plotly/plotly.R/issues/1114
 ```
 
-### Mean of per-sample correlations with every other sample in its corresponding group
+#### Mean of per-sample correlations with every other sample in its corresponding group
 
 In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
 
-```{r correlations_group3,  fig.width = 9, fig.height = 10}
+```{r correlations_group3,  fig.width = 9, fig.height = 8}
 # MEANS BY CHEMICAL
 cor_means_by_chem <- data.table::rbindlist(cor_list)
 cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
