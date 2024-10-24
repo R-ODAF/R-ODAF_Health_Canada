@@ -377,7 +377,7 @@ Marker colour and shape are determined by the experimental groups defined in the
 
 The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
 
-```{r pca_plot, fig.width = 11, fig.height = 8, echo=FALSE}
+```{r pca_plot, fig.width = 9, fig.height = 8, echo=FALSE}
 # Right now this only works for projects with chemical and dose
 # Need to generalize,  maybe add parameters for which columns to use?
 
@@ -1500,6 +1500,152 @@ for (facet in names(dendrograms)) {
 ```
 
 
+# Plots of QC data metrics
+
+These plots show the effects of batch and dose on the quality metrics used for filtering.
+
+## Batch
+
+```{r plot_batch_effects, eval = !is.na(params$batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
+
+plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
+  facet_wrap(paste0("~",params$batch_var), scales = "free_y", labeller = labeller(
+    .cols = add_spaces,
+    .default = label_wrap_gen(100)), ncol = 1) +
+  theme(legend.position = "none") + xlab("Batch") +
+  theme(axis.text.x = element_text(angle = 90)) +
+  coord_flip()
+
+plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") 
+plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
+plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
+
+```
+
+## Dose effects
+
+```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*1.5}
+# It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
+plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]]),
+                                               color = factor(.data[[params$dose]]))) +
+  facet_wrap(paste0("~", params$treatment_var), scales = "free") +
+  theme(legend.position = "none") + xlab("Dose") + # labs(color = dose) +
+  theme(axis.text.x = element_text(angle = 90))
+
+plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
+plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") + scale_y_continuous(labels = scales::scientific)
+plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads") 
+plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
+plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
+```
+
+
+# Write tables to disk
+
+```{r write_output}
+outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
+                                               QAQC_pass_fail,
+                                               by = c("original_names" = "Sample"))
+write.table(outlier_metadata_annotated,
+            file.path(paths$details, "samples_removed.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+write.table(QAQC_annotated,
+            file.path(paths$details, "QC_per_sample.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+write.table(metadata_outliers_removed,
+            file.path(paths$qc, "metadata.QC_applied.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
+
+```
+
+
+# References {-}
+
+If these methods were used in your study, please cite the following papers as appropriate:  
+
+
+
+<div id="refs"></div>
+
+
+
+
+# Appendix (additional plots)
+
+## GC content
+
+Summary of GC content of probes (TempO-Seq only)
+```{r plot-gc, eval=params$platform == "TempO-Seq"}
+
+# Calculate the GC content for each probe, add this value as a column
+manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
+
+count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
+                                  manifest,
+                                  by = c("rowname" = "Probe_Name")) %>%
+  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
+                      names_to = "sample", values_to = "count") %>%
+  dplyr::mutate(GC_corrected_count = count/gc_content)
+ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
+  geom_density() +
+  scale_x_log10() +
+  theme(legend.position = "none")
+
+gc_summary <- count_data_gc %>%
+  group_by(sample) %>%
+  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
+
+gc_summary_long <- gc_summary %>%
+  pivot_longer(cols=c("mean_gc","median_gc"))
+
+ggplot(gc_summary_long,
+       aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
+  geom_violin(fill = "transparent") +
+  facet_wrap(name~., scales = "free")
+
+gc_summary %>%
+  kable(caption = "Summary GC statistics") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+## Zero count heatmap
+
+Heatmap showing presence of zeroes (black) in the data.
+
+```{r zero-heatmap, fig.width = 11, fig.height = 10}
+
+
+if(nrow(count_data) > 3000){
+  random_indices <- sample(nrow(count_data), 2500)
+  count_data_random <- count_data[random_indices, ]
+  count_data_is0 <- ((count_data_random==0)*1)
+} else{
+  count_data_is0 <- ((count_data==0)*1)
+}
+
+annotation_col <- exp_metadata %>%
+  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
+  tibble::column_to_rownames("original_names")
+
+pheatmap(count_data_is0,
+         color = c("white", "black"),
+         annotation_col = annotation_col,
+         treeheight_col = 30,
+         treeheight_row = 0,
+         show_rownames=F,
+         legend=F)
+
+```
+
 
 # Correlations 
 ## Within Group Correlations {.tabset}
@@ -1667,158 +1813,6 @@ if (length(exp_groups) > 1 & !is.na(params$batch_var)) {
 }
 
 ```
-
-
-
-
-## Write tables to disk
-
-```{r write_output}
-outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
-                                               QAQC_pass_fail,
-                                               by = c("original_names" = "Sample"))
-write.table(outlier_metadata_annotated,
-            file.path(paths$details, "samples_removed.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-write.table(QAQC_annotated,
-            file.path(paths$details, "QC_per_sample.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-write.table(metadata_outliers_removed,
-            file.path(paths$qc, "metadata.QC_applied.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
-
-```
-
-
-There are `r ncol(count_data_filtered)` samples remaining in the study after sample removal.
-
-
-
-## Plots of QC data metrics
-
-### Batch
-
-```{r plot_batch_effects, eval = !is.na(params$batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
-
-plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
-  facet_wrap(paste0("~",params$batch_var), scales = "free_y", labeller = labeller(
-    .cols = add_spaces,
-    .default = label_wrap_gen(100)), ncol = 1) +
-  theme(legend.position = "none") + xlab("Batch") +
-  theme(axis.text.x = element_text(angle = 90)) +
-  coord_flip()
-
-plot_batches + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_batches + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") 
-plot_batches + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads")
-plot_batches + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
-plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
-
-```
-
-### Dose effects
-
-```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*1.5}
-# It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
-plot_dose_effect <- ggplot(QAQC_annotated, aes(x = factor(.data[[params$dose]]),
-                                               color = factor(.data[[params$dose]]))) +
-  facet_wrap(paste0("~", params$treatment_var), scales = "free") +
-  theme(legend.position = "none") + xlab("Dose") + # labs(color = dose) +
-  theme(axis.text.x = element_text(angle = 90))
-
-plot_dose_effect + geom_boxplot(aes(y = Gini_data)) + ggtitle("Gini")
-plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped Reads") + scale_y_continuous(labels = scales::scientific)
-plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads") 
-plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
-plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
-```
-
-
-# References {-}
-
-If these methods were used in your study, please cite the following papers as appropriate:  
-
-
-
-<div id="refs"></div>
-
-
-
-
-# Appendix (additional plots)
-
-## GC content
-
-Summary of GC content of probes (TempO-Seq only)
-```{r plot-gc, eval=params$platform == "TempO-Seq"}
-
-# Calculate the GC content for each probe, add this value as a column
-manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
-
-count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
-                                  manifest,
-                                  by = c("rowname" = "Probe_Name")) %>%
-  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
-                      names_to = "sample", values_to = "count") %>%
-  dplyr::mutate(GC_corrected_count = count/gc_content)
-ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
-  geom_density() +
-  scale_x_log10() +
-  theme(legend.position = "none")
-
-gc_summary <- count_data_gc %>%
-  group_by(sample) %>%
-  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
-
-gc_summary_long <- gc_summary %>%
-  pivot_longer(cols=c("mean_gc","median_gc"))
-
-ggplot(gc_summary_long,
-       aes(x=name, y=value)) +
-  geom_jitter(alpha = 0.1) +
-  geom_violin(fill = "transparent") +
-  facet_wrap(name~., scales = "free")
-
-gc_summary %>%
-  kable(caption = "Summary GC statistics") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
-
-
-## Zero count heatmap
-
-Heatmap showing presence of zeroes (black) in the data.
-
-```{r zero-heatmap, fig.width = 11, fig.height = 10}
-
-
-if(nrow(count_data) > 3000){
-  random_indices <- sample(nrow(count_data), 2500)
-  count_data_random <- count_data[random_indices, ]
-  count_data_is0 <- ((count_data_random==0)*1)
-} else{
-  count_data_is0 <- ((count_data==0)*1)
-}
-
-annotation_col <- exp_metadata %>%
-  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
-  tibble::column_to_rownames("original_names")
-
-pheatmap(count_data_is0,
-         color = c("white", "black"),
-         annotation_col = annotation_col,
-         treeheight_col = 30,
-         treeheight_row = 0,
-         show_rownames=F,
-         legend=F)
-
-```
-
 
 ```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```
