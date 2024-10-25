@@ -397,31 +397,40 @@ pca_data <- as.data.frame(pca_result$x)
 pca_data$sample <- rownames(pca_data)
 pca_data <- merge(pca_data, exp_metadata, by.x = "sample", by.y = "original_names")
 
-# Colour and shape by exp_groups defined in config
+# Extract column names from config parameters
 expgroup1 <- params$exp_groups[[1]][1]
-exp_group2 <- params$exp_groups[[1]][2]
+exp_group2 <- if (length(params$exp_groups[[1]]) > 1) params$exp_groups[[1]][2] else NULL
 
-# Create a new column for dose levels
-# Otherwise there can be way too many doses to plot
-pca_data <- pca_data %>%
-  group_by(across(all_of(expgroup1))) %>%
-  mutate(level = dense_rank(across(all_of(exp_group2)))) %>%
-  ungroup()
+# Generalize the PCA code
+if (!is.null(exp_group2)) {
+  pca_data <- pca_data %>%
+    group_by(across(all_of(expgroup1))) %>%
+    mutate(level = dense_rank(across(all_of(exp_group2)))) %>%
+    ungroup()
+  
+  # Convert level to a factor
+  pca_data$level <- as.factor(pca_data$level)
+  
+  # Create a combined label for the legend
+  pca_data$combined_label <- paste(pca_data[[expgroup1]], pca_data$level, sep = "_")
+} else {
+  pca_data$level <- as.factor(1)  # Use a single level if exp_group2 is not provided
+  pca_data$combined_label <- pca_data[[expgroup1]]
+}
 
-# Convert dose_level to a factor
-pca_data$level <- as.factor(pca_data$level)
+# Plot PCA with ggplot2
+p_pca <- ggplot(pca_data, aes(x = PC1, y = PC2, color = !!sym(expgroup1), shape = level)) +
+  geom_point(size = 3) +
+  labs(title = "PCA of Experimental Samples",
+       x = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)"),
+       y = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")) +
+  theme_minimal()
 
-p_pca <- plot_ly(data = pca_data, type = "scatter", mode = "markers",
-                 x = ~PC1, y = ~PC2,
-                 color = as.formula(paste0("~", expgroup1)), symbol = ~level, text = ~sample,
-                 size = 3) %>%
-  layout(title = "PCA of Experimental Samples",
-         xaxis = list(title = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)")),
-         yaxis = list(title = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")),
-         legend = list(x = 1.1, y = 1, xanchor = "left", yanchor = "top", orientation = "v"))
+# Convert ggplot to plotly
+p_pca_plotly <- plotly::ggplotly(p_pca, tooltip = "text")
 
-
-plotly::highlight(p_pca, on = "plotly_click", off = "plotly_doubleclick", color = "red")
+# Add highlighting
+plotly::highlight(p_pca_plotly, on = "plotly_click", off = "plotly_doubleclick", color = "red")
 
 ```
 
