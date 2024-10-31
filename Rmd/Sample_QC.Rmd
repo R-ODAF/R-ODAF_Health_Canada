@@ -994,8 +994,19 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 
 if (!is.na(params$batch_var)) {
   batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
-} else{
+} else {
   batch_length <- 1
+}
+# Set custom figure dimensions based on the number of plates
+if (batch_length == 1) {
+  custom_fig_height <- 2.75
+  custom_fig_width <- 4
+} else if (batch_length == 2) {
+  custom_fig_height <- 2.75
+  custom_fig_width <- 8
+} else if (batch_length > 2) {
+  custom_fig_height <- 2.75 * batch_length
+  custom_fig_width <- 8
 }
 ```
 
@@ -1029,14 +1040,6 @@ if (!is.na(params$batch_var)) {
 
 ```
 
-
-```{r platefig_size}
-custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
-
-# Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
-custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
-
-```
 
 ### Number of Mapped Reads
 
