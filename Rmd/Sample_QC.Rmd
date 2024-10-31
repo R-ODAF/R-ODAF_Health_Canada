@@ -107,12 +107,12 @@ library(plotly)
 # Collapse replicates, use if params$collapse_replicates == T
 collapse_reps <- function(filepath) {
   df <- read.table(file = filepath,
-           sep = "\t",
-           header = TRUE)
+                   sep = "\t",
+                   header = TRUE)
   names(df) <- gsub(pattern = "_trimmed", replacement = "", x = names(df))
-  df <- df %>% pivot_longer(cols = -c("X"),
-                names_to = c('.value', 'flowcell'),
-                names_pattern = '(.*)_(.*)')
+  df <- df %>% tidyr::pivot_longer(cols = -c("X"),
+                names_to = c(".value", "flowcell"),
+                names_pattern = "(.*)_(.*)")
   df[is.na(df)] <- 0
   sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
   results <- sd_collapse[, lapply(.SD, sum), by = "X"]
@@ -276,7 +276,7 @@ count_data <- count_data[,d$original_names]
 ############################################################################
 libsize <- apply(count_data, 2, sum)
 cpm <- count_data
-for (k in 1:length(libsize)) {
+for (k in seq_along(libsize)) {
   cpm[,k] <- log2((10^6)*(count_data[,k] + 0.5)/(libsize[k] + 1))
 }
 
@@ -371,9 +371,9 @@ stat_metrics %>%
 
 # PCA
 
-The PCA plot below shows the distribution of samples in the study. It includes all experimental samples except those manually removed. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+The PCA plot below shows the distribution of samples in the study. It shows  *experimental samples*, and does not include techical contral samples, reference RNA samples, or experimental samples which were manually removed. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
-Marker colour and shape are determined by the experimental groups defined in the config file.In this plot, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
+Marker colour and shape are determined by the experimental groups defined in the config file. In the plot below, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
 
 The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
 
@@ -1551,7 +1551,7 @@ plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of p
 ```
 
 
-# Write tables to disk
+# Write tables to disk {-}
 
 ```{r write_output}
 outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
@@ -1663,10 +1663,8 @@ These plots show correlations within each experimental grouping.
 
 Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
 
-```{r correlations_group, fig.width = 11, fig.height = 10, results='asis'}
+```{r correlations_group, fig.width = 9, fig.height = 8, results='asis'}
 ### To view correlations for groups of interest...
-
-
 
 for (i in seq_along(facets)) {
   cat("#### ", facets[i], "  \n\n")
@@ -1680,7 +1678,6 @@ for (i in seq_along(facets)) {
   correlation_df <- exp_metadata %>%
     filter(original_names %in% colnames(correlations))
 
-  
 
 ### Make correlation robust PCA plots
   row.names(correlation_df) <- correlation_df$original_names
@@ -1704,8 +1701,6 @@ for (i in seq_along(facets)) {
   cat('  \n\n')
 }
 ```
-
-
 
 
 ### Distribution of correlations
@@ -1747,8 +1742,6 @@ cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
 ggplotly(cor_plot_2)
 ```
 
-
-
 ## Potential covariates
 
 This examines correlations between the QC metrics calculated and any factors in the experimental design.  
@@ -1783,8 +1776,8 @@ covariate_names <- names(potential_covariates[potential_covariates < 24])
 # Need a generic way to look for dose column...
 #QAQC_metadata_subset$dose <- factor(log(QAQC_metadata_subset$dose+1))
 
-if (length(exp_groups) > 1 & !is.na(params$batch_var)) {
-  for (i in seq_along(exp_groups)[1:length(exp_groups)]) {
+if (length(exp_groups) > 1 && !is.na(params$batch_var)) {
+  for (i in seq_along(exp_groups)[seq_along(exp_groups)]) {
     # Drop groups that have high numbers of possible values
     covariate_cols <- unlist(exp_groups[[i]])
     for (subgroup in covariate_cols) {
@@ -1802,7 +1795,7 @@ if (length(exp_groups) > 1 & !is.na(params$batch_var)) {
     print(p)
   }
 } else {
-  if (length(exp_groups) <= 1 & !is.na(params$batch_var)) {
+  if (length(exp_groups) <= 1 && !is.na(params$batch_var)) {
   p <- ggpairs(QAQC_metadata_subset,
                  cardinality_threshold = 24,
                  columns = c(unlist(exp_groups),
