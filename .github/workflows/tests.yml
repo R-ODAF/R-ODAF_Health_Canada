@@ -47,7 +47,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
             miniforge-variant: Miniforge
-            miniforge-version: latest
+            miniforge-version: 24.7.1-2
             environment-file: workflow/envs/base.yml
             activate-environment: base
             use-mamba: true
