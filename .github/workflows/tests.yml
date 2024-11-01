@@ -46,8 +46,8 @@ jobs:
       - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v3
         with:
-            miniforge-variant: Mambaforge
-            miniforge-version: latest
+            miniforge-variant: Miniforge3
+            miniforge-version: 23.3.1-0
             environment-file: workflow/envs/base.yml
             activate-environment: base
             use-mamba: true
