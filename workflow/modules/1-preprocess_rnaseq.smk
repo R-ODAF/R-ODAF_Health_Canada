@@ -1,6 +1,6 @@
-include: "1-define.smk"
-include: "2-trim.smk"
-include: "3-align.smk"
+include: "define.smk"
+include: "trim.smk"
+include: "align.smk"
 
 ##### Dummy rule all for testing purposes
 ##### Don't forget to change it!
@@ -8,7 +8,7 @@ rule pp_rs_all:
     input: 
         processed_dir / "count_table.tsv",
         processed_dir / "isoforms_table.tsv",
-        "genome.removed"
+        dummy_dir / "genome.removed"
 
 #######################
 # QUANTIFICATION RSEM #

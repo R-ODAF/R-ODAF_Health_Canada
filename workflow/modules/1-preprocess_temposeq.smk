@@ -1,13 +1,13 @@
-include: "1-define.smk"
-include: "2-trim.smk"
-include: "3-align.smk"
+include: "define.smk"
+include: "trim.smk"
+include: "align.smk"
 
 
 # Rule all for if only running pipeline to this step
 rule pp_ts_all:
     input: 
         processed_dir / "count_table.tsv",
-        "genome.removed"
+        dummy_dir / "genome.removed"
 
 ########################
 # Quantification QuasR #

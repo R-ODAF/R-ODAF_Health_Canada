@@ -1,4 +1,4 @@
-include: "1-define.smk"
+include: "define.smk"
 
 # NOTE that preprocessing steps (1-4) must be complete before running this step.
 # Smk modules 2-4 are not in "include" statements to allow changing QC params and re-running without Snakemake forcing reruns of previous steps
@@ -45,7 +45,7 @@ rule studywideqc:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-        "genome.removed"
+        dummy_dir / "genome.removed"
     output:
         qc_dir / "details/samples_removed.txt"
     conda:

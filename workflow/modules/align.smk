@@ -63,7 +63,7 @@ if "AZ_BATCH_POOL_ID" not in os.environ:
         input:
             genome_dir / "STAR_index"
         output:
-            touch("genome.loaded")
+            touch(dummy_dir / "genome.loaded")
         conda:
             "../envs/preprocessing.yml"
         params:
@@ -77,10 +77,10 @@ if "AZ_BATCH_POOL_ID" not in os.environ:
     # Delete unnecessary log files made by STAR
     rule STAR_unload:
         input:
-            idx = "genome.loaded",
+            idx = dummy_dir / "genome.loaded",
             bams = expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES)
         output:
-            touch("genome.removed")
+            touch(dummy_dir / "genome.removed")
         conda:
             "../envs/preprocessing.yml"
         params:
@@ -96,7 +96,7 @@ if "AZ_BATCH_POOL_ID" not in os.environ:
 if pipeline_config["mode"] == "se":
     rule STAR:
         input:
-            loaded_index = "genome.loaded",
+            loaded_index = dummy_dir / "genome.loaded",
             R1 = trim_dir / "{sample}.fastq.gz"
         output:
             sortedByCoord = align_dir / "{sample}.Aligned.sortedByCoord.out.bam",
@@ -137,7 +137,7 @@ if pipeline_config["mode"] == "se":
 if pipeline_config["mode"] == "pe":
     rule STAR:
         input:
-            loaded_index = "genome.loaded",
+            loaded_index = dummy_dir / "genome.loaded",
             R1 = trim_dir / "{sample}.R1.fastq.gz",
             R2 = trim_dir / "{sample}.R2.fastq.gz"
         output:
