@@ -998,13 +998,21 @@ if (!is.na(params$batch_var)) {
   batch_length <- 1
 }
 # Set custom figure dimensions based on the number of plates
+
+is_even <- function(number) {
+  return(number %% 2 == 0)
+}
+
 if (batch_length == 1) {
   custom_fig_height <- 2.75
   custom_fig_width <- 4
 } else if (batch_length == 2) {
   custom_fig_height <- 2.75
   custom_fig_width <- 8
-} else if (batch_length > 2) {
+} else if (batch_length > 2 && is_even(batch_length)) {
+  custom_fig_height <- 2.75 * batch_length - 2.75
+  custom_fig_width <- 8
+} else if (batch_length > 2 && !is_even(batch_length)) {
   custom_fig_height <- 2.75 * batch_length
   custom_fig_width <- 8
 }
