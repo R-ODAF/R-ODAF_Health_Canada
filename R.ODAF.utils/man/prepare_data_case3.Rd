@@ -12,7 +12,8 @@ prepare_data_case3(
   rldList,
   mergedDEGsList,
   designList,
-  contrastsList
+  contrastsList,
+  allBiomarkers
 )
 }
 \arguments{
