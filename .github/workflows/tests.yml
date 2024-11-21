@@ -35,6 +35,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Remove existing Conda environment
+        run: |
+          if [ -d "/home/runner/miniconda3" ]; then
+            sudo rm -rf /home/runner/miniconda3
+          fi
       - name: Install linux dependencies
         run: |
           sudo apt-get update
@@ -43,7 +48,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup Mambaforge
+      - name: Setup Miniforge3
         uses: conda-incubator/setup-miniconda@v3
         with:
             miniforge-variant: Miniforge3
