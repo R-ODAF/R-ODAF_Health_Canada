@@ -38,6 +38,7 @@ jobs:
       - name: Remove existing Conda environment
         run: |
           if [ -d "/home/runner/miniconda3" ]; then
+            /home/runner/miniconda3/bin/conda env remove --name base --yes
             sudo rm -rf /home/runner/miniconda3
           fi
       - name: Install linux dependencies
