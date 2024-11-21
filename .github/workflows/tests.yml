@@ -41,10 +41,9 @@ jobs:
             source /home/runner/miniconda3/bin/activate
             conda deactivate
           fi
-      - name: Remove existing Conda environment
+      - name: Remove existing Conda installation
         run: |
           if [ -d "/home/runner/miniconda3" ]; then
-            /home/runner/miniconda3/bin/conda env remove --name base --yes
             sudo rm -rf /home/runner/miniconda3
           fi
       - name: Install linux dependencies
