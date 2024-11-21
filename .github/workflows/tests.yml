@@ -35,6 +35,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Deactivate any active Conda environment
+        run: |
+          if [ -d "/home/runner/miniconda3" ]; then
+            source /home/runner/miniconda3/bin/activate
+            conda deactivate
+          fi
       - name: Remove existing Conda environment
         run: |
           if [ -d "/home/runner/miniconda3" ]; then
