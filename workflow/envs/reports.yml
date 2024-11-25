@@ -50,7 +50,7 @@ dependencies:
   - conda-forge::r-ggupset=0.3.0 # required by enrichplot, but not in dependency list
   - conda-forge::r-crosstalk=1.2.0
   - conda-forge::r-ggh4x
-  # - conda-forge::r-matrixstats=1.1.0 #v1.2 breaks DESeq2_report_new.Rmd
+  - conda-forge::r-matrixstats=1.4.1 #v1.2 breaks DESeq2_report_new.Rmd
   - conda-forge::r-formattable=0.2.1
   # Install these via different mechanism.
   #- bioconda::r-crosstool
