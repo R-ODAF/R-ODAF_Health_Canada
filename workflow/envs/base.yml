@@ -1,7 +1,7 @@
 # Using an environment name other than "base" is not recommended!
 # Read https://github.com/mamba-org/micromamba-docker#multiple-environments
 # if you must use a different environment name.
-name: not_base
+name: rodaf_base
 channels:
   - conda-forge
   - defaults

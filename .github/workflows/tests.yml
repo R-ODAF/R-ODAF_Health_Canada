@@ -38,13 +38,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup Mambaforge
+      - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
             miniforge-variant: Miniforge3
             miniforge-version: 23.3.1-0
             environment-file: workflow/envs/base.yml
-            activate-environment: not_base
+            activate-environment: rodaf_base
             use-mamba: true
             python-version: ${{ matrix.python-version }}
             mamba-version: "*"
@@ -63,7 +63,7 @@ jobs:
           conda config --show channels
           conda search r-matrixstats
       - name: Update environment
-        run: mamba env update -n not_base -f workflow/envs/base.yml
+        run: mamba env update -n rodaf_base -f workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Check conda install
         run: |
