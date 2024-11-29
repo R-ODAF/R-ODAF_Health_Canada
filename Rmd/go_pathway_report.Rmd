@@ -455,28 +455,31 @@ plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
 
+# Set species
+# Currently this works for human, mouse, and rat. Otherwise report will error out.
+kegg_organism <- params$species_data$kegg_organism
+
 # Workaround necessary to use GSEA with KEGG data, because gseKEGG doesn't work in this clusterProfiler version
 # Download KEGG data using KEGGREST
-kegg_pathways <- KEGGREST::keggList("pathway", "hsa")
-kegg_genes <- KEGGREST::keggLink("pathway", "hsa")
+kegg_pathways <- KEGGREST::keggList("pathway", kegg_organism)
+kegg_genes <- KEGGREST::keggLink("pathway", kegg_organism)
 
 # Convert to data frames
 term2name.kegg <- data.frame(pathway_id = names(kegg_pathways), pathway_name = kegg_pathways)
 term2gene.kegg <- data.frame(pathway_id = kegg_genes, gene_id = names(kegg_genes))
 
-# Extract KEGG gene IDs and remove the "hsa:" prefix so they match the entrezIDs from dataset
-kegg_gene_ids <- sub("hsa:", "", term2gene.kegg$gene_id)
-entrez_ids <- clusterProfiler::bitr_kegg(kegg_gene_ids, fromType = "kegg", toType = "ncbi-geneid", organism = "hsa")
-
+# Extract KEGG gene IDs and remove the organism prefix so they match the entrezIDs from dataset
+kegg_gene_ids <- sub(paste0(kegg_organism, ":"), "", term2gene.kegg$gene_id)
+entrez_ids <- clusterProfiler::bitr_kegg(kegg_gene_ids, fromType = "kegg", toType = "ncbi-geneid", organism = kegg_organism)
 
 # Wrangle kegg data to match the DEGs
-term2gene.kegg$gene_id <- sub("hsa:", "", term2gene.kegg$gene_id)
+term2gene.kegg$gene_id <- sub(paste0(kegg_organism, ":"), "", term2gene.kegg$gene_id)
 
 term2gene.kegg <- merge(term2gene.kegg, entrez_ids, by.x = "gene_id", by.y = "kegg")
 term2gene.kegg <- term2gene.kegg[, c("pathway_id", "ncbi-geneid")]
 colnames(term2gene.kegg) <- c("pathway_id", "gene_id")
 
-term2name.kegg$pathway_id <- sub("hsa", "path:hsa", term2name.kegg$pathway_id)
+term2name.kegg$pathway_id <- sub(kegg_organism, paste0("path:", kegg_organism), term2name.kegg$pathway_id)
 
 
 for (i in seq_along(contrasts)) {
