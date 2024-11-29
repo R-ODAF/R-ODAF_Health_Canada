@@ -6,7 +6,7 @@ include: "define.smk"
 
 # Rule all for if running this module separately from full pipeline
 rule diff_all:
-	input: dummy_dir / "reports_complete"
+	input: sm_temp_dir / "reports_complete"
 
 # Set up analysis folder name with timestamp
 from datetime import datetime
@@ -23,7 +23,7 @@ rule deseq2:
     input:
         qc_dir / "details/samples_removed.txt"
     output:
-        touch(dummy_dir / "DESeq2_complete")
+        touch(sm_temp_dir / "DESeq2_complete")
     conda:
         "../envs/reports.yml"
     benchmark: log_dir / "benchmark.deseq2.txt"
@@ -39,9 +39,9 @@ rule deseq2:
 rule deseq_reports:
     message: "generating DESeq2 reports in R..."
     input:
-        dummy_dir / "DESeq2_complete"
+        sm_temp_dir / "DESeq2_complete"
     output:
-        touch(dummy_dir / "reports_complete")
+        touch(sm_temp_dir / "reports_complete")
     conda:
         "../envs/reports.yml"
     benchmark: log_dir / "benchmark.deseq_report.txt"

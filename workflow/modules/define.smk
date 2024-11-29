@@ -104,8 +104,8 @@ qc_dir.mkdir(parents=True, exist_ok=True)
 log_dir = output_dir / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 
-dummy_dir = output_dir/ "snakemake_dummy_files"
-dummy_dir.mkdir(parents=True, exist_ok=True)
+sm_temp_dir = output_dir/ ".rodaf_internal"
+sm_temp_dir.mkdir(parents=True, exist_ok=True)
 
 print("Using genome: " + str(genome_dir))
 

@@ -8,7 +8,7 @@ rule pp_rs_all:
     input: 
         processed_dir / "count_table.tsv",
         processed_dir / "isoforms_table.tsv",
-        dummy_dir / "genome.removed"
+        sm_temp_dir / "genome.removed"
 
 #######################
 # QUANTIFICATION RSEM #

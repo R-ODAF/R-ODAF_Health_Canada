@@ -7,7 +7,7 @@ include: "align.smk"
 rule pp_ts_all:
     input: 
         processed_dir / "count_table.tsv",
-        dummy_dir / "genome.removed"
+        sm_temp_dir / "genome.removed"
 
 ########################
 # Quantification QuasR #

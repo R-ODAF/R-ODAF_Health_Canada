@@ -3,7 +3,7 @@ include: "modules/define.smk"
 
 
 rule all:
-	input: dummy_dir / "reports_complete"
+	input: sm_temp_dir / "reports_complete"
 
 if common_config["platform"] == "TempO-Seq":
 	include: "modules/1-preprocess_temposeq.smk"
