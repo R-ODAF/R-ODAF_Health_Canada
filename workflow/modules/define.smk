@@ -104,6 +104,9 @@ qc_dir.mkdir(parents=True, exist_ok=True)
 log_dir = output_dir / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 
+sm_temp_dir = output_dir/ ".rodaf_internal"
+sm_temp_dir.mkdir(parents=True, exist_ok=True)
+
 print("Using genome: " + str(genome_dir))
 
 # Copy state of workflow for posterity.

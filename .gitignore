@@ -85,6 +85,7 @@ extra_stats_report.html
 output/*.png
 
 # Snakemake dummy files
+output/.rodaf_internal/*
 genome.loaded
 genome.removed
 analysis_complete
