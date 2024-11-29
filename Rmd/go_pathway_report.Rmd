@@ -499,7 +499,8 @@ for (i in seq_along(contrasts)) {
               TERM2NAME = term2name.kegg,
               minGSSize = 10,
               maxGSSize = 500,
-              pvalueCutoff = 0.05)
+              pvalueCutoff = 0.05,
+              pAdjustMethod = "fdr")
 
 
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
