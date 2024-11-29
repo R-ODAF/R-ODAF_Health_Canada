@@ -85,6 +85,7 @@ startTime <- Sys.time()
 
 library('clusterProfiler')
 library('enrichplot')
+library(KEGGREST)
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 
@@ -445,15 +446,38 @@ for (i in seq_along(contrasts)) {
 
 ## GSEA: By contrast {.tabset .tabset-fade}
 
-This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
+This section uses clusterProfiler `GSEA()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
+
 
 ```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
-config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
-bg_genes <-read.gmt(paste0(params$wikipathways_directory,params$KEGGpathways_filename)) 
+
+# Workaround necessary to use GSEA with KEGG data, because gseKEGG doesn't work in this clusterProfiler version
+# Download KEGG data using KEGGREST
+kegg_pathways <- KEGGREST::keggList("pathway", "hsa")
+kegg_genes <- KEGGREST::keggLink("pathway", "hsa")
+
+# Convert to data frames
+term2name.kegg <- data.frame(pathway_id = names(kegg_pathways), pathway_name = kegg_pathways)
+term2gene.kegg <- data.frame(pathway_id = kegg_genes, gene_id = names(kegg_genes))
+
+# Extract KEGG gene IDs and remove the "hsa:" prefix so they match the entrezIDs from dataset
+kegg_gene_ids <- sub("hsa:", "", term2gene.kegg$gene_id)
+entrez_ids <- clusterProfiler::bitr_kegg(kegg_gene_ids, fromType = "kegg", toType = "ncbi-geneid", organism = "hsa")
+
+
+# Wrangle kegg data to match the DEGs
+term2gene.kegg$gene_id <- sub("hsa:", "", term2gene.kegg$gene_id)
+
+term2gene.kegg <- merge(term2gene.kegg, entrez_ids, by.x = "gene_id", by.y = "kegg")
+term2gene.kegg <- term2gene.kegg[, c("pathway_id", "ncbi-geneid")]
+colnames(term2gene.kegg) <- c("pathway_id", "gene_id")
+
+term2name.kegg$pathway_id <- sub("hsa", "path:hsa", term2name.kegg$pathway_id)
+
 
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
@@ -461,7 +485,7 @@ for (i in seq_along(contrasts)) {
                                 by = c("Feature_ID", "Gene_Symbol"))
   
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
-  names(foldChanges) <- DEGs_full %>% dplyr::pull(Gene_Symbol)
+  names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
   foldChanges <- foldChanges %>% sort() %>% rev()
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
   if (length(foldChanges) < 10) {
@@ -469,7 +493,15 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
     next
   }
-  kk <- GSEA(foldChanges, pvalueCutoff = 0.05, TERM2GENE = bg_genes,)
+
+  kk <- GSEA(geneList = foldChanges,
+              TERM2GENE = term2gene.kegg,
+              TERM2NAME = term2name.kegg,
+              minGSSize = 10,
+              maxGSSize = 500,
+              pvalueCutoff = 0.05)
+
+
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
   gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
@@ -484,6 +516,7 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
   }
 }
+
 ```
 
 ```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
