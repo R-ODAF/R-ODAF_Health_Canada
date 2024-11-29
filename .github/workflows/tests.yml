@@ -1,7 +1,5 @@
 # This workflow is used for testing whether the DEG list produced by the new code is identical to the expected result based on example data.
-
 name: Tests
-
 on:
   push:
     branches:
@@ -11,10 +9,8 @@ on:
     - cron: '0 0 1 * *'
 env:
   CACHE_NUMBER: 0
-
 permissions:
   contents: read
-
 jobs:
   tests:
     env:
@@ -32,7 +28,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-
     steps:
       - uses: actions/checkout@v3
       - name: Install linux dependencies
@@ -43,13 +38,13 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Setup Mambaforge
+      - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v3
         with:
             miniforge-variant: Miniforge3
             miniforge-version: 23.3.1-0
             environment-file: workflow/envs/base.yml
-            activate-environment: base
+            activate-environment: rodaf_base
             use-mamba: true
             python-version: ${{ matrix.python-version }}
             mamba-version: "*"
@@ -63,14 +58,12 @@ jobs:
       #     path: ${{ matrix.prefix }}
       #     key: ${{ matrix.label }}-conda-${{ hashFiles('workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
       #   id: cache
-      - name: Remove existing base environment
-        run: conda env remove -n base
+      - name: List available channels and packages
+        run: |
+          conda config --show channels
+          conda search r-matrixstats
       - name: Update environment
-        run: mamba env update -n base -f workflow/envs/base.yml
-        if: steps.cache.outputs.cache-hit != 'true'      
-      
-      - name: Update environment
-        run: mamba env create -n base -f workflow/envs/base.yml
+        run: mamba env update -n rodaf_base -f workflow/envs/base.yml
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Check conda install
         run: |
