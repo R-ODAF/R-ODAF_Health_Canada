@@ -73,3 +73,4 @@ dependencies:
   - bioconda::bioconductor-enrichplot=1.18.0
   - bioconda::bioconductor-org.hs.eg.db=3.16.0
   - bioconda::bioconductor-org.mm.eg.db=3.16.0
+  - bioconda::bioconductor-keggrest
