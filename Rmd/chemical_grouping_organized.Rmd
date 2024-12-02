@@ -7,7 +7,7 @@ output:
     code_folding: hide
 ---
 
-```{r libraries}
+```{r libraries, message=FALSE, warning=FALSE}
 library('tidyverse')
 library('devtools')
 library('DESeq2')
@@ -189,8 +189,10 @@ ggsave(file.path(paste0(prefix,"_","filter_summary_plot.png")),p2,
 # Determine, on a per-chemical basis, the total number of genes measured for that chemical
 proportions <- p2_data %>% dplyr::filter(name == "passed_all_filters")
 ggplot(proportions, aes(x = facet_contrast, y = perc)) +
-  geom_bar(stat="identity",position="dodge") +
-  facet_wrap(~facet, scales = "free_x")
+  geom_bar(stat="identity", position="dodge") +
+  geom_hline(yintercept = 0.01, linetype = "dashed", color = "red") +
+  facet_wrap(~facet, scales = "free_x") +
+  theme(axis.text.x = element_blank())
 
 
 # Pick, within facets (chemicals), the dose (contrast) that most closely matches
@@ -416,6 +418,10 @@ results_selected_bioactivity_gt_0.01_filt <- results_selected_bioactivity_gt_0.0
   dplyr::filter(any(padj < 0.05 & 
                   abs(log2FoldChange) > log2(1.5) ))
 
+# Remove the _vs_DMSO part of the name
+results_selected_bioactivity_gt_0.01_filt <- results_selected_bioactivity_gt_0.01_filt %>%
+  mutate(name = sub("_vs.*", "", name))
+
 matrix_DEGs_bioactivity_gt_0.01 <- results_selected_bioactivity_gt_0.01_filt %>%
   dplyr::select(name, gene, log2FoldChange) %>%
   spread(key = name, value = log2FoldChange)
@@ -433,6 +439,13 @@ plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >1%")
 
 ```
 
+Same plot as above, but no title and larger font.
+```{r}
+par(mar = c(6.5,4,4,4), cex = 1)
+plot(as.dendrogram(clustered_DEGs), horiz = F)
+```
+
+
 ```{r bioactivity_0.01_scaled}
 matrix_DEGs_bioactivity_gt_0.01_scaled <- scale(matrix_DEGs_bioactivity_gt_0.01, center=FALSE, scale=colSums(matrix_DEGs_bioactivity_gt_0.01))
 
@@ -442,6 +455,9 @@ clustered_DEGs_0.01_scaled <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_bioact
 
 par(mar = c(20,4,4,4), cex = 0.5)
 plot(as.dendrogram(clustered_DEGs_0.01_scaled), horiz = F, main = "Bioactivity DEGs >1%, normalized log2 fold changes")
+
+par(mar = c(20,4,4,4), cex = 1)
+plot(as.dendrogram(clustered_DEGs_0.01_scaled), horiz = F)
 
 ```
 
@@ -522,6 +538,11 @@ selected_names_0.1 <- sub("_.*", "", results_selected_bioactivity_gt_0.01$name)
 # NOTE This depends on the order of matrix_DEGs_top_names being the same. It should be.
 matrix_DEGs_top_bioactive_0.1 <- matrix_DEGs_top[, matrix_DEGs_top_names %in% selected_names_0.1]
 
+# Modify the column names to remove the _vs_DMSO part
+colnames_matrix_DEGs_top_bioactive_0.1 <- colnames(matrix_DEGs_top_bioactive_0.1)
+colnames_matrix_DEGs_top_bioactive_0.1 <- sub("_vs.*", "", colnames_matrix_DEGs_top_bioactive_0.1)
+colnames(matrix_DEGs_top_bioactive_0.1) <- colnames_matrix_DEGs_top_bioactive_0.1
+
 clustered_DEGs_top_bioactive_0.1 <- hclust( as.dist(1-cor(as.matrix(matrix_DEGs_top_bioactive_0.1),
                                   method = dist_method) ),
                          method = link_method)
@@ -529,6 +550,13 @@ dend.top.active_0.1 <- as.dendrogram(clustered_DEGs_top_bioactive_0.1)
 
 par(mar = c(20,4,4,4), cex = 0.75)
 plot(dend.top.active_0.1, horiz = F, main = "Top doses of bioactive chemicals with a 1% threshold")
+```
+
+
+Same plot as above, just without the title and with larger font
+```{r}
+par(mar = c(8,4,4,4), cex = 1)
+plot(dend.top.active_0.1, horiz = F)
 
 ```
 
@@ -586,22 +614,22 @@ plotPCAcustom <- function(obj, title = "", trim_names = TRUE, ...) {
     theme(...)
   return(p1)
 }
-plotPCAcustom(a, title = "Bioactivity > 1%")
+#plotPCAcustom(a, title = "Bioactivity > 1%")
 
 
 ### Bioactivity > 2%
 b <- prcomp(t(matrix_DEGs_bioactivity_gt_0.02), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(b, title = "Bioactivity > 2%")
+#plotPCAcustom(b, title = "Bioactivity > 2%")
 
 
 # PCA plots for inactive chemicals removed @ 1% bioactivity
 c <- prcomp(t(matrix_DEGs_top_bioactive_0.1), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(c, title = "Bioactivity > 1%, inactive chemicals removed")
+#plotPCAcustom(c, title = "Bioactivity > 1%, inactive chemicals removed")
 
 
 # PCA plots for inactive chemicals removed @ 2% bioactivity
 d <- prcomp(t(matrix_DEGs_top_bioactive_0.2), retx = TRUE, center = TRUE, scale. = TRUE)
-plotPCAcustom(d, title = "Bioactivity > 2%, inactive chemicals removed")
+#plotPCAcustom(d, title = "Bioactivity > 2%, inactive chemicals removed")
 
 ```
 
@@ -644,6 +672,11 @@ matrix_biomarker_genes_with_er[is.na(matrix_biomarker_genes_with_er)] <- 0
 
 # pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
 
+# remove the _vs_DMSO part first so names match
+colnames_matrix_biomarker_genes_with_er <- colnames(matrix_biomarker_genes_with_er)
+colnames_matrix_biomarker_genes_with_er <- sub("_vs.*", "", colnames_matrix_biomarker_genes_with_er)
+colnames(matrix_biomarker_genes_with_er) <- colnames_matrix_biomarker_genes_with_er
+
 matrix_biomarker_genes_with_er  <- matrix_biomarker_genes_with_er [, c(colnames(matrix_DEGs_bioactivity_gt_0.01),"ER_biomarker")]
 
 hca_biomarker <- hclust( as.dist(1-cor(as.matrix(matrix_biomarker_genes_with_er ),
@@ -666,8 +699,15 @@ plotPCAcustom(e, trim_names = F, legend.position = "right", title = "ER biomarke
 
 HC and PCA of genes used in ER biomarker, but without including the ER biomarker itself.
 
+
+
 ```{r}
 # pick columns from matrix_biomarker_genes based on bioactivity > 1% and bioactivity > 2%
+
+# remove the _vs_DMSO part first so names match
+colnames_matrix_biomarker_genes <- colnames(matrix_biomarker_genes)
+colnames_matrix_biomarker_genes <- sub("_vs.*", "", colnames_matrix_biomarker_genes)
+colnames(matrix_biomarker_genes) <- colnames_matrix_biomarker_genes
 
 matrix_biomarker_genes_bioactive0.01  <- matrix_biomarker_genes [, c(colnames(matrix_DEGs_bioactivity_gt_0.01))]
 matrix_biomarker_genes_bioactive0.01  <- as.matrix(matrix_biomarker_genes_bioactive0.01)
@@ -691,8 +731,17 @@ plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarke
 
 ```
 
+Same plot as above, just without the title and with larger font
+```{r}
+par(mar = c(6.5,4,4,4), cex = 1)
+plot(hca_biomarker_genes_dendro, horiz = F)
+
+```
+
+
 ```{r}
 # pick columns from matrix_biomarker_genes based on top doses
+
 matrix_biomarker_genes_topactive  <- matrix_biomarker_genes [, c(colnames(matrix_DEGs_top_bioactive_0.1))]
 matrix_biomarker_genes_topactive  <- as.matrix(matrix_biomarker_genes_topactive)
 rownames(matrix_biomarker_genes_topactive) <- id
@@ -712,5 +761,12 @@ plot(hca_biomarker_genes_topactive_dendro, horiz = F, main = "ER-biomarker genes
 g <- prcomp(t(matrix_biomarker_genes_topactive), retx = TRUE, center = TRUE, scale. = TRUE)
 # plot it
 plotPCAcustom(g, trim_names = F, legend.position = "right", title = "ER-biomarker genes, top doses of active chems, ER biomarker data not included")
+
+```
+
+Same plot as above, just without the title and with larger font
+```{r}
+par(mar = c(8,4,4,4), cex = 1)
+plot(hca_biomarker_genes_topactive_dendro, horiz = F)
 
 ```
