@@ -369,9 +369,11 @@ stat_metrics %>%
 
 ```
 
-# PCA
+# PCA {.tabset}
 
-The PCA plot below shows the distribution of samples in the study. It shows  *experimental samples*, and does not include techical contral samples, reference RNA samples, or experimental samples which were manually removed. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+The PCA plots below shows the distribution of samples in the study. They show  *experimental samples*, and do not include technical control samples, reference RNA samples, or experimental samples which were manually removed. These plots show the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
+
+## PCA all experimental samples
 
 Marker colour and shape are determined by the experimental groups defined in the config file. In the plot below, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
 
@@ -433,6 +435,45 @@ p_pca_plotly <- plotly::ggplotly(p_pca, tooltip = "text")
 plotly::highlight(p_pca_plotly, on = "plotly_click", off = "plotly_doubleclick", color = "red")
 
 ```
+
+## PCA by batch
+
+If you have a batch variable specified in the config file, the plot below shows the distribution of samples in the study by batch. The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
+
+
+```{r pca_batch, fig.width = 9, fig.height = 8}
+
+if (!is.na(params$batch_var)) {
+    # Plot PCA with ggplot2
+  
+  batch_var <- params$batch_var
+
+  pca_data[[batch_var]] <- as.factor(pca_data[[batch_var]])
+  
+  p_pca_batch <- ggplot(pca_data, aes(x = PC1, 
+                                y = PC2, 
+                                color = !!sym(params$batch_var), 
+                                )) +
+    geom_point(size = 3,
+              aes(text = combined_label)) +
+    labs(title = "PCA of Experimental Samples",
+        x = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)"),
+        y = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")) +
+    theme_minimal() +
+    scale_shape_manual(values = c(15, 16, 17, 18, 3, 7, 8, 10)) +
+    stat_ellipse(geom = "polygon", aes(group = !!sym(params$batch_var), fill = !!sym(params$batch_var)), alpha = 0.15, level = 0.99)
+
+  # Convert ggplot to plotly
+  p_pca_batch_plotly <- plotly::ggplotly(p_pca_batch, tooltip = "text")
+
+  # Add highlighting
+  plotly::highlight(p_pca_batch_plotly, on = "plotly_click", off = "plotly_doubleclick", color = "red")
+} else {
+  message("No batch variable specified in the config file.")
+}
+
+```
+
 
 # Correlations
 
