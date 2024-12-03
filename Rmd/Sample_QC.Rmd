@@ -1531,7 +1531,7 @@ If you set a group tree height cutoff in the config file, then any sample separa
 
 All dendrograms below are pre-filtering.
 
-```{r display-dendrograms, results='asis', echo=FALSE}
+```{r display-dendrograms, results='asis', echo=FALSE, fig.height=6}
 # Display the saved dendrograms from chunk "group-dendrograms"
 
 for (facet in names(dendrograms)) {
@@ -1539,7 +1539,7 @@ for (facet in names(dendrograms)) {
   dendro_facet <- dendrograms[[facet]]
 
   # Plot dendrogram
-  par(cex = 0.75, mar = c(25, 4, 4, 2))
+  par(cex = 0.75, mar = c(10, 4, 4, 2))
   plot(dendro_facet %>%
          dendextend::set("labels_cex", 1),
        main = "log2 CPM",
