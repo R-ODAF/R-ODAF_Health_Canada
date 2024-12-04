@@ -216,6 +216,10 @@ fail_dendro <- qc_info %>%
   dplyr::filter(dendrogram == "FAIL") %>%
   dplyr::select(sample_ID, params$dendro_color_by)
 
+fail_groupdendro <- qc_info %>%
+  dplyr::filter(group_dendrogram == "FAIL") %>%
+  dplyr::select(sample_ID, params$dendro_color_by)
+
 fail_nmr <- qc_info %>% 
   dplyr::filter(NMR == "FAIL") %>%
   dplyr::select(sample_ID, params$dendro_color_by)
@@ -240,10 +244,20 @@ fail_gic <- qc_info %>%
 ## Samples Failing Quality Control {.tabset .tabset-pills}
 
 
-### Clustering Distance
+### Clustering Distance (studywide)
 ```{r dendro_fail}
 fail_dendro %>%
   kable("html", caption = "Samples Failing Clustering Distance Filter") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+<br>
+<br>
+
+### Clustering Distance (by group)
+```{r group_dendro_fail}
+fail_groupdendro %>%
+  kable("html", caption = "Samples Failing By-Group Clustering Distance Filter") %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
