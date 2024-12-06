@@ -39,7 +39,7 @@ rule deseq2:
 rule deseq_reports:
     message: "generating DESeq2 reports in R..."
     input:
-        sm_temp_dir / "DESeq2_complete"
+        deseq2_complete = sm_temp_dir / "DESeq2_complete"
     output:
         touch(sm_temp_dir / "reports_complete")
     conda:
@@ -47,6 +47,7 @@ rule deseq_reports:
     benchmark: log_dir / "benchmark.deseq_report.txt"
     shell:
         '''
+        rm {input.deseq2_complete}
         Rscript scripts/render_DESeq2_report.parallel.R {analysis_folder}
 
         conda env export > output/analysis/{analysis_folder}/Pipeline_record/reports_env.yml
