@@ -97,8 +97,72 @@ library(rrcov)
 library(vtree) # Richard Webster and Nick Barrowman
 library(ggh4x)
 library(scales)
+library(plotly)
 ```
 
+
+```{r define_functions, message = F, warnings = F, echo = F}
+# Maybe these functions should be in R.ODAF.utils?
+
+# Collapse replicates, use if params$collapse_replicates == T
+collapse_reps <- function(filepath) {
+  df <- read.table(file = filepath,
+                   sep = "\t",
+                   header = TRUE)
+  names(df) <- gsub(pattern = "_trimmed", replacement = "", x = names(df))
+  df <- df %>% tidyr::pivot_longer(cols = -c("X"),
+                names_to = c(".value", "flowcell"),
+                names_pattern = "(.*)_(.*)")
+  df[is.na(df)] <- 0
+  sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
+  results <- sd_collapse[, lapply(.SD, sum), by = "X"]
+  return(results)
+}
+
+# Calculate GC content for TempO-Seq
+calculate_gc <- function(seq) {
+  n_gc <- stringr::str_count(seq, "G")
+  n_c <- stringr::str_count(seq, "C")
+  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
+  return(pct_gc)
+}
+
+# Function for sorting dendrograms
+sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+
+# From EPA code?
+countStats <- function(
+  counts, 
+  nsig = getOption("httrStatNsig", default = 0.8)
+) {
+  # Load required pkgs
+	require(foreach)
+  # Store results in a vector
+	st <- vector()
+	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
+	counts_nz <- counts[counts > 0]
+	# Sort in decreasing order
+	counts_nz <- sort(counts_nz, decreasing = T)
+	# Compute cumulative sum of counts starting from highest count probe
+	cumCounts <- cumsum(counts_nz)
+	# Convert cumulative sums to cumulative proportions
+	cumProp <- cumCounts / sum(counts_nz)
+	# Compute the minimum number of probes to capture X% of total reads
+	if (length(nsig) > 0) {
+		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
+		names(ns) <- paste0("n_sig",nsig*100)
+		st <- append(st, ns)
+	}
+	return(st)
+}
+
+add_spaces <- function(string) {
+  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
+  string <- gsub(pattern = "-", replacement = " ", string)
+  string <- gsub(pattern = "_", replacement = " ", string)
+  string
+}
+```
 
 ```{r params, include = FALSE, echo = FALSE, message = FALSE}
 exp_groups <- unname(params[["exp_groups"]]) # Include b/c of how things are addressed throughout.
@@ -121,26 +185,13 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # A. File with read counts
 count_data_file <- file.path(paths$processed,"count_table.tsv")
 if (params$collapse_replicates == T) {
-  collapse_reps <- function(filepath) {
-  df <- read.table(file = filepath,
-                   sep = "\t",
-                   header = T)
-  names(df) = gsub(pattern = "_trimmed", replacement = "", x = names(df))
-  df <- df %>% pivot_longer(cols = -c("X"),
-                            names_to = c('.value','flowcell'),
-                            names_pattern = '(.*)_(.*)')
-  df[is.na(df)] <- 0
-  sd_collapse <- data.table(df %>% dplyr::select(-c(flowcell)))
-  results <- sd_collapse[, lapply(.SD,sum), by = "X"]
-  return(results)
-  }
   count_data <- collapse_reps(count_data_file)
   write.table(count_data,
               file = file.path(paths$processed,"count_table_collapsed.tsv"),
               sep = "\t",
               quote = F,
               row.names = F)
-  } else {
+} else {
   count_data <- read.table(count_data_file,
                            sep = "\t",
                            stringsAsFactors = FALSE,
@@ -149,12 +200,13 @@ if (params$collapse_replicates == T) {
                            row.names = 1,
                            check.names = FALSE)
   multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
+  # NOTE won't this break if collapse_replicate is true? No multiQC loaded for later?
   multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
                    FMR = multiqc_general_stats$uniquely_mapped_percent/100)
   row.names(mu) <- mu[,1]
-  }
+}
 
 
 # B. Tab delimited sample information file with at least 2 columns:
@@ -176,6 +228,17 @@ exp_metadata <- read.delim(exp_metadata_file,
                           row.names = NULL)
 
 exp_metadata$original_names <- as.character(exp_metadata[,1])
+
+
+# C. Manifest file for TempO-Seq
+if (params$platform == "TempO-Seq") {
+  manifest <- read.delim(
+    file.path(params$biospyder_dbs, params$biospyder_manifest_file), # Assay manifest...
+    stringsAsFactors = FALSE,
+    sep = ",",
+    header = TRUE,
+    quote = "\"")
+}
 
 ############################################################################
 # Arrange tables by sample names
@@ -200,6 +263,24 @@ all(names(count_data) == d$original_names)
 # Useful if you want to analyze a reduced subset of data; relies on the metadata file used to filter sample data:
 count_data <- count_data[, d$original_names]
 mu <- mu[d$original_names, ]
+
+############################################################################
+# Re-order the data by group
+############################################################################
+flag_order <- order(d[,params$treatment_var])
+d <- d[flag_order,]
+count_data <- count_data[,d$original_names]
+
+############################################################################
+# CPM (used in dendrogram/cluster analysis)
+############################################################################
+libsize <- apply(count_data, 2, sum)
+cpm <- count_data
+for (k in seq_along(libsize)) {
+  cpm[,k] <- log2((10^6)*(count_data[,k] + 0.5)/(libsize[k] + 1))
+}
+
+
 
 ############################################################################
 #Remove samples from a list manually
@@ -237,45 +318,35 @@ if (file.exists(remove_file)) {
 ```
 
 
-```{r calculate-gc, eval=params$platform == "TempO-Seq"}
+```{r split_metadata}
+############################################################################
+# Split into experimental samples vs technical controls
+############################################################################
 
+tech_ctrl_names <- exp_metadata %>%
+  dplyr::filter(.data[[params$technical_control]] == TRUE) %>%
+  dplyr::pull(original_names)
 
-calculate_gc <- function(seq) {
-  n_gc <- stringr::str_count(seq, "G")
-  n_c <- stringr::str_count(seq, "C")
-  pct_gc <- ((n_gc + n_c)/stringr::str_length(seq))
-  return(pct_gc)
-}
+sample_names <- exp_metadata %>%
+  dplyr::filter(.data[[params$technical_control]] == FALSE) %>%
+  dplyr::pull(original_names)
 
-# load manifest
-manifest <- read.delim(
-  file.path(params$biospyder_dbs, params$biospyder_manifest_file), # Assay manifest...
-  stringsAsFactors = FALSE,
-  sep = ",",
-  header = TRUE,
-  quote = "\"")
-  
-# Calculate the GC content for each probe, add this value as a column
-manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
-
-count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
-                                  manifest,
-                                  by = c("rowname" = "Probe_Name")) %>%
-  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
-                      names_to = "sample", values_to = "count") %>%
-  dplyr::mutate(GC_corrected_count = count/gc_content)
-
-
-
+ref_samples <- exp_metadata %>%
+  dplyr::filter(.data[[params$reference_rna]] == TRUE) %>%
+  dplyr::pull(original_names)
 
 ```
+
 
 
 # Summary Statistics
 
 Below, you will find plots and a table showing the distribution of read metrics (quality, GC content, aligned reads, etc.).
 
+Details on each sample can be seen in the MultiQC report.
+
 ```{r summary-stats}
+# NOTE won't this break if collapse_replicate is true? No multiQC loaded in load_files line 202?
 summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
 stat_metrics <- summary_stats %>%
   group_by(name) %>%
@@ -298,542 +369,69 @@ stat_metrics %>%
 
 ```
 
-## GC content
+# PCA
 
-Summary of GC content of probes (TempO-Seq only)
+The PCA plot below shows the distribution of samples in the study. It shows  *experimental samples*, and does not include techical contral samples, reference RNA samples, or experimental samples which were manually removed. This plot shows the first two principal components that explain the variability in the data using the regularized log count data. If you are unfamiliar with principal component analysis, you might want to check the [Wikipedia entry](https://en.wikipedia.org/wiki/Principal_component_analysis) or this [interactive explanation](http://setosa.io/ev/principal-component-analysis/).
 
-```{r plot-gc, eval=params$platform == "TempO-Seq"}
+Marker colour and shape are determined by the experimental groups defined in the config file. In the plot below, colour is determined by `r params$exp_groups[[1]][1]` and shape is determined by `r params$exp_groups[[1]][2]`. If your project has doses, they have been converted to dose levels, with 1 as the lowest.
 
-ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
-  geom_density() +
-  scale_x_log10() +
-  theme(legend.position = "none")
+The plot is interactive. Click on a point to highlight it. Double-click to reset the plot.
 
-gc_summary <- count_data_gc %>%
-  group_by(sample) %>%
-  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
+```{r pca_plot, fig.width = 9, fig.height = 8}
+# Right now this only works for projects with chemical and dose
+# Need to generalize,  maybe add parameters for which columns to use?
 
-gc_summary_long <- gc_summary %>%
-  pivot_longer(cols=c("mean_gc","median_gc"))
+# Filter CPM data for experimental samples
+experimental_samples <- exp_metadata %>%
+  filter(!technical_control & !reference_rna & !solvent_control) %>%
+  pull(original_names)
 
-ggplot(gc_summary_long,
-       aes(x=name, y=value)) +
-  geom_jitter(alpha = 0.1) +
-  geom_violin(fill = "transparent") +
-  facet_wrap(name~., scales = "free")
+cpm_experimental <- cpm %>%
+  dplyr::select(all_of(experimental_samples))
 
-gc_summary %>%
-  kable(caption = "Summary GC statistics") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
+# Perform PCA
+pca_result <- prcomp(t(cpm_experimental), scale. = TRUE)
 
+# Create a data frame for plotting
+pca_data <- as.data.frame(pca_result$x)
+pca_data$sample <- rownames(pca_data)
+pca_data <- merge(pca_data, exp_metadata, by.x = "sample", by.y = "original_names")
 
-```
+# Extract column names from config parameters
+expgroup1 <- params$exp_groups[[1]][1]
+exp_group2 <- if (length(params$exp_groups[[1]]) > 1) params$exp_groups[[1]][2] else NULL
 
-
-## Zero count heatmap
-
-Heatmap showing presence of zeroes (black) in the data.
-
-```{r zero-heatmap, fig.width = 11, fig.height = 10}
-
-
-if(nrow(count_data) > 3000){
-  random_indices <- sample(nrow(count_data), 2500)
-  count_data_random <- count_data[random_indices, ]
-  count_data_is0 <- ((count_data_random==0)*1)
-} else{
-  count_data_is0 <- ((count_data==0)*1)
+# Generalize the PCA code
+if (!is.null(exp_group2)) {
+  pca_data <- pca_data %>%
+    group_by(across(all_of(expgroup1))) %>%
+    mutate(level = dense_rank(across(all_of(exp_group2)))) %>%
+    ungroup()
+  
+  # Convert level to a factor
+  pca_data$level <- as.factor(pca_data$level)
+  
+  # Create a combined label for the legend
+  pca_data$combined_label <- paste(pca_data[[expgroup1]], pca_data$level, sep = "_")
+} else {
+  pca_data$level <- as.factor(1)  # Use a single level if exp_group2 is not provided
+  pca_data$combined_label <- pca_data[[expgroup1]]
 }
 
-annotation_col <- exp_metadata %>%
-  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
-  tibble::column_to_rownames("original_names")
+# Plot PCA with ggplot2
+p_pca <- ggplot(pca_data, aes(x = PC1, y = PC2, color = !!sym(expgroup1), shape = level)) +
+  geom_point(size = 3) +
+  labs(title = "PCA of Experimental Samples",
+       x = paste0("PC1 (", round(100 * summary(pca_result)$importance[2, 1], 1), "%)"),
+       y = paste0("PC2 (", round(100 * summary(pca_result)$importance[2, 2], 1), "%)")) +
+  theme_minimal()
+
+# Convert ggplot to plotly
+p_pca_plotly <- plotly::ggplotly(p_pca, tooltip = "text")
+
+# Add highlighting
+plotly::highlight(p_pca_plotly, on = "plotly_click", off = "plotly_doubleclick", color = "red")
 
-pheatmap(count_data_is0,
-         color = c("white", "black"),
-         annotation_col = annotation_col,
-         treeheight_col = 30,
-         treeheight_row = 0,
-         show_rownames=F,
-         legend=F)
-
-```
-
-# Sample Filtering Code
-
-## Samples Removed Manually
-
-If samples were removed due to the results of cytotoxicity assays or other experimentally-determined reasons, they are listed here.
-
-In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the following groups:
-
-`r if (!is.null(remove)) { print(remove) }`
-
-```{r}
-if (nrow(cytotoxic) >= 1) {
-  cytotoxic %>%
-    kable(caption = "Samples removed manually before this report was generated.") %>%
-    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-    scroll_box(width = "100%", height = "480px")
-}
-```
-
-## Dendrogram and distance based filtering
-
-A tree height cutoff of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
-
-### Dendrogram, all samples, prefiltering
-
-Technical control samples are colored differently.
-
-```{r dendrogram_clustering}
-############################################################################
-# Function for sorting dendrograms
-############################################################################
-sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
-message(paste0("The treatment variable is: ", params$treatment_var))
-############################################################################
-# Re-order the data by group
-############################################################################
-flag_order <- order(d[,params$treatment_var])
-d <- d[flag_order,]
-count_data <- count_data[,d$original_names]
-############################################################################
-# CPM (used in dendrogram/cluster analysis)
-############################################################################
-libsize <- apply(count_data, 2, sum)
-cpm <- count_data
-for (k in 1:length(libsize)) {
-  cpm[,k] <- log2((10^6)*(count_data[,k] + 0.5)/(libsize[k] + 1))
-}
-
-############################################################################
-# Dendrogram: all
-############################################################################
-CairoPDF(file = file.path(paths$details, "dendrogram_prefiltering_all.pdf"),
-         width = 14,
-         height = 8.5,
-         family = "Courier")
-
-dendro_before_all_samples <- 1 - cor(as.matrix(cpm), method = params$clust_method)
-dendro_before_all_samples <- sort_hclust(hclust(as.dist(dendro_before_all_samples), method = "average"))
-
-dendro_before_all_samples <- as.dendrogram(dendro_before_all_samples)
-# if (params$platform == "TempO-Seq") {
-#   colors_to_use <- as.numeric(as.factor(exp_metadata[, params$technical_control]))
-# } else{
-#   colors_to_use <- rep.int(0,96)
-# }
-# ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_samples)]
-# labels_colors(dendro_before_all_samples) <- ordered_colors
-
-# original_names <- exp_metadata[, "original_names"]
-# original_names <- original_names[order.dendrogram(dendro_before_all_samples)]
-
-# labels_to_use <- exp_metadata[, params$dendro_color_by]
-# labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_samples)]
-# labels_to_use <- paste(labels_to_use, original_names)
-
-prefilt_dend_names <- colnames(cpm)
-prefilt_dend_names <- prefilt_dend_names[order.dendrogram(dendro_before_all_samples)]
-
-# Match the order of cpm column names in exp_metadata
-exp_metadata_ordered <- exp_metadata[match(colnames(cpm), exp_metadata$original_names), ]
-
-# Create prefilt_dend_labels, order based on the dendrogram
-prefilt_dend_labels <- exp_metadata_ordered[, params$dendro_color_by]
-prefilt_dend_labels <- prefilt_dend_labels[order.dendrogram(dendro_before_all_samples)]
-
-if (params$platform == "TempO-Seq") {
-colors_to_use <- ifelse(exp_metadata_ordered$technical_control == TRUE, "red", "black")
-} else{
-  colors_to_use <- rep.int(0,96)
-}
-
-# Order colors based on the dendrogram
-ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_samples)]
-
-# Assign colors to the dendrogram labels
-labels_colors(dendro_before_all_samples) <- ordered_colors
-labels_to_use <- paste(prefilt_dend_labels, prefilt_dend_names)
-
-plot(dendro_before_all_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-invisible(dev.off())
-
-# Repeat the plot so it appears in the HTML report
-plot(dendro_before_all_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-
-```
-
-
-### Splitting metadata into groups: technical controls and experimental samples
-
-This section obtains sample names for technical controls, experimental samples, and reference RNA samples.
-
-```{r split_metadata}
-############################################################################
-# Dendrogram: split into experimental samples vs technical controls
-############################################################################
-
-tech_ctrl_names <- exp_metadata %>%
-  dplyr::filter(.data[[params$technical_control]] == TRUE) %>%
-  dplyr::pull(original_names)
-
-sample_names <- exp_metadata %>%
-  dplyr::filter(.data[[params$technical_control]] == FALSE) %>%
-  dplyr::pull(original_names)
-
-ref_samples <- exp_metadata %>%
-  dplyr::filter(.data[[params$reference_rna]] == TRUE) %>%
-  dplyr::pull(original_names)
-
-```
-
-### Dendrogram, technical controls, prefiltering
-
-Colored by `r params$dendro_color_by`.
-
-```{r dendro_tech_before  }
-############################################################################
-# Technical Controls, Prefiltering
-############################################################################
-dendro_before_tech_ctrls <- 1 - cor(as.matrix(cpm %>% dplyr::select(all_of(tech_ctrl_names))),
-                                           method = "spearman")
-
-if (length(dendro_before_tech_ctrls) > 2) {
-  exp_metadata_tech_ctrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
-  
-  dendro_before_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_before_tech_ctrls), method = "average"))
-  
-  dendro_before_tech_ctrls <- as.dendrogram(dendro_before_tech_ctrls)
-  colors_to_use <- as.numeric(as.factor(exp_metadata_tech_ctrls[,params$dendro_color_by]))
-  ordered_colors <- colors_to_use[order.dendrogram(dendro_before_tech_ctrls)]
-  labels_colors(dendro_before_tech_ctrls) <- ordered_colors
-  
-  original_names <- exp_metadata_tech_ctrls[,"original_names"]
-  original_names <- original_names[order.dendrogram(dendro_before_tech_ctrls)]
-  
-  labels_to_use <- exp_metadata_tech_ctrls[,params$dendro_color_by]
-  labels_to_use <- labels_to_use[order.dendrogram(dendro_before_tech_ctrls)]
-  labels_to_use <- paste(labels_to_use, original_names)
-  
-  CairoPDF(file = file.path(paths$details,
-                            "dendrogram_prefiltering_tech_controls.pdf"),
-           width = 14,
-           height = 8.5,
-           family = "Courier")
-  
-  par(cex = 0.4, mar = c(25, 4, 4, 2))
-  print(plot(dendro_before_tech_ctrls %>%
-               dendextend::set("labels", labels_to_use) %>%
-               dendextend::set("labels_cex", 0.3),
-             main = "log2 CPM",
-             horiz = F)
-  )
-  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-  invisible(dev.off())
-
-  # Repeat the plot so it appears in the HTML report
-  #par(cex = 0.4, mar = c(25, 4, 4, 2))
-  print(plot(dendro_before_tech_ctrls %>%
-               dendextend::set("labels", labels_to_use) %>%
-               dendextend::set("labels_cex", 0.3),
-             main = "log2 CPM",
-             horiz = F)
-  )
-  abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-}
-
-```
-
-### Dendrogram, experimental samples, prefiltering
-
-First colored by `r params$dendro_color_by` and then colored by dose.  
-
-The dose colored dendrogram is hard-coded in this version and should be removed if your experiment does not involve dose-response (and therefore won't have a dose column in the metadata).  
-
-```{r dendro_samples_before}
-############################################################################
-# Experimental Samples, Prefiltering
-############################################################################
-
-CairoPDF(file = file.path(paths$details,
-                          "dendrogram_prefiltering_exp_samples.pdf"),
-         width = 14,
-         height = 8.5,
-         family = "Courier")
-
-dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
-                                  method = "spearman")
-
-exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
-
-dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
-
-dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,params$treatment_var]))
-ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
-labels_colors(dendro_before_all_exp_samples) <- ordered_colors
-
-original_names <- exp_metadata_exp_samples[,"original_names"]
-original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
-
-labels_to_use <- exp_metadata_exp_samples[,params$dendro_color_by]
-labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
-labels_to_use <- paste(labels_to_use, original_names)
-
-par(cex = 0.2, mar = c(25, 4, 4, 2))
-plot(dendro_before_all_exp_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-invisible(dev.off())
-
-# Repeat the plot so it appears in the HTML report
-
-#par(cex = 0.2, mar = c(25, 4, 4, 2))
-plot(dendro_before_all_exp_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-
-############################################################################
-# Experimental Samples, Prefiltering, Colored by Dose
-############################################################################
-
-CairoPDF(file = file.path(paths$details,
-                          "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
-         width = 14,
-         height = 8.5,
-         family = "Courier")
-
-dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
-                                  method = "spearman")
-
-exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
-
-dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
-
-dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
-colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,params$dendro_color_by]))
-ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
-labels_colors(dendro_before_all_exp_samples) <- ordered_colors
-
-original_names <- exp_metadata_exp_samples[,"original_names"]
-original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
-
-labels_to_use <- exp_metadata_exp_samples[,params$dendro_color_by]
-labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
-labels_to_use <- paste(labels_to_use, original_names)
-
-par(cex = 0.2, mar = c(25, 4, 4, 2))
-plot(dendro_before_all_exp_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-invisible(dev.off())
-
-# Repeat the plot so it appears in the HTML report
-#par(cex = 0.2, mar = c(25, 4, 4, 2))
-plot(dendro_before_all_exp_samples %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-     main = "log2 CPM",
-     horiz = F)
-abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
-
-```
-
-## Samples Removed by QC metrics {.tabset}
-
-Click on the tabs below to view samples removed by each metric.
-
-### Clustering Distance Cutoff
-
-A `r params$clust_method` distance of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
-
-```{r filtering_dendrogram}
-############################################################################
-# Filtering
-############################################################################
-
-tree_groups <- cutree(dendro_before_all_samples, h = params$studywide_tree_height_cutoff)
-n <- table(tree_groups)
-n <- sort(n, decreasing = T)
-
-if (!is.null(dim(n))) {
-  n <- n[2:dim(n)]
-  
-  if (length(n > 0)) {
-    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
-    write.table(d[flag_cluster,],
-                file.path(paths$details, "outliers_cluster_analysis.txt"),
-                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-    d[flag_cluster,] %>%
-      dplyr::select(original_names, params$dendro_color_by) %>%
-      kable(caption = "Samples flagged as outliers by clustering distance") %>%
-      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-      scroll_box(width = "100%", height = "480px")
-  }
-}
-```
-
-
-### Number of mapped reads
-
-Samples with less than `r params$nmr_threshold` aligned reads removed.
-
-```{r num_mapped_reads}
-######################################################################################
-# Additional QC Metrics
-######################################################################################
-# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
-######################################################################################
-# Reject < 300000 or Threshold = 10% of target depth
-# Removes various types of failed samples
-
-QAQC <- data.frame(Sample = names(count_data), NMR = apply(count_data, 2, sum))
-failed_read_threshold <- QAQC[QAQC$NMR < params$nmr_threshold,]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
-  dplyr::select(original_names, params$dendro_color_by) %>%
-  kable(caption = "Samples flagged with too few mapped reads") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-
-```
-
-### Fraction of mapped reads
-
-Samples less than `r params$align_threshold` aligned reads removed.
-
-```{r fraction_mapped_reads}
-QAQC <- QAQC %>% left_join(mu, by = "Sample")
-failed_alignment_threshold <- QAQC[QAQC$FMR < params$align_threshold,]
-  
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
-  dplyr::select(original_names, params$dendro_color_by) %>%
-  kable(caption = "Samples flagged as failing alignment threshold") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
-
-### Number of active probes
-
-The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
-
-```{r ncov5}
-######################################################################################
-# Ncov5 The number of probes with at least 5 uniquely mapped reads.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-n_genes <- nrow(count_data)
-QAQC$Ncov5 <- apply(count_data, 2, function(x) length(x[x > 4]))/n_genes
-percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
-failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
-  dplyr::select(original_names, params$dendro_color_by) %>%
-  kable(caption = "Samples flagged as outliers with few active probes") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
-
-### Number of probes capturing 80% of signal
-
-The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
-
-```{r nsig80}
-######################################################################################
-# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
-######################################################################################
-# Tukey's Outer Fence cutoff - 3*IQR
-# (include test samples, vehicle controls, and reference chemical treatments)
-
-### Using some of the EPA code:
-countStats <- function(
-  counts, 
-  nsig = getOption("httrStatNsig", default = 0.8)
-) {
-  # Load required pkgs
-	require(foreach)
-  # Store results in a vector
-	st <- vector()
-	# Drop probes w/ no reads (this is for efficiency, should not impact final Nsig values)
-	counts_nz <- counts[counts > 0]
-	# Sort in decreasing order
-	counts_nz <- sort(counts_nz, decreasing = T)
-	# Compute cumulative sum of counts starting from highest count probe
-	cumCounts <- cumsum(counts_nz)
-	# Convert cumulative sums to cumulative proportions
-	cumProp <- cumCounts / sum(counts_nz)
-	# Compute the minimum number of probes to capture X% of total reads
-	if (length(nsig) > 0) {
-		ns <- foreach(prop = nsig, .combine = 'c') %do% {min(which(cumProp > prop))}
-		names(ns) <- paste0("n_sig",nsig*100)
-		st <- append(st, ns)
-	}
-	return(st)
-}
-
-QAQC$Nsig80 <- apply(count_data, 2, countStats)
-
-probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
-failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
-  dplyr::select(original_names, params$dendro_color_by) %>%
-  kable(caption = "Samples flagged as outliers for the proportion of probes contributing to the data") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-
-```
-
-### Gini coefficient
-
-The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r params$gini_cutoff` are removed from the analysis.
-
-```{r gini}
-######################################################################################
-# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
-# raw counts for all probes including those with 0 aligned reads
-######################################################################################
-# Reject > 0.95
-QAQC$Gini <- apply(count_data, 2, function(x) gini(x))
-failed_gini <- QAQC[QAQC$Gini > params$gini_cutoff,]
-
-# Samples failing
-d %>%
-  dplyr::filter(original_names %in% failed_gini$Sample) %>%
-  dplyr::select(original_names, params$dendro_color_by ) %>%
-  kable(caption = "Samples flagged as failing the Gini coefficient") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
 ```
 
 # Correlations
@@ -870,8 +468,6 @@ pheatmap(ref_correlations_all,
 
 This shows the Pearson correlation of log2-normalized CPM of read counts across experimental samples.  Technical controls are excluded.
 
-This first plot shows every sample in the study:
-
 ```{r correlation_2, fig.width = 11, fig.height = 10}
 ref_correlations_samples <- cor(as.matrix(cpm %>%
                                             dplyr::select(all_of(sample_names))),
@@ -894,166 +490,6 @@ pheatmap(ref_correlations_samples,
          border_color = NA,
          annotation_col = correlation_df_samples_heatmap)
 
-```
-
-## Within Group Correlations {.tabset}
-
-These plots show correlations within each experimental grouping.  
-
-Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
-
-
-```{r group-correlation-setup}
-facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
-cor_list <- list()
-
-# Do we want a separate config param from params$treatment_var for the within-group tree cutoff?
-# Or to use the deseq_facet?
-```
-
-```{r, fig.width = 11, fig.height = 10, results='asis'}
-### To view correlations for groups of interest...
-
-# Create list to populate with dataframes for each treatment_var group
-df_groupdendro_list <- list()
-
-for (i in seq_along(facets)) {
-  cat("###", facets[i], "  \n\n")
-  samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
-                                            "original_names"]
-  if (length(samples_in_facet) < 2) { next }
-  cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
-  pca_subset <- rrcov::PcaGrid(t(cpm_subset))
-  #biplot <- rrcov::biplot(pca_subset)
-  correlations <- cor(cpm_subset, method = "pearson")
-  correlation_df <- exp_metadata %>%
-    filter(original_names %in% colnames(correlations))
-
-  ### Filtering by within-group correlations ###
-  if(!is.na(params$group_tree_height_cutoff)) {
-    dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
-    dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
-    dendro_facet <- as.dendrogram(dendro_facet)
-
-    facet_tree_groups <- cutree(dendro_facet, h = params$group_tree_height_cutoff)
-    n_facet <- table(facet_tree_groups)
-    n_facet <- sort(n_facet, decreasing = T)
-
-    d_facet <- d %>% dplyr::filter(original_names %in% samples_in_facet)
-    if (!is.null(dim(n_facet))) {
-      n_facet <- n_facet[2:dim(n_facet)]
-
-      if (length(n_facet > 0)) {
-        flag_cluster_facet <- d_facet$original_names %in% names(facet_tree_groups[facet_tree_groups %in% as.integer(names(n_facet))])
-      }
-    } else {
-      flag_cluster_facet <- rep(FALSE, nrow(d_facet))
-    }
-
-    # Add clustering results column to dataframe
-    d_facet$flag_cluster_facet <- flag_cluster_facet
-
-    df_groupdendro_list[[i]] <- d_facet
-
-
-    # Output dendrograms per facet (currently it's by params$treatment_group!)
-    facet_dendro_filename = paste0("dendrogram_",facets[i],".pdf")
-    CairoPDF(file = file.path(paths$details, facet_dendro_filename),
-          width = 14,
-          height = 8.5,
-          family = "Courier")
-    
-    par(cex = 0.75, mar = c(25, 4, 4, 2))
-    plot(dendro_facet %>%
-          dendextend::set("labels_cex", 1),
-        main = "log2 CPM",
-        horiz = F)
-    abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
-    invisible(dev.off())  
-  }
-
-
-### Make correlation robust PCA plots
-  row.names(correlation_df) <- correlation_df$original_names
-  correlation_df <- correlation_df[colnames(correlations),]
-  correlation_df <- as.data.frame(correlation_df[unlist(exp_groups[[1]][1])])
-  group_heatmap <- pheatmap(correlations,
-                            annotation_col = correlation_df,
-                            display_numbers = T,
-                            cutree_cols = 2,
-                            cutree_rows = 2)
- 
-  plot(pca_subset)
-  print(group_heatmap)
-  correlations <- as.data.frame(correlations)
-  correlations$original_names <- row.names(correlations)
-  cor_distribution <- correlations %>%
-    mutate(mean = rowMeans(across(where(is.numeric)))) %>%
-    dplyr::select(mean, original_names) %>%
-    mutate(facet = facets[i])
-  cor_list[[i]] <- cor_distribution
-  cat('  \n\n')
-}
-```
-
-
-```{r add_group_dendro_to_QCAC}
-if(!is.na(params$group_tree_height_cutoff)) {
-  df_groupdendro <- do.call(rbind, df_groupdendro_list)
-  df_groupdendro <- df_groupdendro %>% 
-    dplyr::select(sample_ID, flag_cluster_facet) %>%
-    dplyr::rename(group_tree = flag_cluster_facet)
-  df_groupdendro$group_tree <- ifelse(df_groupdendro$group_tree, "FAIL", "PASS")
-} else {
-  # If no tree height cutoff is specified, all samples are considered to pass
-  df_groupdendro <- exp_metadata %>% 
-    dplyr::select(sample_ID) %>%
-    dplyr::mutate(group_tree = "PASS")
-}
-
-
-
-# Incorporate info into QAQC table
-QAQC <- merge(QAQC, df_groupdendro, by.x = "Sample", by.y = "sample_ID", all.x = TRUE)
-```
-
-## Distribution of correlations
-
-### Mean of per-sample correlations with every other sample in the study
-
-In other words, for each sample, what is its mean correlation with **every other sample in the study**?
-
-Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
-
-```{r,  fig.width = 9, fig.height = 10}
-cor_df1 <- as.data.frame(ref_correlations_samples)
-cor_df1$original_names <- row.names(cor_df1)
-cor_df2 <- exp_metadata_exp_samples[c(params$treatment_var,"original_names")]
-# STUDY WIDE CORRELATION MEANS
-cor_distribution_all <- left_join(cor_df1, cor_df2) %>%
-    mutate(mean = rowMeans(across(where(is.numeric)))) %>%
-    dplyr::select(mean, original_names, .data[[params$treatment_var]])
-cor_plot <- ggplot(cor_distribution_all, aes(.data[[params$treatment_var]], mean)) +
-  geom_boxplot(outlier.shape = NA, outlier.color = NA) +
-  geom_jitter(size = 0.5) +
-  theme(axis.text = element_text(angle = 90))
-ggplotly(cor_plot)
-# Ok, there's a bug that prevents outliers from being hidden, but whatever.
-# https://github.com/plotly/plotly.R/issues/1114
-```
-
-### Mean of per-sample correlations with every other sample in its corresponding group
-
-In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
-
-```{r,  fig.width = 9, fig.height = 10}
-# MEANS BY CHEMICAL
-cor_means_by_chem <- data.table::rbindlist(cor_list)
-cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
-  geom_boxplot(outlier.shape = NA) +
-  geom_jitter(size = 0.5) +
-  theme(axis.text = element_text(angle = 90))
-ggplotly(cor_plot_2)
 ```
 
 
@@ -1082,30 +518,335 @@ pheatmap(ref_correlations,
          #cutree_cols = 2, # This is nice to have but won't work with small groups
          #cutree_rows = 2)
 
-heatmap_colors <- circlize::colorRamp2(c(0.7, 1), c("blue", "red"))
+```
 
-annotation_col <- HeatmapAnnotation(df = correlation_df)
+
+# Sample Filtering 
+
+## Quality control criteria
+
+Quality control of each sample is performed according to the criteria laid out in @harrill2021high, 
+plus an additional filter for the distance between samples in hierarchical clustering, suggested by Andrew Williams (Health Canada). 
+In some projects, using a whole-study clustering distance cutoff may not be appropriate.
+For example, if your study includes multiple cell lines, the whole-study clustering distance will be high because the cell lines are biologically distinct.
+In that case, the whole-study clustering distance cutoff should be set high (for example, 0.9), and group-specific clustering distance cutoff should be used instead.
+
+```{r criteria_table}
+
+criteria <- data.frame(
+  Abbreviation = c("Dendrogram", "Group Dendrogram", "NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Description = c("All-samples clustering distance",
+                  "Group-specific clustering distance",
+                  "Number of mapped reads",
+                  "Fraction of uniquely mapped reads", 
+                  "Number of probes with at least 5 uniquely mapped reads", 
+                  "Number of probes capturing the top 80% of a signal in a sample", 
+                  "Gini coefficient"),
+  "Default Threshold" = c("< 0.1",
+                          "N/A",
+                          "> 10% of target read depth",
+                          "> 0.5",
+                          "within 3*IQR",
+                          "within 3*IQR",
+                          "RNA-Seq: < 0.99, \nTempO-Seq: < 0.95"),
+  "Threshold" = c(
+    paste0("< ",params$studywide_tree_height_cutoff),
+    paste0("<", params$group_tree_height_cutoff),
+    paste0("> ",params$nmr_threshold),
+    paste0("> ",params$align_threshold), 
+    "within 3*IQR", "within 3*IQR", 
+    paste0("< ",params$gini_cutoff)
+  )
+)
+
+# Generate and style the table
+criteria %>%
+  kable("html", caption = "Criteria Table",
+        col.names = c("Abbreviation", "Description", "Default Threshold", "Threshold")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 
 ```
 
-# Compose tables
 
-```{r return_data}
+## Samples Removed Manually
 
-################################################################################
-# Add Dendrogram Clustering Pass/Fail to QAQC
-################################################################################
+If samples were removed due to the results of cytotoxicity assays or other experimentally-determined reasons, they are listed here.
+
+In this experiment, `r nrow(cytotoxic)` samples were removed manually, from the following groups:
+
+`r if (!is.null(remove)) { print(remove) }`
+
+```{r manually_removed}
+if (nrow(cytotoxic) >= 1) {
+  cytotoxic %>%
+    kable(caption = "Samples removed manually before this report was generated.") %>%
+    kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+    scroll_box(width = "100%", height = "480px")
+}
+```
+
+
+## Samples Removed by QC metrics {.tabset}
+
+Click on the tabs below to view samples removed by each metric.
+
+```{r create_qaqc, results='asis', echo=FALSE}
+# Initial Creation of QAQC
+QAQC <- data.frame(Sample = names(count_data), NMR = apply(count_data, 2, sum))
+
+# Adding Fraction of Mapped Reads (FMR)
+QAQC <- QAQC %>% left_join(mu, by = "Sample")
+
+# Adding Number of Active Probes (Ncov5)
+n_genes <- nrow(count_data)
+QAQC$Ncov5 <- apply(count_data, 2, function(x) length(x[x > 4])) / nrow(count_data)
+
+# Adding Number of Probes Capturing 80% of Signal (Nsig80)
+QAQC$Nsig80 <- apply(count_data, 2, countStats)
+
+# Adding Gini Coefficient
+QAQC$Gini <- apply(count_data, 2, function(x) gini(x))
+```
+
+### Clustering Distance Cutoff
+
+A `r params$clust_method` distance of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
+
+```{r filtering_dendrogram}
+############################################################################
+# Filtering
+############################################################################
+
+dendro_before_all_samples <- 1 - cor(as.matrix(cpm), method = params$clust_method)
+dendro_before_all_samples <- sort_hclust(hclust(as.dist(dendro_before_all_samples), method = "average"))
+
+dendro_before_all_samples <- as.dendrogram(dendro_before_all_samples)
+
+tree_groups <- cutree(dendro_before_all_samples, h = params$studywide_tree_height_cutoff)
+n <- table(tree_groups)
+n <- sort(n, decreasing = T)
+
+if (!is.null(dim(n))) {
+  n <- n[2:dim(n)]
+  
+  if (length(n > 0)) {
+    flag_cluster <- d$original_names %in% names(tree_groups[tree_groups %in% as.integer(names(n))])
+    write.table(d[flag_cluster,],
+                file.path(paths$details, "outliers_cluster_analysis.txt"),
+                sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+    d[flag_cluster,] %>%
+      dplyr::select(original_names, params$dendro_color_by) %>%
+      kable(caption = "Samples flagged as outliers by clustering distance") %>%
+      kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+      scroll_box(width = "100%", height = "480px")
+  }
+}
+
 QAQC$dendrogram <- "PASS"
 if (exists("flag_cluster")) {
   QAQC$dendrogram[which(QAQC$Sample %in% d$original_names[flag_cluster])] <- "FAIL"
 }
 
-failed_dendro_clustering <- QAQC[QAQC$Denodogram == "FAIL",]
+```
+
+
+### Group-specific Clustering Distance Cutoff
+
+A `r params$clust_method` distance of `r params$group_tree_height_cutoff` is used to cut the tree and separate outliers.
+```{r group-dendrograms}
+# Perform the analysis, save results into QAQC dataframe, and generate dendrograms
+
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+
+facets <- unique(exp_metadata_exp_samples[,params$treatment_var])
+cor_list <- list()
+
+# Create list to populate with dataframes for each treatment_var group
+df_groupdendro_list <- list()
+dendrograms <- list()
+
+if(!is.na(params$group_tree_height_cutoff)) {
+  for (i in seq_along(facets)) {
+    samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
+                                                 "original_names"]
+    if (length(samples_in_facet) < 2) { next }
+    cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
+
+    ### Filtering by dendrogram distance within each treatment group ###
+    dendro_facet <- 1 - cor(cpm_subset, method = params$clust_method)
+    dendro_facet <- sort_hclust(hclust(as.dist(dendro_facet), method = "average"))
+    dendro_facet <- as.dendrogram(dendro_facet)
+
+    facet_tree_groups <- cutree(dendro_facet, h = params$group_tree_height_cutoff)
+    n_facet <- table(facet_tree_groups)
+    n_facet <- sort(n_facet, decreasing = T)
+
+    d_facet <- d %>% dplyr::filter(original_names %in% samples_in_facet)
+    if (!is.null(dim(n_facet))) {
+      n_facet <- n_facet[2:dim(n_facet)]
+
+      if (length(n_facet > 0)) {
+        flag_cluster_facet <- d_facet$original_names %in% names(facet_tree_groups[facet_tree_groups %in% as.integer(names(n_facet))])
+      }
+    } else {
+      flag_cluster_facet <- rep(FALSE, nrow(d_facet))
+    }
+
+    # Add clustering results column to dataframe
+    d_facet$flag_cluster_facet <- flag_cluster_facet
+
+    df_groupdendro_list[[i]] <- d_facet
+
+    # Save dendrogram
+    dendrograms[[facets[i]]] <- dendro_facet
+  }
+}
+
+if(!is.na(params$group_tree_height_cutoff)) {
+  df_groupdendro <- do.call(rbind, df_groupdendro_list)
+  df_groupdendro <- df_groupdendro %>% 
+    dplyr::select(sample_ID, flag_cluster_facet) %>%
+    dplyr::rename(group_dendrogram = flag_cluster_facet)
+  df_groupdendro$group_dendrogram <- ifelse(df_groupdendro$group_dendrogram, "FAIL", "PASS")
+} else {
+  # If no tree height cutoff is specified, all samples are considered to pass
+  df_groupdendro <- exp_metadata %>% 
+    dplyr::select(sample_ID) %>%
+    dplyr::mutate(group_dendrogram = "PASS")
+}
+
+# Incorporate info into QAQC table
+QAQC <- merge(QAQC, df_groupdendro, by.x = "Sample", by.y = "sample_ID", all.x = TRUE)
+
+# Table of samples failing
+failed_groupdendro <- QAQC[QAQC$group_dendrogram == "FAIL",]
+
+d %>%
+  dplyr::filter(original_names %in% failed_groupdendro$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged with too few mapped reads") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+
+### Number of mapped reads
+
+Samples with less than `r params$nmr_threshold` aligned reads removed.
+
+```{r num_mapped_reads}
+######################################################################################
+# Additional QC Metrics
+######################################################################################
+# NMR Number of mapped reads, defined as sum of total read counts summed over all detected probes
+######################################################################################
+# Reject < 10% of target depth
+# Removes various types of failed samples
+
+failed_read_threshold <- QAQC[QAQC$NMR < params$nmr_threshold,]
 
 # Samples failing
 d %>%
-  dplyr::filter(original_names %in% failed_dendro_clustering$Sample) %>%
-  dplyr::pull(params$treatment_var)
+  dplyr::filter(original_names %in% failed_read_threshold$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged with too few mapped reads") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Fraction of mapped reads
+
+Samples less than `r params$align_threshold` aligned reads removed.
+
+```{r fraction_mapped_reads}
+failed_alignment_threshold <- QAQC[QAQC$FMR < params$align_threshold,]
+  
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_alignment_threshold$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged as failing alignment threshold") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of active probes
+
+The number of probes having >5 uniquely mapped reads are calculated. Outliers on that metric (i.e., outside 3XIQR) are removed from analysis.
+
+```{r ncov5}
+######################################################################################
+# Ncov5 The number of probes with at least 5 uniquely mapped reads.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+percent_active_probes <- boxplot(QAQC$Ncov5, range = 3, plot = F)
+failed_Ncov5 <- QAQC[QAQC$Ncov5 < percent_active_probes$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Ncov5$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers with few active probes") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+### Number of probes capturing 80% of signal
+
+The number of probes capturing 80% of the signal is first calculated, and samples falling outside of 3X IQR are removed from downstream analysis.
+
+```{r nsig80}
+######################################################################################
+# Nsig80 - The number of probes capturing the top 80% of signal in a sample.
+######################################################################################
+# Tukey's Outer Fence cutoff - 3*IQR
+# (include test samples, vehicle controls, and reference chemical treatments)
+
+probes_capturing_top_80 <- boxplot(QAQC$Nsig80, range = 3, plot = F)
+failed_Nsig80 <- QAQC[QAQC$Nsig80 < probes_capturing_top_80$stats[1,1],]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_Nsig80$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by) %>%
+  kable(caption = "Samples flagged as outliers for the proportion of probes contributing to the data") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+
+```
+
+### Gini coefficient
+
+The Gini coefficient is computed for each sample based on the distribution of raw counts for all probes including those with 0 aligned reads. Samples with Gini coefficients >`r params$gini_cutoff` are removed from the analysis.
+
+```{r gini}
+######################################################################################
+# Gini coefficient - Gini coefficient computed for each sample based on the distribution of 
+# raw counts for all probes including those with 0 aligned reads
+######################################################################################
+# Reject > 0.95
+failed_gini <- QAQC[QAQC$Gini > params$gini_cutoff,]
+
+# Samples failing
+d %>%
+  dplyr::filter(original_names %in% failed_gini$Sample) %>%
+  dplyr::select(original_names, params$dendro_color_by ) %>%
+  kable(caption = "Samples flagged as failing the Gini coefficient") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+
+```{r QAQC_setup}
+
+################################################################################
+# Add Dendrogram Clustering Pass/Fail to QAQC
+################################################################################
+
+failed_dendro_clustering <- QAQC[QAQC$Denodogram == "FAIL",]
 
 ################################################################################
 # Removing Outliers
@@ -1151,15 +892,6 @@ QAQC_failed_logical <- QAQC_failed_logical %>%
 
 ```
 
-# Tables and plots
-
-This section shows several tables of the outlier data.  
-
-## vtree plot of outliers
-
-This plot shows the various QC metrics that may result in sample removal, along with the numbers of samples that were removed for one or more of those filters.  
-
-
 ```{r QAQC_annotated}
 
 QAQC_annotated <- dplyr::left_join(exp_metadata,
@@ -1172,22 +904,6 @@ QAQC_annotated$Any <- apply(QAQC_annotated,
                             MARGIN = 1,
                             FUN = function(x) ifelse(any(x == "FAIL", na.rm = T),"FAIL","PASS"))
 
-```
-
-### Vtree Summary
-
-```{r vtree}
-
-vtree(QAQC_annotated,
-      "Any dendrogram group_tree NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
-      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
-      pngknit = FALSE) # This is not ideal - but the tmp files didn't work when rendering externally.
-
-vtree(QAQC_annotated,
-      "dendrogram group_tree NMR FMR Ncov5 Nsig80 Gini",
-      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
-      pattern = T,
-      pngknit = FALSE)
 
 outliers <- QAQC_failed$Sample
 
@@ -1198,76 +914,73 @@ metadata_outliers_removed <- exp_metadata[!exp_metadata$original_names %in% outl
 ```
 
 
-## Potential covariates
+## Metadata of samples removed by filters
 
-This examines correlations between the QC metrics calculated and any factors in the experimental design.  
+```{r table_metadata}
+knitr::kable(outlier_metadata,
+             caption = "Samples Removed") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
 
-Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
+QAQC_failed_kable <- outlier_metadata %>%
+  dplyr::select(original_names,
+                .data[[params$treatment_var]],
+                .data[[params$dendro_color_by]]) %>%
+  left_join(QAQC_failed, by = (c("original_names" = "Sample")))
+```
 
-```{r possible_covariates, fig.height = 12, fig.width = 12}
+## Number of filtered samples in each group
 
-if (!is.na(params$batch_var)) {
-QAQC_metadata_subset <- QAQC_annotated %>%
-  dplyr::select(unlist(exp_groups), .data[[params$batch_var]],
-                NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
-  QAQC_metadata_subset[,params$batch_var] <- factor(QAQC_metadata_subset[,params$batch_var])
-} else {
-    QAQC_metadata_subset <- QAQC_annotated %>%
-    dplyr::select(unlist(exp_groups),
-                  NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
-}
+```{r table_by_groups}
 
-QAQC_metadata_subset %>%
-    summarise_all(~length(unique(.))) # Just info. Output not used
-    #summarise_each(levels(as.factor(.))) %>% tally()
-
-potential_covariates <- QAQC_metadata_subset %>%
-  dplyr::mutate_all(as.factor) %>%
-  purrr::map(levels) %>%
-  purrr::map(length)
+knitr::kable(QAQC_annotated %>%
+               dplyr::group_by(.data[[params$treatment_var]],
+                               .data[[params$dose]], Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
+               tally() %>% dplyr::arrange(Any) %>%
+               tidyr::pivot_wider(names_from = Any, values_from = n, values_fill = 0)) %>% # wide table instead of long
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  kableExtra::scroll_box(width = "100%", height = "480px")
+```
 
 
-covariate_names <- names(potential_covariates[potential_covariates < 24])
+## Pass/fail table for samples removed by filters
 
-# Need a generic way to look for dose column...
-#QAQC_metadata_subset$dose <- factor(log(QAQC_metadata_subset$dose+1))
 
-if (length(exp_groups) > 1 & !is.na(params$batch_var)) {
-  for (i in seq_along(exp_groups)[1:length(exp_groups)]) {
-    # Drop groups that have high numbers of possible values
-    covariate_cols <- unlist(exp_groups[[i]])
-    for (subgroup in covariate_cols) {
-      cardinality <- length(levels(factor(QAQC_metadata_subset[,subgroup])))
-      if (cardinality > 24) {
-        covariate_cols <- covariate_cols[!covariate_cols %in% subgroup]
-      }
-    }
-    if (length(covariate_cols) < 1) {next}
-    p <- ggpairs(QAQC_metadata_subset,
-                 cardinality_threshold = 24,
-                 columns = c(covariate_cols,
-                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"),
-                 ggplot2::aes(colour = .data[[params$batch_var]]))
-    print(p)
-  }
-} else {
-  if (length(exp_groups) <= 1 & !is.na(params$batch_var)) {
-  p <- ggpairs(QAQC_metadata_subset,
-                 cardinality_threshold = 24,
-                 columns = c(unlist(exp_groups),
-                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"),
-                 ggplot2::aes(colour = .data[[params$batch_var]]))
-  print(p)
-} else {
-  if (is.na(params$batch_var)) {
-  p <- ggpairs(QAQC_metadata_subset,
-                 cardinality_threshold = 24,
-                 columns = c(unlist(exp_groups),
-                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"))
-  print(p)
-  }
-}
-}
+```{r table_pass_fail}
+knitr::kable(QAQC_failed_kable,
+             caption = "Which samples were removed and why?") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+
+## Pass/fail for each test, broken up by sample groups
+
+```{r pass_fail_by_group}
+QAQC_annotated %>%
+  dplyr::group_by(dendrogram, group_dendrogram, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
+  tally() %>%
+  knitr::kable(caption = "Pass/fail results by group") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+### Vtree Summary
+
+```{r vtree}
+
+vtree(QAQC_annotated,
+      "Any dendrogram group_dendrogram NMR FMR Ncov5 Nsig80 Gini", # Make "Any" first?
+      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
+      pngknit = FALSE) # This is not ideal - but the tmp files didn't work when rendering externally.
+
+vtree(QAQC_annotated,
+      "dendrogram group_dendrogram NMR FMR Ncov5 Nsig80 Gini",
+      summary = "NMR_data \nAverage Reads Mapped\n%mean% %leafonly% ",
+      pattern = T,
+      pngknit = FALSE)
 
 ```
 
@@ -1281,8 +994,19 @@ are_there_plates <- any(grepl("column", colnames(QAQC_annotated), ignore.case = 
 
 if (!is.na(params$batch_var)) {
   batch_length <- length(unique(QAQC_annotated[, params$batch_var]))
-} else{
+} else {
   batch_length <- 1
+}
+# Set custom figure dimensions based on the number of plates
+if (batch_length == 1) {
+  custom_fig_height <- 2.75
+  custom_fig_width <- 4
+} else if (batch_length == 2) {
+  custom_fig_height <- 2.75
+  custom_fig_width <- 8
+} else if (batch_length > 2) {
+  custom_fig_height <- 2.75 * batch_length
+  custom_fig_width <- 8
 }
 ```
 
@@ -1316,14 +1040,6 @@ if (!is.na(params$batch_var)) {
 
 ```
 
-
-```{r}
-custom_fig_height <- ifelse(test = batch_length > 1, yes = batch_length, no = 2.75)
-
-# Set plot width to narrow for single plate, and wider for multiple plates to accomodate two column facet wrap
-custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
-
-```
 
 ### Number of Mapped Reads
 
@@ -1383,94 +1099,70 @@ custom_fig_width <- ifelse(test = batch_length > 1, yes = batch_length, no = 4)
 ```
 
 
-## Metadata of samples identified as outliers
+# Dendrogram and distance based filtering
 
-```{r table_metadata}
-knitr::kable(outlier_metadata,
-             caption = "Samples Removed") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  kableExtra::scroll_box(width = "100%", height = "480px")
+A tree height cutoff of `r params$studywide_tree_height_cutoff` is used to cut the tree and separate outliers.
 
-QAQC_failed_kable <- outlier_metadata %>%
-  dplyr::select(original_names,
-                .data[[params$treatment_var]],
-                .data[[params$dendro_color_by]]) %>%
-  left_join(QAQC_failed, by = (c("original_names" = "Sample")))
-```
+## Dendrogram, all samples {.tabset}
 
-## Sample groups summary - numbers of outliers in each group
+Technical control samples are colored differently.
 
-```{r table_by_groups}
-knitr::kable(QAQC_annotated %>%
-               dplyr::group_by(.data[[params$treatment_var]],
-                               .data[[params$dose]], Any) %>% # Could be better to somehow use exp_groups[[1]], but not sure how to get it working as expected
-               tally() %>% dplyr::arrange(Any),
-             caption = "Groups Summary") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  kableExtra::scroll_box(width = "100%", height = "480px")
-```
+### Pre-filtering
+```{r dendrogram_all_before}
+message(paste0("The treatment variable is: ", params$treatment_var))
 
 
-## Pass/fail table for samples identified as outliers
+############################################################################
+# Dendrogram: all
+############################################################################
+CairoPDF(file = file.path(paths$details, "dendrogram_prefiltering_all.pdf"),
+         width = 14,
+         height = 8.5,
+         family = "Courier")
 
-```{r table_pass_fail}
-knitr::kable(QAQC_failed_kable,
-             caption = "Which samples were removed and why?") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
 
+prefilt_dend_names <- colnames(cpm)
+prefilt_dend_names <- prefilt_dend_names[order.dendrogram(dendro_before_all_samples)]
 
-## Overall summary of pass/fail for each test
+# Match the order of cpm column names in exp_metadata
+exp_metadata_ordered <- exp_metadata[match(colnames(cpm), exp_metadata$original_names), ]
 
-```{r pass_fail_summary}
-QAQC_annotated %>%
-  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any) %>%
-  tally() %>%
-  knitr::kable(caption = "Summary of pass/fail results") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
+# Create prefilt_dend_labels, order based on the dendrogram
+prefilt_dend_labels <- exp_metadata_ordered[, params$dendro_color_by]
+prefilt_dend_labels <- prefilt_dend_labels[order.dendrogram(dendro_before_all_samples)]
 
-## Pass/fail for each test, broken up by sample groups
+if (params$platform == "TempO-Seq") {
+colors_to_use <- ifelse(exp_metadata_ordered$technical_control == TRUE, "red", "black")
+} else{
+  colors_to_use <- rep.int(0,96)
+}
 
-```{r pass_fail_by_group}
-QAQC_annotated %>%
-  dplyr::group_by(dendrogram, group_tree, NMR, FMR, Ncov5, Nsig80, Gini, Any, .data[[params$treatment_var]]) %>%
-  tally() %>%
-  knitr::kable(caption = "Pass/fail results by group") %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
-  scroll_box(width = "100%", height = "480px")
-```
+# Order colors based on the dendrogram
+ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_samples)]
 
-## Write tables to disk
+# Assign colors to the dendrogram labels
+labels_colors(dendro_before_all_samples) <- ordered_colors
+labels_to_use <- paste(prefilt_dend_labels, prefilt_dend_names)
 
-```{r write_output}
-outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
-                                               QAQC_pass_fail,
-                                               by = c("original_names" = "Sample"))
-write.table(outlier_metadata_annotated,
-            file.path(paths$details, "samples_removed.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+plot(dendro_before_all_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
+invisible(dev.off())
 
-write.table(QAQC_annotated,
-            file.path(paths$details, "QC_per_sample.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-write.table(metadata_outliers_removed,
-            file.path(paths$qc, "metadata.QC_applied.txt"),
-            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
-
-count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
+# Repeat the plot so it appears in the HTML report
+plot(dendro_before_all_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
-
-There are `r ncol(count_data_filtered)` samples remaining in the study after sample removal.
-
-## Dendrogram (after filtering)
-
-### Dendrogram, all samples, postfiltering
+### Post-filtering
 
 ```{r dendrogram_all_after}
 ############################################################################
@@ -1517,58 +1209,176 @@ plot(dendro_after_all_samples %>%
 abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ```
 
-### Dendrogram, technical control samples, postfiltering
+## Dendrogram, technical controls 
 
-```{r dendrogram_technical_after}
+Colored by `r params$dendro_color_by`.
+
+Note that technical controls are filtered out, so no post-filtering dendrogram is available.
+
+```{r dendro_tech_before  }
 ############################################################################
-# Technical Controls, Postfiltering
+# Technical Controls, Prefiltering
 ############################################################################
-dendro_after_tech_ctrls <- 1 - cor(as.matrix(cpm %>%
-                                            dplyr::select(all_of(tech_ctrl_names)) %>%
-                                            dplyr::select(-all_of(outliers[outliers %in% tech_ctrl_names]))),
-                                method = "spearman")
-if (length(dendro_after_tech_ctrls) > 2) {
+dendro_before_tech_ctrls <- 1 - cor(as.matrix(cpm %>% dplyr::select(all_of(tech_ctrl_names))),
+                                           method = "spearman")
+
+if (length(dendro_before_tech_ctrls) > 2) {
   exp_metadata_tech_ctrls <- exp_metadata %>% dplyr::filter(original_names %in% all_of(tech_ctrl_names))
   
-  dendro_after_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_after_tech_ctrls), method = "average"))
+  dendro_before_tech_ctrls <- sort_hclust(hclust(as.dist(dendro_before_tech_ctrls), method = "average"))
   
-  dendro_after_tech_ctrls <- as.dendrogram(dendro_after_tech_ctrls)
+  dendro_before_tech_ctrls <- as.dendrogram(dendro_before_tech_ctrls)
   colors_to_use <- as.numeric(as.factor(exp_metadata_tech_ctrls[,params$dendro_color_by]))
-  ordered_colors <- colors_to_use[order.dendrogram(dendro_after_tech_ctrls)]
-  labels_colors(dendro_after_tech_ctrls) <- ordered_colors
+  ordered_colors <- colors_to_use[order.dendrogram(dendro_before_tech_ctrls)]
+  labels_colors(dendro_before_tech_ctrls) <- ordered_colors
   
   original_names <- exp_metadata_tech_ctrls[,"original_names"]
-  original_names <- original_names[order.dendrogram(dendro_after_tech_ctrls)]
+  original_names <- original_names[order.dendrogram(dendro_before_tech_ctrls)]
   
   labels_to_use <- exp_metadata_tech_ctrls[,params$dendro_color_by]
-  labels_to_use <- labels_to_use[order.dendrogram(dendro_after_tech_ctrls)]
+  labels_to_use <- labels_to_use[order.dendrogram(dendro_before_tech_ctrls)]
   labels_to_use <- paste(labels_to_use, original_names)
   
   CairoPDF(file = file.path(paths$details,
-                            "dendrogram_postfiltering_tech_controls.pdf"),
+                            "dendrogram_prefiltering_tech_controls.pdf"),
            width = 14,
            height = 8.5,
            family = "Courier")
+  
   par(cex = 0.4, mar = c(25, 4, 4, 2))
-  plot(dendro_after_tech_ctrls %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-       main = "log2 CPM",
-       horiz = F)
+  print(plot(dendro_before_tech_ctrls %>%
+               dendextend::set("labels", labels_to_use) %>%
+               dendextend::set("labels_cex", 0.3),
+             main = "log2 CPM",
+             horiz = F)
+  )
   abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
   invisible(dev.off())
 
-  # Repeat plot so it appears in the HTML report
-  plot(dendro_after_tech_ctrls %>%
-       dendextend::set("labels", labels_to_use) %>%
-       dendextend::set("labels_cex", 0.3),
-       main = "log2 CPM",
-       horiz = F)
+  # Repeat the plot so it appears in the HTML report
+  #par(cex = 0.4, mar = c(25, 4, 4, 2))
+  print(plot(dendro_before_tech_ctrls %>%
+               dendextend::set("labels", labels_to_use) %>%
+               dendextend::set("labels_cex", 0.3),
+             main = "log2 CPM",
+             horiz = F)
+  )
   abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 }
+
 ```
 
-### Dendrogram, experimental samples, postfiltering
+## Dendrogram, experimental samples {.tabset}
+
+First colored by `r params$dendro_color_by` and then colored by dose.  
+
+The dose colored dendrogram is hard-coded in this version and should be removed if your experiment does not involve dose-response (and therefore won't have a dose column in the metadata).  
+
+### Prefiltering, coloured by group
+
+```{r dendro_samples_before}
+############################################################################
+# Experimental Samples, Prefiltering
+############################################################################
+
+CairoPDF(file = file.path(paths$details,
+                          "dendrogram_prefiltering_exp_samples.pdf"),
+         width = 14,
+         height = 8.5,
+         family = "Courier")
+
+dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
+                                  method = "spearman")
+
+dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
+
+dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,params$treatment_var]))
+ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
+labels_colors(dendro_before_all_exp_samples) <- ordered_colors
+
+original_names <- exp_metadata_exp_samples[,"original_names"]
+original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
+
+labels_to_use <- exp_metadata_exp_samples[,params$dendro_color_by]
+labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
+labels_to_use <- paste(labels_to_use, original_names)
+
+par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
+invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+
+#par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
+```
+
+### Prefiltering, coloured by dose
+
+```{r dendro_samples_before_dose}
+
+############################################################################
+# Experimental Samples, Prefiltering, Colored by Dose
+############################################################################
+
+CairoPDF(file = file.path(paths$details,
+                          "dendrogram_prefiltering_exp_samples_by_dose.pdf"),
+         width = 14,
+         height = 8.5,
+         family = "Courier")
+
+dendro_before_all_exp_samples <- 1-cor(as.matrix(cpm  %>% dplyr::select(all_of(sample_names))),
+                                  method = "spearman")
+
+exp_metadata_exp_samples <- exp_metadata %>% dplyr::filter(original_names %in% all_of(sample_names))
+
+dendro_before_all_exp_samples <- sort_hclust(hclust(as.dist(dendro_before_all_exp_samples), method = "average"))
+
+dendro_before_all_exp_samples <- as.dendrogram(dendro_before_all_exp_samples)
+colors_to_use <- as.numeric(as.factor(exp_metadata_exp_samples[,params$dendro_color_by]))
+ordered_colors <- colors_to_use[order.dendrogram(dendro_before_all_exp_samples)]
+labels_colors(dendro_before_all_exp_samples) <- ordered_colors
+
+original_names <- exp_metadata_exp_samples[,"original_names"]
+original_names <- original_names[order.dendrogram(dendro_before_all_exp_samples)]
+
+labels_to_use <- exp_metadata_exp_samples[,params$dendro_color_by]
+labels_to_use <- labels_to_use[order.dendrogram(dendro_before_all_exp_samples)]
+labels_to_use <- paste(labels_to_use, original_names)
+
+par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
+invisible(dev.off())
+
+# Repeat the plot so it appears in the HTML report
+#par(cex = 0.2, mar = c(25, 4, 4, 2))
+plot(dendro_before_all_exp_samples %>%
+       dendextend::set("labels", labels_to_use) %>%
+       dendextend::set("labels_cex", 0.3),
+     main = "log2 CPM",
+     horiz = F)
+abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
+
+```
+
+
+### Postfiltering, coloured by group
 
 ```{r dendrogram_exp_after}
 ############################################################################
@@ -1621,7 +1431,7 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 
 ```
 
-### Dendrogram, experimental samples, postfiltering, colored by dose
+### Postfiltering, coloured by dose
 
 ```{r dendrogram_exp_post_dose}
 ############################################################################
@@ -1674,17 +1484,39 @@ abline(h = params$studywide_tree_height_cutoff, col = "red", lwd = 2)
 ```
 
 
-## Plots of QC data metrics
+## Group-based Dendrogram Filtering  {.tabset}
 
-### Batch
+If you set a group tree height cutoff in the config file, then any sample separating from the rest of its group at a height heigher than `r params$group_tree_height_cutoff` will be filtered out.
+
+All dendrograms below are pre-filtering.
+
+```{r display-dendrograms, results='asis', echo=FALSE}
+# Display the saved dendrograms from chunk "group-dendrograms"
+
+for (facet in names(dendrograms)) {
+  cat("### ", facet, "  \n\n")
+  dendro_facet <- dendrograms[[facet]]
+
+  # Plot dendrogram
+  par(cex = 0.75, mar = c(25, 4, 4, 2))
+  plot(dendro_facet %>%
+         dendextend::set("labels_cex", 1),
+       main = "log2 CPM",
+       horiz = F)
+  abline(h = params$group_tree_height_cutoff, col = "red", lwd = 2)
+  cat('\n\n')
+}
+```
+
+
+# Plots of QC data metrics
+
+These plots show the effects of batch and dose on the quality metrics used for filtering.
+
+## Batch
 
 ```{r plot_batch_effects, eval = !is.na(params$batch_var), fig.height = as.numeric(custom_fig_height)*1.5}
-add_spaces <- function(string) {
-  substr(string, 1, 1) <- toupper(substr(string, 1, 1))
-  string <- gsub(pattern = "-", replacement = " ", string)
-  string <- gsub(pattern = "_", replacement = " ", string)
-  string
-}
+
 plot_batches <- ggplot(QAQC_annotated, aes(x = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
   facet_wrap(paste0("~",params$batch_var), scales = "free_y", labeller = labeller(
     .cols = add_spaces,
@@ -1701,7 +1533,7 @@ plot_batches + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probe
 
 ```
 
-### Dose effects
+## Dose effects
 
 ```{r plot_chemical_differences, eval=!is.na(params$dose), fig.height = as.numeric(custom_fig_height)*1.5}
 # It would make sense to use params$dose instead of dose here - but ensym() doesn't want to evaluate it properly? Error: arg must be of length 1 - maybe because it's part of a list? Early on, dose <- params$dose sets it to a character vector, maybe the class is interpreted differently by ensym().
@@ -1719,6 +1551,29 @@ plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of p
 ```
 
 
+# Write tables to disk {-}
+
+```{r write_output}
+outlier_metadata_annotated <- dplyr::left_join(outlier_metadata,
+                                               QAQC_pass_fail,
+                                               by = c("original_names" = "Sample"))
+write.table(outlier_metadata_annotated,
+            file.path(paths$details, "samples_removed.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+write.table(QAQC_annotated,
+            file.path(paths$details, "QC_per_sample.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+write.table(metadata_outliers_removed,
+            file.path(paths$qc, "metadata.QC_applied.txt"),
+            sep = "\t", row.names = FALSE, col.names = TRUE, quote = FALSE)
+
+count_data_filtered <- count_data %>% dplyr::select(-all_of(outliers))
+
+```
+
+
 # References {-}
 
 If these methods were used in your study, please cite the following papers as appropriate:  
@@ -1727,6 +1582,238 @@ If these methods were used in your study, please cite the following papers as ap
 
 <div id="refs"></div>
 
+
+
+
+# Appendix (additional plots)
+
+## GC content
+
+Summary of GC content of probes (TempO-Seq only)
+```{r plot-gc, eval=params$platform == "TempO-Seq"}
+
+# Calculate the GC content for each probe, add this value as a column
+manifest <- manifest %>% mutate(gc_content=calculate_gc(Probe_Sequence))
+
+count_data_gc <- dplyr::left_join(tibble::rownames_to_column(count_data),
+                                  manifest,
+                                  by = c("rowname" = "Probe_Name")) %>%
+  tidyr::pivot_longer(all_of(c(exp_metadata$original_names)),
+                      names_to = "sample", values_to = "count") %>%
+  dplyr::mutate(GC_corrected_count = count/gc_content)
+ggplot(count_data_gc,aes(x=GC_corrected_count,colour=sample)) +
+  geom_density() +
+  scale_x_log10() +
+  theme(legend.position = "none")
+
+gc_summary <- count_data_gc %>%
+  group_by(sample) %>%
+  summarise(median_gc = median(GC_corrected_count), mean_gc = mean(GC_corrected_count))
+
+gc_summary_long <- gc_summary %>%
+  pivot_longer(cols=c("mean_gc","median_gc"))
+
+ggplot(gc_summary_long,
+       aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
+  geom_violin(fill = "transparent") +
+  facet_wrap(name~., scales = "free")
+
+gc_summary %>%
+  kable(caption = "Summary GC statistics") %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+  scroll_box(width = "100%", height = "480px")
+```
+
+
+## Zero count heatmap
+
+Heatmap showing presence of zeroes (black) in the data.
+
+```{r zero-heatmap, fig.width = 11, fig.height = 10}
+
+
+if(nrow(count_data) > 3000){
+  random_indices <- sample(nrow(count_data), 2500)
+  count_data_random <- count_data[random_indices, ]
+  count_data_is0 <- ((count_data_random==0)*1)
+} else{
+  count_data_is0 <- ((count_data==0)*1)
+}
+
+annotation_col <- exp_metadata %>%
+  dplyr::select(c(as.vector(unlist(params$exp_groups)),"original_names")) %>%
+  tibble::column_to_rownames("original_names")
+
+pheatmap(count_data_is0,
+         color = c("white", "black"),
+         annotation_col = annotation_col,
+         treeheight_col = 30,
+         treeheight_row = 0,
+         show_rownames=F,
+         legend=F)
+
+```
+
+
+## Correlations 
+### Within Group Correlations {.tabset}
+
+These plots show correlations within each experimental grouping.  
+
+Click on the tabs below to see the robust PCA and Pearson correlations for all samples within a group.  
+
+```{r correlations_group, fig.width = 9, fig.height = 8, results='asis'}
+### To view correlations for groups of interest...
+
+for (i in seq_along(facets)) {
+  cat("#### ", facets[i], "  \n\n")
+  samples_in_facet <- exp_metadata_exp_samples[exp_metadata_exp_samples[params$treatment_var] == facets[i],
+                                            "original_names"]
+  if (length(samples_in_facet) < 2) { next }
+  cpm_subset <- as.matrix(cpm %>% dplyr::select(all_of(samples_in_facet)))
+  pca_subset <- rrcov::PcaGrid(t(cpm_subset))
+  #biplot <- rrcov::biplot(pca_subset)
+  correlations <- cor(cpm_subset, method = "pearson")
+  correlation_df <- exp_metadata %>%
+    filter(original_names %in% colnames(correlations))
+
+
+### Make correlation robust PCA plots
+  row.names(correlation_df) <- correlation_df$original_names
+  correlation_df <- correlation_df[colnames(correlations),]
+  correlation_df <- as.data.frame(correlation_df[unlist(exp_groups[[1]][1])])
+  group_heatmap <- pheatmap(correlations,
+                            annotation_col = correlation_df,
+                            display_numbers = T,
+                            cutree_cols = 2,
+                            cutree_rows = 2)
+ 
+  plot(pca_subset)
+  print(group_heatmap)
+  correlations <- as.data.frame(correlations)
+  correlations$original_names <- row.names(correlations)
+  cor_distribution <- correlations %>%
+    mutate(mean = rowMeans(across(where(is.numeric)))) %>%
+    dplyr::select(mean, original_names) %>%
+    mutate(facet = facets[i])
+  cor_list[[i]] <- cor_distribution
+  cat('  \n\n')
+}
+```
+
+
+### Distribution of correlations
+
+#### Mean of per-sample correlations with every other sample in the study
+
+In other words, for each sample, what is its mean correlation with **every other sample in the study**?
+
+Sometimes it might be necessary to zoom in to see the required level of granularity on these plots. Click and drag a box around the region you would like to view in more detail.
+
+```{r correlations_group2,  fig.width = 9, fig.height = 8}
+cor_df1 <- as.data.frame(ref_correlations_samples)
+cor_df1$original_names <- row.names(cor_df1)
+cor_df2 <- exp_metadata_exp_samples[c(params$treatment_var,"original_names")]
+# STUDY WIDE CORRELATION MEANS
+cor_distribution_all <- left_join(cor_df1, cor_df2) %>%
+    mutate(mean = rowMeans(across(where(is.numeric)))) %>%
+    dplyr::select(mean, original_names, .data[[params$treatment_var]])
+cor_plot <- ggplot(cor_distribution_all, aes(.data[[params$treatment_var]], mean)) +
+  geom_boxplot(outlier.shape = NA, outlier.color = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot)
+# Ok, there's a bug that prevents outliers from being hidden, but whatever.
+# https://github.com/plotly/plotly.R/issues/1114
+```
+
+#### Mean of per-sample correlations with every other sample in its corresponding group
+
+In other words, for each sample, what is its mean correlation with every sample **within in its experimental grouping**?
+
+```{r correlations_group3,  fig.width = 9, fig.height = 8}
+# MEANS BY CHEMICAL
+cor_means_by_chem <- data.table::rbindlist(cor_list)
+cor_plot_2 <- ggplot(cor_means_by_chem, aes(facet, mean)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(size = 0.5) +
+  theme(axis.text = element_text(angle = 90))
+ggplotly(cor_plot_2)
+```
+
+## Potential covariates
+
+This examines correlations between the QC metrics calculated and any factors in the experimental design.  
+
+Please note that in these pairwise plots, some relationships are meaningless (e.g., dose vs dose). This is meant to explore trends that may not otherwise be apparent.  
+
+```{r possible_covariates, fig.height = 12, fig.width = 12}
+
+if (!is.na(params$batch_var)) {
+QAQC_metadata_subset <- QAQC_annotated %>%
+  dplyr::select(unlist(exp_groups), .data[[params$batch_var]],
+                NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+  QAQC_metadata_subset[,params$batch_var] <- factor(QAQC_metadata_subset[,params$batch_var])
+} else {
+    QAQC_metadata_subset <- QAQC_annotated %>%
+    dplyr::select(unlist(exp_groups),
+                  NMR_data, FMR_data, Ncov5_data, Nsig80_data, Gini_data)
+}
+
+QAQC_metadata_subset %>%
+    summarise_all(~length(unique(.))) # Just info. Output not used
+    #summarise_each(levels(as.factor(.))) %>% tally()
+
+potential_covariates <- QAQC_metadata_subset %>%
+  dplyr::mutate_all(as.factor) %>%
+  purrr::map(levels) %>%
+  purrr::map(length)
+
+
+covariate_names <- names(potential_covariates[potential_covariates < 24])
+
+# Need a generic way to look for dose column...
+#QAQC_metadata_subset$dose <- factor(log(QAQC_metadata_subset$dose+1))
+
+if (length(exp_groups) > 1 && !is.na(params$batch_var)) {
+  for (i in seq_along(exp_groups)[seq_along(exp_groups)]) {
+    # Drop groups that have high numbers of possible values
+    covariate_cols <- unlist(exp_groups[[i]])
+    for (subgroup in covariate_cols) {
+      cardinality <- length(levels(factor(QAQC_metadata_subset[,subgroup])))
+      if (cardinality > 24) {
+        covariate_cols <- covariate_cols[!covariate_cols %in% subgroup]
+      }
+    }
+    if (length(covariate_cols) < 1) {next}
+    p <- ggpairs(QAQC_metadata_subset,
+                 cardinality_threshold = 24,
+                 columns = c(covariate_cols,
+                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"),
+                 ggplot2::aes(colour = .data[[params$batch_var]]))
+    print(p)
+  }
+} else {
+  if (length(exp_groups) <= 1 && !is.na(params$batch_var)) {
+  p <- ggpairs(QAQC_metadata_subset,
+                 cardinality_threshold = 24,
+                 columns = c(unlist(exp_groups),
+                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"),
+                 ggplot2::aes(colour = .data[[params$batch_var]]))
+  print(p)
+} else {
+  if (is.na(params$batch_var)) {
+  p <- ggpairs(QAQC_metadata_subset,
+                 cardinality_threshold = 24,
+                 columns = c(unlist(exp_groups),
+                           "NMR_data", "FMR_data", "Ncov5_data", "Nsig80_data", "Gini_data"))
+  print(p)
+  }
+}
+}
+
+```
 
 ```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```

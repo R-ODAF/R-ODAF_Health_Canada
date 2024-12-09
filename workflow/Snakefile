@@ -1,17 +1,17 @@
-include: "modules/1-define.smk"
+include: "modules/define.smk"
 
 
 
 rule all:
-	input: "reports_complete"
+	input: sm_temp_dir / "reports_complete"
 
 if common_config["platform"] == "TempO-Seq":
-	include: "modules/4-preprocess_temposeq.smk"
+	include: "modules/1-preprocess_temposeq.smk"
 
 if common_config["platform"] == "RNA-Seq":
-	include: "modules/4-preprocess_rnaseq.smk"
+	include: "modules/1-preprocess_rnaseq.smk"
 
-include: "modules/5-qc.smk"
+include: "modules/2-qc.smk"
 
-include: "modules/6-diffexp.smk"
+include: "modules/3-diffexp_and_reports.smk"
 
