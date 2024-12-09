@@ -74,7 +74,7 @@ output:
     toc: true
     toc_float: true
     number_sections: false
-    code_folding: show
+    code_folding: hide
     theme: spacelab           # flatly spacelab sandstone cerulean
     code_download: true
 bibliography: "`r file.path(params$projectdir, 'references/rf_references.bib')`"
@@ -94,6 +94,8 @@ library(scales)
 library(viridisLite)
 library(formattable)
 library(stringr)
+library(ComplexHeatmap)
+library(circlize)
 ```
 
 ---
@@ -210,87 +212,10 @@ RF <- function(bm, bioset, N){
 }
 ```
 
-```{r heatmap_function, echo=FALSE}
-make_heatmap <- function (filtered_data, threshold_lo, threshold_hi, colours, breaks = NULL) {
-
-  # Make matrix
-  # Exclude the 'Biomarker' column and convert the remaining data frame to a matrix
-  data_matrix <- filtered_data %>%
-    select(-Biomarker) %>%
-    as.matrix() %>%
-    t()  # Transpose so biomarkers are on x-axis, biosets on y-axis
-  # Put biomarker names back in
-  colnames(data_matrix) <- filtered_data$Biomarker
-
-  # Set up the layout: 1 row, 2 columns, so legend is beside the heatmap
-  layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))
-
-  # Set up legend and main title
-  if (threshold_hi == 4) {
-    legend_text <- c(paste0("< ", threshold_lo), paste0(threshold_lo, " to ", threshold_hi), paste0("> ", threshold_hi))
-    title <- "Heatmap for Biomarkers with Threshold -4 to 4"
-    fill = c("blue", "white", "red")
-  } else if (threshold_hi == 15) {
-    legend_text <- c(paste0("< ", threshold_lo), paste0(threshold_lo, " to ", threshold_hi), paste0("> ", threshold_hi))
-    title <- "Heatmap for Biomarkers with Threshold -15 to 15"
-    fill = c("blue", "white", "red")
-  } else {
-    # Trick to make a continuous legend in R base heatmap
-    # With 0 in the middle (white)
-    min_logpval <- min(data_matrix, na.rm = TRUE)
-    max_logpval <- max(data_matrix, na.rm = TRUE)
-    cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
-
-    legend_text <- seq(-cont_legend_limit, cont_legend_limit, length.out = 21) %>% round()
-    title <- "Heatmap for Biomarkers with no published thresholds"
-
-    # Generate the continuous color palette
-    colours <- colorRampPalette(c("blue", "white", "red"))(21)
-    breaks <- seq(-cont_legend_limit, cont_legend_limit, length.out = 22)
-  }
-
-  # Create the heatmap using the image function
-  par(mar = c(2, 10, 18, 0), cex.main = 0.8)  # Margins: bottom, left, top, right
-
-  if (threshold_hi > 0) {
-    image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
-          col = colours, breaks = c(-100, threshold_lo, threshold_hi, 100), axes = FALSE, xlab = "", ylab = "",
-          main = title)
-  } else { 
-    image(1:ncol(data_matrix), 1:nrow(data_matrix), t(data_matrix),
-          col = colours, breaks = breaks, 
-          axes = FALSE, xlab = "", ylab = "",
-          main = title)
-  }
-
-  # Add row and column labels
-  axis(3, at = 1:ncol(data_matrix), labels = colnames(data_matrix), las = 2)
-  axis(2, at = 1:nrow(data_matrix), labels = rownames(data_matrix), las = 2)
-
-  # Add borders around the cells
-  for (i in 1:ncol(data_matrix)) {
-    for (j in 1:nrow(data_matrix)) {
-      rect(i - 0.5, j - 0.5, i + 0.5, j + 0.5, border = "grey")
-    }
-  }
-
-  # Create a blank plot for the legend
-  par(mar = c(5, 0, 5, 0))  # Adjust margins for the legend
-  plot.new()
-  legend("center", legend = legend_text, 
-         fill = colours, 
-         title = "-log(p-value)")
-}
-
-```
-
-
 ```{r load_biomarkers, echo=FALSE}
 bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker_", full.names = TRUE)
 
 biomarkers <- str_extract(bms, "(?<=Biomarker_)[^_]+")
-nms <- c("AHR", "Aneugen1", "Aneugen2", "AR", "Genomark", "ERa50", "ERa46", "FattyLiver", "HIF1", "HSF1", "MTF1",
-	"Nrf2", "PParHepaRG", "PParHH", "TGxDDI", "HDACiTk6", "HDACiHepaRG", "TGxTB", "TSA")
 
 # Nested list of biomarkers with genes and scores
 bm <- NULL
@@ -462,10 +387,12 @@ htmltools::div(
 ## Running Fisher Analysis {-}
 
 ```{r threshold_setup, echo=FALSE}
+# Should un-hardcode this, or write conditional so sentences below only show biomarkers actually used.
 threshold4 <- c("AHR", "AR",
                 "ERa50", "ERa46",
                 "HSF1", "MTF1",
-                "Nrf2", "TGx-DDI")
+                "Nrf2-mouse", "TGx-DDI",
+                "Nrf2-human")
 
 threshold15 <- c("TGx-HDACi-TK6")
 
@@ -474,42 +401,137 @@ thresholdunknown <- c("Aneugen1", "Aneugen2",
                       "HIF1", "PPARaHepaRG",
                       "PPARaHH", "TGx-HDACi-HepaRG",
                       "TGx-TB", "TSA")
-                      
-# Define custom color palette for heatmaps
-custom_colors <- c("blue", "white", "red")
 
+thresholds <- c("AHR" = 4,
+                "AR" = 4,
+                "ERa50" = 4,
+                "ERa46" = 4,
+                "HSF1" = 4,
+                "MTF1" = 4,
+                "Nrf2-mouse" = 4,
+                "TGx-DDI" = 4,
+                "Nrf2-human" = 4,
+                "TGx-HDACi-TK6" = 15)
 
 # Define fig heights for heatmaps
-heatmap_height <- (length(bs) / 4) + 5
+heatmap_height <- (length(bs) / 6) + 5
 ```
 
-### Heatmaps {.tabset .tabset-pills}
+### Heatmap {.tabset .tabset-pills}
 
-#### Threshold -4 to 4
-```{r heatmap_threshold4, echo=FALSE, fig.height=heatmap_height}
-selected_data_threshold4 <- out2 %>% 
-  filter(Biomarker %in% threshold4)
+The heatmaps below show the -log10(p-value) for each biomarker and bioset combination. 
+For biomarkers that have published threshold scores, the symbols indicate values **above the positive threshold (filled dot)** and **below the negative threshold (x)**.
+For more information, see the table below and references therein.
 
-make_heatmap(selected_data_threshold4, -4, 4, custom_colors)
+Biomarkers with 4 (positive) and -4 (negative) thresholds: `r paste(threshold4, collapse = ", ")`
+
+Biomarkers with 15 (positive) and -15 (negative) thresholds: `r paste(threshold15, collapse = ", ")`
+
+Biomarkers without published threshold (no symbols will appear on heatmap): `r paste(thresholdunknown, collapse = ", ")`
+
+```{r heatmap_function, echo=FALSE}
+
+make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, cluster_rows = FALSE, cluster_columns = FALSE) {
+  print(cont_legend_limit)
+
+  legend_values <- round(seq(-cont_legend_limit, cont_legend_limit, length.out = 5), digits = 1)
+
+  ComplexHeatmap::Heatmap(
+  matrix_data,
+  name = "-log10(p-value)",
+  col = colorRamp2(c(-cont_legend_limit, 0, cont_legend_limit), c("blue", "white", "red")),
+  heatmap_legend_param = list(at = legend_values),
+  row_names_gp = gpar(fontsize = 10),
+  column_names_gp = gpar(fontsize = 10),
+  show_column_names = TRUE,
+  show_row_names = TRUE,
+  cluster_rows = cluster_rows,
+  cluster_columns = cluster_columns,
+  column_title = "Biomarkers",
+  row_title = "Biosets",
+  row_title_side = "left",
+  column_title_side = "top",
+  # Add symbols for values above and below thresholds
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    threshold <- thresholds[colnames(selected_data)[j]]
+    if (!is.na(threshold)) {
+      if (selected_data[i, j] > threshold) {
+        grid.points(x, y, pch = 16, size = unit(2, "mm"), gp = gpar(col = "black"))
+      } else if (selected_data[i, j] < -threshold) {
+        grid.text("x", x, y, gp = gpar(col = "black", fontsize = 10))
+      }
+    }
+  },
+  # Add annotations for thresholds across top of heatmap
+  top_annotation = HeatmapAnnotation(
+    thresholds = anno_text(as.character(thresholds[colnames(selected_data)]), 
+                           rot = 0, 
+                           just = "center", 
+                           gp = gpar(fontsize = 10))
+  )
+)
+}
+
 ```
 
-#### Threshold -15 to 15
-```{r heatmap_threshold15, echo=FALSE, fig.height=heatmap_height}
-selected_data_threshold15 <- out2 %>% 
-  filter(Biomarker %in% threshold15)
+#### Unclustered Heatmap {-}
 
-make_heatmap(selected_data_threshold15, -15, 15, custom_colors)
+```{r unclust_heatmap, fig.height=heatmap_height}
+selected_data <- out2 %>%
+  select(-Biomarker) %>%
+  as.matrix() %>%
+  t()
+
+colnames(selected_data) <- biomarkers
+
+# Set up color palette so zero is white
+min_logpval <- min(selected_data, na.rm = TRUE)
+max_logpval <- max(selected_data, na.rm = TRUE)
+cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
+
+
+heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit)
+
+draw(heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("heatmap.pdf", width = 10, height = 10)
+# draw(heatmap)
+# dev.off()
+
 ```
 
-#### No published thresholds
-```{r heatmap_thresholdunknown, echo=FALSE, fig.height=heatmap_height}
-selected_data_thresholdunknown <- out2 %>% 
-  filter(Biomarker %in% thresholdunknown)
+#### Heatmap, clustered rows {-}
 
-make_heatmap(selected_data_thresholdunknown, 0, 0, continuous_colors)
+```{r rowclust_heatmap, fig.height=heatmap_height}
+rowclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_rows = TRUE)
+
+draw(rowclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("rowclust_heatmap.pdf", width = 10, height = 10)
+# draw(rowclust_heatmap)
+# dev.off()
 ```
 
-### Plots {.tabset .tabset-pills}
+#### Heatmap, clustered columns {-}
+
+```{r colclust_heatmap, fig.height=heatmap_height}
+colclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_columns = TRUE)
+
+draw(colclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("colclust_heatmap.pdf", width = 10, height = 10)
+# draw(colclust_heatmap)
+# dev.off()
+```
+
+
+### Individual plots {.tabset .tabset-pills}
+
+These plots show a more detailed view of the -log10(p-value) scores for each bioset and biomarker combination.
+
 ```{r plot_RF, echo=FALSE, results='asis'}
 # Initialize an empty list to store ggplot objects for the combined plot
 plot_list_combined <- list()
@@ -531,13 +553,13 @@ for (i in seq_along(unique(out$Biomarker))) {
   j <- out %>% 
     filter(Biomarker == biomarker) %>%
     arrange(o, decreasing = TRUE) %>%
-    mutate(Chemical = str_extract(Chem, "^[^_]+")) %>% 
+    mutate(Group = str_extract(Chem, "^[^_]+")) %>% 
     mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
   
   cat(paste0("#### ", biomarker, "\n\n"))  # Show each plot in its own tab
 
   # Create the plot with full x-axis and y-axis labels
-  p <- ggplot(j, aes(x = Chem, y = o, color = Chemical)) +
+  p <- ggplot(j, aes(x = Chem, y = o, color = Group)) +
     geom_point(size = 3) +
     geom_hline(yintercept = threshold_hi, color = "black") +
     geom_hline(yintercept = threshold_lo, color = "black") +
@@ -588,33 +610,38 @@ table_data <- data.frame(
   Biomarker_name = c("AHR", "Aneugen1", "Aneugen2",
                      "AR", "ERa46", "ERa50",
                      "FattyLiverDisease", "Genomark","HIF1",
-                     "HSF1", "MTF1", "Nrf2",
+                     "HSF1", "MTF1", "Nrf2-mouse",
                      "PPARaHepaRG", "PPARaHH", "TGx-DDI",
-                 "TGx-HDACi-TK6", "TGx-HDACi-TK6", "TGx-TB", "TSA"),
+                 "TGx-HDACi-TK6", "TGx-HDACi-HDACi", "TGx-TB", 
+                 "TSA", "Nrf2-human"),
   Organism = c("", "", "",
               "Human", "Human", "Human",
               "", "Human", "Human",
               "Human", "Human", "Mouse",
               "Human", "Human", "Human",
-              "Human", "", "", "Human"),
+              "Human", "Human", "", 
+              "Human", "Human"),
   Cell_line = c("", "", "",
                 "LAPC-4", "HeapRG", "MCF7",
                 "", "HepaRG", "DU 145, PC-3, and 22Rv1",
                 "various", "various", "liver",
                 "HepaRG", "Primary hepatocytes", "TK6 and HepaRG",
-                "TK6", "", "", "MCF7"),
+                "TK6", "HDAci", "", 
+                "MCF7", "various"),
   Threshold_log10_p_value = c("-4/4", "", "",
                               "-4/4", "", "-4/4",
                               "-4/4", "", "",
                               "-4/4", "-4/4", "-4/4",
                               "", "", "-4/4",
-                              "-15/15", "", "", ""),
+                              "-15/15", "", "", 
+                              "", "-4/4"),
   Reference = c("@corton_gene_2022", "", "",
-                "@rooney_activation_2018", "@thienpont_novel_2023", "@corton_50_gene_2024",
-                "@ryan_moving_2016", "@lichtenstein_transcript_2020", "@jonsson_hypoxia-independent_2016",
+                "@rooney_activation_2018", "@ryan_moving_2016", "@corton_50_gene_2024",
+                "@lichtenstein_transcript_2020", "@thienpont_novel_2023", "@jonsson_hypoxia-independent_2016",
                 "@cervantes_gene_2021", "@jackson_identification_2020", "@rooney_activation_2018",
                 "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_flow_2020",
-                "@cho_development_2021", "", "", "@yeakley_trichostatin_2017")
+                "@cho_development_2021", "", "",
+                "@yeakley_trichostatin_2017", "@rooney_mining_2020")
 )
 
 table_filtered <- table_data %>%
