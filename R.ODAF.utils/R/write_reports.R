@@ -180,10 +180,12 @@ make_hdaci_reports <- function(pars, paths, facet) {
 #' @export
 
 make_runningfisher_report <- function(pars, paths, input) {
+  project_title <- pars$project_title
+  timestamp <- format(Sys.time(), '%d-%m-%Y.%H.%M')
   if (pars$write_additional_output && pars$generate_runningfisher_report) {
     message("Generating Running Fisher report")
     runningfisher_report <- file.path(paths$projectdir, "Rmd", "running_fisher.Rmd")
-    runningfisher_file <- file.path(paths$reports_dir, "running_fisher.html")
+    runningfisher_file <- file.path(paths$reports_dir, paste0(project_title, "_running_fisher_", timestamp, ".html"))
     render_report(runningfisher_report, runningfisher_file, pars)
   }
 }
