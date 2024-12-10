@@ -233,6 +233,8 @@ for(k in 1:length(bms)){
 ```
 
 ```{r load_biosets, echo=FALSE}
+# bs object already in env because of render_DESeq2_report.parallel.R
+
 # Select EnsemblID as ID column
 # Note ensembl ID column needs to be renamed as Gene to match Andrew's code
 select_and_rename <- function(df) {
@@ -387,21 +389,7 @@ htmltools::div(
 ## Running Fisher Analysis {-}
 
 ```{r threshold_setup, echo=FALSE}
-# Should un-hardcode this, or write conditional so sentences below only show biomarkers actually used.
-threshold4 <- c("AHR", "AR",
-                "ERa50", "ERa46",
-                "HSF1", "MTF1",
-                "Nrf2-mouse", "TGx-DDI",
-                "Nrf2-human")
-
-threshold15 <- c("TGx-HDACi-TK6")
-
-thresholdunknown <- c("Aneugen1", "Aneugen2",
-                      "Genomark", "FattyLiverDisease",
-                      "HIF1", "PPARaHepaRG",
-                      "PPARaHH", "TGx-HDACi-HepaRG",
-                      "TGx-TB", "TSA")
-
+# Define thresholds for biomarkers based on publications
 thresholds <- c("AHR" = 4,
                 "AR" = 4,
                 "ERa50" = 4,
@@ -411,7 +399,36 @@ thresholds <- c("AHR" = 4,
                 "Nrf2-mouse" = 4,
                 "TGx-DDI" = 4,
                 "Nrf2-human" = 4,
-                "TGx-HDACi-TK6" = 15)
+                "TGx-HDACi-TK6" = 15,
+                "Aneugen1" = NA, 
+                "Aneugen2" = NA,
+                "Genomark" = NA,
+                "FattyLiverDisease" = NA,
+                "HIF1" = NA,
+                "PPARaHepaRG" = NA,
+                "PPARaHH" = NA,
+                "TGx-HDACi-HepaRG" = NA,
+                "TGx-TB" = NA,
+                "TSA" = NA)
+
+# Only published biomarkers (in RF_biomasrkers folder) will be shown/used
+threshold4 <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(thresholds == 4) %>%
+              dplyr::pull(Biomarker)
+
+threshold15 <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(thresholds == 15) %>%
+              dplyr::pull(Biomarker)
+
+thresholdunknown <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(is.na(thresholds)) %>%
+              dplyr::pull(Biomarker)
 
 # Define fig heights for heatmaps
 heatmap_height <- (length(bs) / 6) + 5
