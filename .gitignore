@@ -69,6 +69,8 @@ count_table*.tsv
 checksum*
 truth_checksums/*
 
+# Unpublished Running Fisher Biomarkers
+resources/RF_biomarkers/*UNPUBLISHED.txt
 
 ## Misc
 *Log.out
