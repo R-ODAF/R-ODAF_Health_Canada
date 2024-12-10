@@ -113,7 +113,13 @@ Report prepared for: `r params$researcher_name`
 ***
 Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in @kupershmidt_ontology_based_2010.
 
-Here is an explanation (that perhaps Andrew will provide?) of the Running Fisher method:
+The Running Fisher (RF) algorithm is a method for comparing two ranked lists of genes. The algorithm is based on the Fisher's exact test.
+The results of the analysis in this report can be considered *exploratory* and should be *interpreted with caution*. 
+Biomarkers were developed in specific cell lines (see the table at the end of this report), and the results may not be generalizable to other cell lines or conditions.
+
+This report was generated as part of the R-ODAF_Health_Canada pipeline. For more information, see the [R-ODAF GitHub repository](https://github.com/R-ODAF/R-ODAF_Health_Canada/).
+
+The biosets generated in that pipeline and used as input for the Running Fisher analyses consist of differentially expressed genes (DEGs) and their fold change from DESeq2 analysis, filtered according to the R-ODAF criteria [@VERHEIJEN2022105143], and then filtered for only DEGs with padj < 0.05 and abs(linear fold change) > `r params$linear_fc_filter_biosets `.
 
 ***
 ```{r functions, echo=FALSE}
@@ -298,13 +304,19 @@ write.table(out2, file = file.path(paths$BMD_output, "RF_results.txt"), sep = "\
 
 ## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
 
+This table shows the number of genes in each biomarker, and how many of those genes are present in your dataset.
+If your project used TempO-seq, "Matches in Dataset" refers to the number of genes in the biomarker that are present in the TempO-seq manifest.
+If your project used RNA-seq, "Matches in Dataset" refers to the number of genes in the biomarker that are present in the count data.
+
+The rest of the columns show the number of genes from each biomarker that are present in each bioset.
+
 ```{r match_bm_counttable, echo=FALSE}
 
 if (params$platform == "TempO-Seq") {
   # Initialize an empty dataframe to store the results
   match_counts <- data.frame(Biomarker = character(), 
                              Genes_in_biomarker = integer(), 
-                             Manifest = integer(), 
+                             Matches_in_Dataset = integer(), 
                              stringsAsFactors = FALSE)
 
   for (biomarker_name in names(bm)) {
@@ -548,6 +560,7 @@ draw(colclust_heatmap)
 ### Individual plots {.tabset .tabset-pills}
 
 These plots show a more detailed view of the -log10(p-value) scores for each bioset and biomarker combination.
+This is a more detailed view of the data shown in the heatmaps above.
 
 ```{r plot_RF, echo=FALSE, results='asis'}
 # Initialize an empty list to store ggplot objects for the combined plot
@@ -677,3 +690,6 @@ kable(table_filtered, col.names = c("Biomarker Name", "Organism", "Cell line or 
 
 ```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
 ```
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>
