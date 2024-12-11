@@ -28,6 +28,7 @@ get_DESeq_results <- function(dds,
   Counts <- DESeq2::counts(dds, normalized = TRUE)
   CPMdds <- edgeR::cpm(DESeq2::counts(dds, normalized = TRUE))
   mergedDEGs <- c()
+  bioset_input <- list()
 
   for (x in seq_len(nrow(contrasts))) { # For all comparisons to be done
    condition1 <- contrasts[x, 2] # Control
@@ -147,6 +148,11 @@ get_DESeq_results <- function(dds,
             Filter[gene, 3] <- 1
       }
    }
+  
+  # Extract tables for biosets 
+  
+   bioset_input[[contrast_string]] <- DEsamples[rowSums(Filter) == 3 & !is.na(DEsamples$padj) &  abs(DEsamples$log2FoldChange) > log2(params$linear_fc_filter_biosets) ,]
+
 
    # Extract the final list of DEGs
    
@@ -196,7 +202,8 @@ mergedDEGs <- unique(mergedDEGs)
       resListFiltered = resListFiltered,
       resListDEGs = resListDEGs,
       mergedDEGs = mergedDEGs,
-      filtered_table = filtered_table
+      filtered_table = filtered_table,
+      bioset_input = bioset_input
     )
   )
 }

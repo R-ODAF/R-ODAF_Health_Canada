@@ -249,6 +249,10 @@ properties:
         type: boolean
       generate_go_pathway_report:
         type: boolean
+      generate_summary_report:
+        type: boolean
+      generate_runningfisher_report:
+        type: boolean
       output_digits:
         type: integer
         minimum: 1
@@ -284,6 +288,8 @@ properties:
       - generate_stats_report
       - generate_data_explorer_report
       - generate_go_pathway_report
+      - generate_summary_report
+      - generate_runningfisher_report
       - output_digits
       - parallel
 required:
