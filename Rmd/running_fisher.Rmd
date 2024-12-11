@@ -669,7 +669,7 @@ table_data <- data.frame(
                 "@rooney_activation_2018", "@ryan_moving_2016", "@corton_50_gene_2024",
                 "@lichtenstein_transcript_2020", "@thienpont_novel_2023; @ates_novel_2018", "@jonsson_hypoxia-independent_2016",
                 "@cervantes_gene_2021", "@jackson_identification_2020", "@rooney_activation_2018",
-                "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_flow_2020",
+                "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_integration_2015",
                 "@cho_development_2021", "", "",
                 "@yeakley_trichostatin_2017", "@rooney_mining_2020")
 )

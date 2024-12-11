@@ -119,7 +119,7 @@ Report prepared for: `r params$researcher_name`
 ***
 
 <span style="color:red;">
-WARNING: The TGx-DDI biomarker was developed using the TK6 cell line [@li2015development] and has been tested on HepaRG [@buick2020tgxddi_hepaRG].
+WARNING: The TGx-DDI biomarker was developed using the TK6 cell line [@li2015development] and has been tested on HepaRG [@buick_integration_2015; @buick2020tgxddi_hepaRG].
 The results of this analysis may not be applicable to other cell lines or tissues.
 </span>
 
