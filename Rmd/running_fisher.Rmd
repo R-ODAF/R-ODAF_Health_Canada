@@ -1,0 +1,695 @@
+---
+params:
+  projectdir: null # Use when loading. If null, here::here() will be used. Can also hard code if for some reason you need that
+  project_title: "Test"    # Change depending on your project name
+  researcher_name: "Name" # Name of the researcher leading the project
+  bioinformatician_name: "Name" # Name of the person running the R-ODAF analyses
+  metadata_file: "metadata.txt" # Name of the metadata file. Must be in inputs/metadata/ 
+  contrasts_file: "contrasts.txt" # Name of the contrasts file. Must be in inputs/contrasts/ 
+  project_description: null # description of project for report, optional
+  analysis_name: "default" # short string identifying analysis settings. This will appear in the analysis directory and file names
+  batch_var: "batch"          # For example, multiple plates
+  dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
+  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
+  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
+  celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
+  units: "uM" # only required for biosets output. Units of dose
+  species: "human"                 # one of human, mouse, rat, hamster
+  design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
+  intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
+  intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
+  formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
+  deseq_facet: "chemical"       # If you have many different experimental groups, you may subset the report by specifying a column in the metadata to filter groups, and then setting the group of interest in deseq_filter
+  deseq_filter:  null        # Which group will this report be done on?
+  reports_facet: null #  
+  reports_filter:  null # 
+  sortcol: "dose"                # Optionally, a column by which to sort the contrasts
+  solvent_control: "solvent_control"
+  lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
+  strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report
+  exclude_samples: null      # Optionally, a vector of sample names to exclude from the analysis
+  exclude_groups: null       # Optionally, a vector of groups to exclude from the analysis. By default this is assumed to be in the column specified by params$design.
+  include_only_column:  null # Restrict analysis to group(s) in the column listed here based on params$include_only_group.
+  include_only_group:  null  # Restrict analysis to this/these group(s) within the column listed in params$include_only_column
+  cpus: 41                       # Set to a lower number (e.g., 2 to 4) if you aren't working in a server environment
+  run_pathway_analysis: TRUE     # Optionally disable pathway analysis if not available for your organism
+  wikipathways_directory: "~/shared/dbs/wikipathways"
+  linear_fc_filter_DEGs: 1.5 # Default 1.5
+  linear_fc_filter_biosets: 1.2 # Default 1.2. Used for biosets output when write_additional_output=True
+  biospyder_dbs: "~/shared/dbs/biospyder/"
+  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
+  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
+  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
+  wikipathways_filename: "wikipathways-20210810-gmt-Homo_sapiens.gmt"
+  KEGGpathways_filename: "c2.cp.kegg_medicus.v2023.2.Hs.symbols.gmt"
+  # "wikipathways-20210810-gmt-Mus_musculus.gmt"
+  # "wikipathways-20210810-gmt-Rattus_norvegicus.gmt"
+  nBestFeatures: 20              # The number of best features to make plots of their counts
+  nBest: 100                     # Number of features to include in table and limiting PCA/clustering analysis
+  nHeatmap: 50                   # Number of most variable genes for heatmap
+  nHeatmapDEGs: 50               # Number of DEGs for heatmap
+  cooks: FALSE                   # the DESeq Cook's distance cutoff, or FALSE to disable it
+  filter_gene_counts: FALSE      # Filter genes to those with at least 1 count in 1 sample. Disabled by default for biomarker file output. Can enable to increase speed of analysis
+  generate_main_report: TRUE
+  generate_stats_report: TRUE
+  generate_data_explorer_report: TRUE
+  generate_go_pathway_report: TRUE
+  generate_tgxddi_report: TRUE
+  generate_tgxhdaci_report: TRUE
+  generate_runningfisher_report: TRUE
+  generate_summary_report: TRUE
+  output_digits: 5
+  parallel: FALSE
+  species_data: null
+  count_data_file: null
+  sampledata_sep: null
+  MinCount: null
+  alpha: 0.05
+  feature_id: null
+  biospyder: null
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+    theme: spacelab           # flatly spacelab sandstone cerulean
+    code_download: true
+bibliography: "`r file.path(params$projectdir, 'references/rf_references.bib')`"
+
+---
+
+```{r docSetup, warning = FALSE, message = FALSE, include = F}
+#### Record start time
+startTime <- Sys.time()
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+library(pheatmap)
+library(scales)
+library(viridisLite)
+library(formattable)
+library(stringr)
+library(ComplexHeatmap)
+library(circlize)
+```
+
+---
+title: "`r params$platform` Running Fisher biomarker suite report"
+---
+
+# `r params$project_title` {-}
+
+Date report generated: `r format(Sys.time(), '%d %B, %Y')`  
+
+Report prepared by: `r params$bioinformatician_name`
+
+Report prepared for: `r params$researcher_name`
+
+***
+Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in @kupershmidt_ontology_based_2010.
+
+The Running Fisher (RF) algorithm is a method for comparing two ranked lists of genes. The algorithm is based on the Fisher's exact test.
+The results of the analysis in this report can be considered *exploratory* and should be *interpreted with caution*. 
+Biomarkers were developed in specific cell lines (see the table at the end of this report), and the results may not be generalizable to other cell lines or conditions.
+
+This report was generated as part of the R-ODAF_Health_Canada pipeline. For more information, see the [R-ODAF GitHub repository](https://github.com/R-ODAF/R-ODAF_Health_Canada/).
+
+The biosets generated in that pipeline and used as input for the Running Fisher analyses consist of differentially expressed genes (DEGs) and their fold change from DESeq2 analysis, filtered according to the R-ODAF criteria [@VERHEIJEN2022105143], and then filtered for only DEGs with padj < 0.05 and abs(linear fold change) > `r params$linear_fc_filter_biosets `.
+
+***
+```{r functions, echo=FALSE}
+K <- function(bm, bioset){
+	#Arguments are two ranked order lists of genes
+	#Return the rankings for each common gene in the bioset
+	rnk <- 1:length(bioset)
+	K <- data.frame(ID = bm, Rank = 0)
+	ID <- 1:length(bioset)
+
+	for(j in 1:nrow(K)){
+		flag <- bioset == K$ID[j]
+		if(length(bioset[flag]) == 1) K$Rank[j] <- ID[flag]
+	}
+	K[K$Rank > 0,]
+}
+
+mat <- function(bm, bioset, N){
+	n <- length(bm)
+	x11 <- length(bioset[bioset %in% bm])
+	x12 <- n - x11
+	x21 <- length(bioset) - x11
+	x22 <- N - x21 - x11 - x12
+	matrix(c(x11, x21, x12, x22), ncol = 2)
+}
+
+test <- function(mat){
+	pval <- fisher.test(mat, alternative = "greater")$p.value
+	if(is.na(pval)){
+		pval <- 2.2e-16
+	}
+	pval
+}
+
+runningFisher <- function(bm, bioset, N){
+	score <- 0
+	if(length(bm) > 0){
+		Runs <- K(bm, bioset)
+		if(length(Runs$ID) > 0){
+			Runs$pval <- 1
+			for(k in 1:nrow(Runs)){
+				bs <- bioset[1:Runs$Rank[k]]
+				m <- mat(bm, bs, N)				
+				Runs$pval[k] <- test(m)
+			}
+			score <- min(Runs$pval*length(Runs$pval))
+			if(score > 1) score <- 1
+			-log10(score)
+		} else {
+			score
+		}
+	} else {
+		score
+	}
+}
+
+signedRF <- function(b1up, b1down, b2up, b2down, N){
+	s1 <- runningFisher(b1up, b2up, N)
+	s2 <- runningFisher(b1down, b2down, N)
+	s3 <- runningFisher(b1up, b2down, N)
+	s4 <- runningFisher(b1down, b2up, N)
+
+	#Reverse order
+	r1 <- runningFisher(b2up, b1up, N)
+	r2 <- runningFisher(b2down, b1down, N)
+	r3 <- runningFisher(b2up, b1down, N)
+	r4 <- runningFisher(b2down, b1up, N)
+
+	#The same procedure in this reverse direction produces another score for the same subset pair.
+	#The 2 scores are averaged to represent the magnitude of the similarity between the 2 subsets.
+	s1 <- (s1+r1)/2
+	s2 <- (s2+r2)/2
+	s3 <- (s3+r3)/2
+	s4 <- (s4+r4)/2
+
+	#The overall score is computed by summing up all directional subset pair scores. The sign of the 
+	#sum determines whether the 2 signatures are positively or negatively correlated. Note a negative 
+	#sign is given if Di and Dj are opposite (s3 and s4)
+	score <- s1+s2-s3-s4
+	score
+}
+
+RF <- function(bm, bioset, N){
+	#bm <- bm[b][[1]]; bioset <- x
+
+	#Rank order the values
+	bm <- bm[order(abs(bm$Score), decreasing = TRUE),]
+
+	b1up <- bm$ID[bm$Score > 0]
+	b1down <- bm$ID[bm$Score < 0]
+
+	b2up <- bioset$Gene[bioset$fc > 0]
+	b2down <- bioset$Gene[bioset$fc < 0]
+
+	signedRF(b1up, b1down, b2up, b2down, N)
+}
+```
+
+```{r load_biomarkers, echo=FALSE}
+bms <- dir(path = here::here("resources", "RF_biomarkers"), pattern = "Biomarker_", full.names = TRUE)
+
+biomarkers <- str_extract(bms, "(?<=Biomarker_)[^_]+")
+
+# Nested list of biomarkers with genes and scores
+bm <- NULL
+
+for(k in 1:length(bms)){
+	tmp <- read.delim(bms[k])
+  tmp <- tmp %>% dplyr::select(EnsemblID, log2FC)
+	#tmp <- tmp[,c(1,2)] # change this to get ensembl IDs and scores
+	names(tmp) <- c("ID", "Score")
+	tmp <- tmp[order(abs(tmp$Score), decreasing = TRUE),]
+	tmp$ID <- toupper(tmp$ID)
+	bm$tmp <- tmp
+	names(bm)[k] <- biomarkers[k]
+}
+```
+
+```{r load_biosets, echo=FALSE}
+# bs object already in env because of render_DESeq2_report.parallel.R
+
+# Select EnsemblID as ID column
+# Note ensembl ID column needs to be renamed as Gene to match Andrew's code
+select_and_rename <- function(df) {
+  df <- df[, c("EnsemblID", "pval", "fc"), drop = FALSE]  # Select the columns
+  colnames(df) <- c("Gene", "pval", "fc")           # Rename the columns
+  return(df)
+}
+bs <- lapply(bs, select_and_rename)
+
+# Remove rows with NA ensemble IDs
+bs <- lapply(bs, function(x) x[!is.na(x$Gene), ])
+
+# Number of rows per bioset
+# sapply(bs, nrow)
+
+# Rename the biosets to remove extra information (which clutters up the plots)
+original_names <- names(bs)
+
+rename_function <- function(name) {
+  sub("(_[0-9.]+).*", "\\1", name)
+}
+
+new_names <- sapply(original_names, rename_function)
+names(bs) <- new_names
+# print(names(bs))
+
+```
+
+```{r run_RF, echo=FALSE}
+# N defines the number of genes in the universe which is the intersection of the bioset universe and the biomarker universe.
+if (params$platform == "TempO-Seq") {
+  # Get number of unique genes (not probes) from manifest
+  N <- length(unique(params$biospyder$Gene_Symbol))
+} else {
+  # For RNA-seq, use the length of the count data
+  ## Minus the number of rows with all zeros
+  zero_count <- apply(count_data, 1, function(row) all(row == 0)) %>% sum()
+  N <- nrow(count_data) - zero_count
+}
+
+
+out <- NULL
+out2 <- data.frame(Biomarker = names(bm))
+
+for(f in 1:length(bs)){
+	x <- bs[f][[1]]
+	nms <- names(bs)[f]
+	oo <- NULL
+	for(b in 1:length(bm)){
+		o <- RF(bm[b][[1]], x, N)
+		o <- cbind.data.frame(data.frame(Chem = nms, Biomarker = names(bm)[b]), o)
+		out <- rbind.data.frame(out, o)
+		oo <- rbind.data.frame(oo,o)
+	}
+	out2[[nms]] <- oo$o
+}
+
+# Export the results to a file
+write.table(out2, file = file.path(paths$BMD_output, "RF_results.txt"), sep = "\t", row.names = FALSE)
+```
+
+## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
+
+This table shows the number of genes in each biomarker, and how many of those genes are present in your dataset.
+If your project used TempO-seq, "Matches in Dataset" refers to the number of genes in the biomarker that are present in the TempO-seq manifest.
+If your project used RNA-seq, "Matches in Dataset" refers to the number of genes in the biomarker that are present in the count data.
+
+The rest of the columns show the number of genes from each biomarker that are present in each bioset.
+
+```{r match_bm_counttable, echo=FALSE}
+
+if (params$platform == "TempO-Seq") {
+  # Initialize an empty dataframe to store the results
+  match_counts <- data.frame(Biomarker = character(), 
+                             Genes_in_biomarker = integer(), 
+                             Matches_in_Dataset = integer(), 
+                             stringsAsFactors = FALSE)
+
+  for (biomarker_name in names(bm)) {
+    biomarker_df <- bm[[biomarker_name]]
+
+    genes_in_biomarker <- nrow(biomarker_df)
+
+    # Match ID column of the biomarker and the Ensembl_Gene_ID column of biospyder manifest
+    matching_genes <- sum(biomarker_df$ID %in% params$biospyder$Ensembl_Gene_ID)
+
+    # Store the result in the match_counts dataframe
+    match_counts <- rbind(match_counts, data.frame(Biomarker = biomarker_name, 
+                                                   Genes_in_biomarker = genes_in_biomarker, 
+                                                   Manifest = matching_genes))
+  }
+} else {
+  match_counts <- data.frame(Biomarker = character(),
+                             Genes_in_biomarker = integer(),
+                             Dataset = integer(),
+                             stringsAsFactors = FALSE)
+  
+  for (biomarker_name in names(bm)) {
+    biomarker_df <- bm[[biomarker_name]]
+
+    genes_in_biomarker <- nrow(biomarker_df)
+
+    # Match ID column of the biomarker and the rownames of the count data
+    matching_genes <- sum(biomarker_df$ID %in% rownames(count_data))
+
+    match_counts <- rbind(match_counts, data.frame(Biomarker = biomarker_name,
+                                                   Genes_in_biomarker = genes_in_biomarker,
+                                                   Dataset = matching_genes))
+  }
+}
+
+```
+
+```{r match_bm_bs, echo=FALSE, fig.height=6}
+# Initialize the matrix to store the results
+# Assuming bm and bs are already defined and populated
+results <- matrix(nrow = length(bm), ncol = length(bs))
+colnames(results) <- names(bs)
+rownames(results) <- names(bm)
+
+# Fill the matrix with the number of matching genes for each bioset
+for (i in 1:length(bm)) {
+  biomarker_df <- bm[[i]]
+  for (j in 1:length(bs)) {
+    bioset_df <- bs[[j]]
+    merged <- merge(biomarker_df, bioset_df, by.x = "ID", by.y = "Gene")
+    results[i, j] <- nrow(merged)
+  }
+}
+
+# Convert the matrix to a data frame
+results_df <- as.data.frame(results, stringsAsFactors = FALSE)
+results_df$Biomarker <- rownames(results_df)
+
+# Merge the match_counts and results_df dataframes
+final_df <- merge(match_counts, results_df, by = "Biomarker")
+
+# Fancy formatting
+formatted_table <- final_df %>%
+  formattable::formattable(
+    align = c("l", rep("r", ncol(final_df) - 1)),
+    list(
+      area(col = 2:3) ~ formattable::formatter("span", style = ~ formattable::style(font.style = "italic")),
+      area(col = 4:ncol(final_df)) ~ formattable::color_tile("#ffffff", "#54ce89")
+    )
+  ) %>%
+  formattable::as.htmlwidget()
+
+# Make table horizontally scrollable
+htmltools::div(
+  style = "overflow-x: auto; width: 100%; height: 700px;",
+  formatted_table
+)
+
+```
+
+
+## Running Fisher Analysis {-}
+
+```{r threshold_setup, echo=FALSE}
+# Define thresholds for biomarkers based on publications
+thresholds <- c("AHR" = 4,
+                "AR" = 4,
+                "ERa50" = 4,
+                "ERa46" = 4,
+                "HSF1" = 4,
+                "MTF1" = 4,
+                "Nrf2-mouse" = 4,
+                "TGx-DDI" = 4,
+                "Nrf2-human" = 4,
+                "TGx-HDACi-TK6" = 15,
+                "Aneugen1" = NA, 
+                "Aneugen2" = NA,
+                "Genomark" = NA,
+                "FattyLiverDisease" = NA,
+                "HIF1" = NA,
+                "PPARaHepaRG" = NA,
+                "PPARaHH" = NA,
+                "TGx-HDACi-HepaRG" = NA,
+                "TGx-TB" = NA,
+                "TSA" = NA)
+
+# Only published biomarkers (in RF_biomasrkers folder) will be shown/used
+threshold4 <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(thresholds == 4) %>%
+              dplyr::pull(Biomarker)
+
+threshold15 <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(thresholds == 15) %>%
+              dplyr::pull(Biomarker)
+
+thresholdunknown <- as.data.frame(thresholds) %>% 
+              dplyr::mutate(Biomarker = rownames(.)) %>%
+              dplyr::filter(Biomarker %in% biomarkers) %>%
+              dplyr::filter(is.na(thresholds)) %>%
+              dplyr::pull(Biomarker)
+
+# Define fig heights for heatmaps
+heatmap_height <- (length(bs) / 6) + 5
+```
+
+### Heatmap {.tabset .tabset-pills}
+
+The heatmaps below show the -log10(p-value) for each biomarker and bioset combination. 
+For biomarkers that have published threshold scores, the symbols indicate values **above the positive threshold (filled dot)** and **below the negative threshold (x)**.
+For more information, see the table below and references therein.
+
+Biomarkers with 4 (positive) and -4 (negative) thresholds: `r paste(threshold4, collapse = ", ")`
+
+Biomarkers with 15 (positive) and -15 (negative) thresholds: `r paste(threshold15, collapse = ", ")`
+
+Biomarkers without published threshold (no symbols will appear on heatmap): `r paste(thresholdunknown, collapse = ", ")`
+
+```{r heatmap_function, echo=FALSE}
+
+make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, cluster_rows = FALSE, cluster_columns = FALSE) {
+  print(cont_legend_limit)
+
+  legend_values <- round(seq(-cont_legend_limit, cont_legend_limit, length.out = 5), digits = 1)
+
+  ComplexHeatmap::Heatmap(
+  matrix_data,
+  name = "-log10(p-value)",
+  col = colorRamp2(c(-cont_legend_limit, 0, cont_legend_limit), c("blue", "white", "red")),
+  heatmap_legend_param = list(at = legend_values),
+  row_names_gp = gpar(fontsize = 10),
+  column_names_gp = gpar(fontsize = 10),
+  show_column_names = TRUE,
+  show_row_names = TRUE,
+  cluster_rows = cluster_rows,
+  cluster_columns = cluster_columns,
+  column_title = "Biomarkers",
+  row_title = "Biosets",
+  row_title_side = "left",
+  column_title_side = "top",
+  # Add symbols for values above and below thresholds
+  cell_fun = function(j, i, x, y, width, height, fill) {
+    threshold <- thresholds[colnames(selected_data)[j]]
+    if (!is.na(threshold)) {
+      if (selected_data[i, j] > threshold) {
+        grid.points(x, y, pch = 16, size = unit(2, "mm"), gp = gpar(col = "black"))
+      } else if (selected_data[i, j] < -threshold) {
+        grid.text("x", x, y, gp = gpar(col = "black", fontsize = 10))
+      }
+    }
+  },
+  # Add annotations for thresholds across top of heatmap
+  top_annotation = HeatmapAnnotation(
+    thresholds = anno_text(as.character(thresholds[colnames(selected_data)]), 
+                           rot = 0, 
+                           just = "center", 
+                           gp = gpar(fontsize = 10))
+  )
+)
+}
+
+```
+
+#### Unclustered Heatmap {-}
+
+```{r unclust_heatmap, fig.height=heatmap_height}
+selected_data <- out2 %>%
+  select(-Biomarker) %>%
+  as.matrix() %>%
+  t()
+
+colnames(selected_data) <- biomarkers
+
+# Set up color palette so zero is white
+min_logpval <- min(selected_data, na.rm = TRUE)
+max_logpval <- max(selected_data, na.rm = TRUE)
+cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
+
+
+heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit)
+
+draw(heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("heatmap.pdf", width = 10, height = 10)
+# draw(heatmap)
+# dev.off()
+
+```
+
+#### Heatmap, clustered rows {-}
+
+```{r rowclust_heatmap, fig.height=heatmap_height}
+rowclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_rows = TRUE)
+
+draw(rowclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("rowclust_heatmap.pdf", width = 10, height = 10)
+# draw(rowclust_heatmap)
+# dev.off()
+```
+
+#### Heatmap, clustered columns {-}
+
+```{r colclust_heatmap, fig.height=heatmap_height}
+colclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_columns = TRUE)
+
+draw(colclust_heatmap)
+
+# Save the heatmap to a PDF file, for testing.
+# pdf("colclust_heatmap.pdf", width = 10, height = 10)
+# draw(colclust_heatmap)
+# dev.off()
+```
+
+
+### Individual plots {.tabset .tabset-pills}
+
+These plots show a more detailed view of the -log10(p-value) scores for each bioset and biomarker combination.
+This is a more detailed view of the data shown in the heatmaps above.
+
+```{r plot_RF, echo=FALSE, results='asis'}
+# Initialize an empty list to store ggplot objects for the combined plot
+plot_list_combined <- list()
+
+for (i in seq_along(unique(out$Biomarker))) {
+  biomarker <- unique(out$Biomarker)[i]
+  
+  if (biomarker %in% threshold15) {
+    threshold_hi <- 15
+    threshold_lo <- -15
+  } else if (biomarker %in% threshold4) {
+    threshold_hi <- 4
+    threshold_lo <- -4
+  } else {
+    threshold_hi <- NULL
+    threshold_lo <- NULL
+  }
+
+  j <- out %>% 
+    filter(Biomarker == biomarker) %>%
+    arrange(o, decreasing = TRUE) %>%
+    mutate(Group = str_extract(Chem, "^[^_]+")) %>% 
+    mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
+  
+  cat(paste0("#### ", biomarker, "\n\n"))  # Show each plot in its own tab
+
+  # Create the plot with full x-axis and y-axis labels
+  p <- ggplot(j, aes(x = Chem, y = o, color = Group)) +
+    geom_point(size = 3) +
+    geom_hline(yintercept = threshold_hi, color = "black") +
+    geom_hline(yintercept = threshold_lo, color = "black") +
+    labs(title = biomarker,
+         y = "-log10(p-value)",
+         x = "Bioset") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+  print(p)
+
+  cat("\n\n")
+  
+  # Save the individual plot
+  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
+
+  # Append the modified plot to the list for the combined plot
+  plot_list_combined[[biomarker]] <- p
+}
+```
+
+```{r plot_combined, echo=FALSE, fig.height=20, fig.width=10}
+# Combine the plots using patchwork with a shared legend
+combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
+  plot_layout(guides = "collect",
+  axis_titles = "collect") +
+  plot_annotation(
+    title = NULL,
+    subtitle = NULL,
+    caption = NULL,
+    theme = theme(
+      plot.title = element_blank(),
+      plot.subtitle = element_blank(),
+      plot.caption = element_blank(),
+      axis.title.x = element_text(size = 12, face = "bold"),
+      axis.title.y = element_text(size = 12, face = "bold")
+    )
+  )
+
+# combined_plot
+```
+
+## Biomarker Table {-}
+
+```{r create_table}
+# Sample data
+table_data <- data.frame(
+  Biomarker_name = c("AHR", "Aneugen1", "Aneugen2",
+                     "AR", "ERa46", "ERa50",
+                     "FattyLiverDisease", "Genomark","HIF1",
+                     "HSF1", "MTF1", "Nrf2-mouse",
+                     "PPARaHepaRG", "PPARaHH", "TGx-DDI",
+                 "TGx-HDACi-TK6", "TGx-HDACi-HDACi", "TGx-TB", 
+                 "TSA", "Nrf2-human"),
+  Organism = c("", "", "",
+              "Human", "Human", "Human",
+              "", "Human", "Human",
+              "Human", "Human", "Mouse",
+              "Human", "Human", "Human",
+              "Human", "Human", "", 
+              "Human", "Human"),
+  Cell_line = c("", "", "",
+                "LAPC-4", "MCF7", "MCF7",
+                "", "HepaRG", "DU 145, PC-3, and 22Rv1",
+                "various", "various", "liver",
+                "HepaRG", "Primary hepatocytes", "TK6 and HepaRG",
+                "TK6", "HDAci", "", 
+                "MCF7", "various"),
+  Threshold_log10_p_value = c("", "", "",
+                              "-4/4", "", "-4/4",
+                              "-4/4", "", "",
+                              "-4/4", "-4/4", "-4/4",
+                              "", "", "-4/4",
+                              "-15/15", "", "", 
+                              "", "-4/4"),
+  Reference = c("", "", "",
+                "@rooney_activation_2018", "@ryan_moving_2016", "@corton_50_gene_2024",
+                "@lichtenstein_transcript_2020", "@thienpont_novel_2023; @ates_novel_2018", "@jonsson_hypoxia-independent_2016",
+                "@cervantes_gene_2021", "@jackson_identification_2020", "@rooney_activation_2018",
+                "@rogue_comparative_2011", "@rogue_comparative_2011", "@li_development_2015; @buick_integration_2015",
+                "@cho_development_2021", "", "",
+                "@yeakley_trichostatin_2017", "@rooney_mining_2020")
+)
+
+table_filtered <- table_data %>%
+  filter(Biomarker_name %in% biomarkers)
+
+# Create the table with advanced formatting
+kable(table_filtered, col.names = c("Biomarker Name", "Organism", "Cell line or tissue", "Threshold -log10(p-value)", "Reference")) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+
+# References
+
+<div id="refs"></div>
+
+
+```{r, child=file.path(paths$projectdir,'Rmd','session_info.Rmd')}
+```
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 0;"></div>

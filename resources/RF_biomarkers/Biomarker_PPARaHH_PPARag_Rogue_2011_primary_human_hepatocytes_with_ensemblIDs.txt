@@ -1,0 +1,97 @@
+GeneSymbol	log2FC	ENTREZID	SYMBOL	Description	Group	EnsemblID
+ABAT	-0.835	18	ABAT	4-aminobutyrate aminotransferase	Amino acid metabolism	ENSG00000183044
+ABCB11	-0.635	8647	ABCB11	ATP-binding cassette, sub-family B (MDR/TAP), member 11	Cholesterol/Bile tansport and metabolism	ENSG00000073734
+ABCB4	0.907	5244	ABCB4	ATP-binding cassette, sub-family B (MDR/TAP), member 4	Cholesterol/Bile tansport and metabolism	ENSG00000005471
+ABCC2	0.504	1244	ABCC2	ATP-binding cassette, sub-family C (CFTR/MRP), member 2	Cholesterol/Bile tansport and metabolism	ENSG00000023839
+ABCG5	-0.389	64240	ABCG5	ATP-binding cassette, sub-family G (WHITE), member 5 (sterolin 1)	Cholesterol/Bile tansport and metabolism	ENSG00000138075
+ABCG8	-0.429	64241	ABCG8	ATP-binding cassette, sub-family G (WHITE), member 8 (sterolin 2)	Cholesterol/Bile tansport and metabolism	ENSG00000143921
+ACAA2	0.476	10449	ACAA2	acetyl-Coenzyme A acyltransferase 2	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000167315
+ACADL	-0.43	33	ACADL	acyl-Coenzyme A dehydrogenase, long chain	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000115361
+ACADVL	0.53	37	ACADVL	acyl-Coenzyme A dehydrogenase, very long chain	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000072778
+ACMSD	-0.48	130013	ACMSD	aminocarboxymuconate semialdehyde decarboxylase	Amino acid metabolism	ENSG00000153086
+ACOT12	-0.413	134526	ACOT12	acyl-CoA thioesterase 12	AcylcoA formation hydrolysis and binding	ENSG00000172497
+ACOT7	-0.477	11332	ACOT7	acyl-CoA thioesterase 7	AcylcoA formation hydrolysis and binding	ENSG00000097021
+ACOX1	0.398	51	ACOX1	acyl-Coenzyme A oxidase 1, palmitoyl	Peroxisomal ?-oxidation	ENSG00000161533
+ACSL1	0.748	2180	ACSL1	acyl-CoA synthetase long-chain family member 1	AcylcoA formation hydrolysis and binding	ENSG00000151726
+ACSL3	0.478	2181	ACSL3	acyl-CoA synthetase long-chain family member 3	AcylcoA formation hydrolysis and binding	ENSG00000123983
+ACSL5	0.904	51703	ACSL5	acyl-CoA synthetase long-chain family member 5	AcylcoA formation hydrolysis and binding	ENSG00000197142
+AGXT2	-0.863	64902	AGXT2	alanine-glyoxylate aminotransferase 2	Amino acid metabolism	ENSG00000113492
+AKR1B10	0.51	57016	AKR1B10	aldo-keto reductase family 1, member B10 (aldose reductase)	Biotransformation	ENSG00000198074
+ANGPTL4	1.608	51129	ANGPTL4	angiopoietin-like 4	Lipoprotein uptake and metabolism	ENSG00000167772
+APCS	-0.685	325	APCS	amyloid P component, serum	Inflammation	ENSG00000132703
+APOA1	-0.437	335	APOA1	apolipoprotein A-I	Lipoprotein uptake and metabolism	ENSG00000118137
+AQP7	0.564	364	AQP7	aquaporin 7	Glucose/glycerol tranport and metabolism	ENSG00000165269
+ARG1	-0.68	383	ARG1	arginase, liver	Amino acid metabolism	ENSG00000118520
+BDH1	-0.683	622	BDH1	3-hydroxybutyrate dehydrogenase, type 1	Ketogenesis and ketolysis	ENSG00000161267
+CAV1	-0.79	857	CAV1	caveolin 1, caveolae protein, 22kDa	Cholesterol/Bile tansport and metabolism	ENSG00000105974
+CBS	-0.481	875	CBS	cystathionine-beta-synthase	Amino acid metabolism	ENSG00000160200
+CCL3	-1.105	6348	CCL3	chemokine (C-C motif) ligand 3	Inflammation	ENSG00000277632
+CD14	0.728	929	CD14	CD14 molecule	Miscellanous	ENSG00000170458
+CD36	1.499	948	CD36	CD36 molecule (thrombospondin receptor)	Lipid and hormone transport	ENSG00000135218
+CIDEC	0.674	63924	CIDEC	cell death-inducing DFFA-like effector c	Lipase and lipid droplets	ENSG00000187288
+CPT1A	1.527	1374	CPT1A	carnitine palmitoyltransferase 1A (liver)	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000110090
+CPT2	0.647	1376	CPT2	carnitine palmitoyltransferase II	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000157184
+CROT	-0.512	54677	CROT	carnitine O-octanoyltransferase	Peroxisomal ?-oxidation	ENSG00000005469
+CXCL10	-1.426	3627	CXCL10	chemokine (C-X-C motif) ligand 10	Inflammation	ENSG00000169245
+CYP1A1	0.416	1543	CYP1A1	cytochrome P450, family 1, subfamily A, polypeptide 1	Biotransformation	ENSG00000140465
+CYP27A1	-0.668	1593	CYP27A1	cytochrome P450, family 27, subfamily A, polypeptide 1	Cholesterol/Bile tansport and metabolism	ENSG00000135929
+CYP2B6	0.52	1555	CYP2B6	cytochrome P450, family 2, subfamily B, polypeptide 6	Biotransformation	ENSG00000197408
+CYP3A5	0.377	1577	CYP3A5	cytochrome P450, family 3, subfamily A, polypeptide 5	Biotransformation	ENSG00000106258
+CYP3A7	0.44	1551	CYP3A7	cytochrome P450, family 3, subfamily A, polypeptide 4	Biotransformation	ENSG00000160870
+CYP4A11	0.399	1579	CYP4A11	cytochrome P450, family 4, subfamily A, polypeptide 11	Microsomal ? hydroxylation	ENSG00000187048
+CYP7A1	-1.063	1581	CYP7A1	cytochrome P450, family 7, subfamily A, polypeptide 1	Cholesterol/Bile tansport and metabolism	ENSG00000167910
+CYP8B1	-0.428	1582	CYP8B1	cytochrome P450, family 8, subfamily B, polypeptide 1	Cholesterol/Bile tansport and metabolism	ENSG00000180432
+ECH1	0.464	1891	ECH1	enoyl Coenzyme A hydratase 1, peroxisomal	Peroxisomal ?-oxidation	ENSG00000104823
+ELOVL6	0.652	79071	ELOVL6	ELOVL family member 6, elongation of long chain fatty acids	Lipogenesis	ENSG00000170522
+EPHX2	-0.596	2053	EPHX2	epoxide hydrolase 2, cytoplasmic	Biotransformation	ENSG00000120915
+ETFDH	0.546	2110	ETFDH	electron-transferring-flavoprotein dehydrogenase	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000171503
+FABP1	0.845	2168	FABP1	fatty acid binding protein 1, liver	AcylcoA formation hydrolysis and binding	ENSG00000163586
+FABP3	1.414	2170	FABP3	fatty acid binding protein 3, muscle and heart	AcylcoA formation hydrolysis and binding	ENSG00000121769
+FABP4	1.573	2167	FABP4	fatty acid binding protein 4, adipocyte	AcylcoA formation hydrolysis and binding	ENSG00000170323
+FADS1	0.395	3992	FADS1	fatty acid desaturase 1	Lipogenesis	ENSG00000149485
+FBP2	1.053	8789	FBP2	fructose-1,6-bisphosphatase 2	Glucose/glycerol tranport and metabolism	ENSG00000130957
+FGF21	1.423	26291	FGF21	fibroblast growth factor 21	Ketogenesis and ketolysis	ENSG00000105550
+GK	0.702	2710	GK	glycerol kinase	Glucose/glycerol tranport and metabolism	ENSG00000198814
+GLS2	-0.677	27165	GLS2	glutaminase 2 (liver, mitochondrial)	Amino acid metabolism	ENSG00000135423
+GYS2	-0.915	2998	GYS2	glycogen synthase 2 (liver)	Glucose/glycerol tranport and metabolism	ENSG00000111713
+HADHA	0.81	3030	HADHA	hydroxyacyl-Coenzyme A dehydrogenase alpha subunit	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000084754
+HADHB	0.781	3032	HADHB	hydroxyacyl-Coenzyme A dehydrogenase beta subunit	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000138029
+HAL	-0.651	3034	HAL	histidine ammonia-lyase	Amino acid metabolism	ENSG00000084110
+HMGCS2	0.538	3158	HMGCS2	3-hydroxy-3-methylglutaryl-Coenzyme A synthase 2 (mitochondrial)	Ketogenesis and ketolysis	ENSG00000134240
+HMOX1	0.763	3162	HMOX1	heme oxygenase (decycling) 1	Oxidative stress/Immune response	ENSG00000100292
+HPD	-0.593	3242	HPD	4-hydroxyphenylpyruvate dioxygenase	Amino acid metabolism	ENSG00000158104
+IL1B	0.382	3553	IL1B	interleukin 1, beta	Inflammation	ENSG00000125538
+IL1RAP	-0.483	3556	IL1RAP	interleukin 1 receptor accessory protein	Inflammation	ENSG00000196083
+IRF7	0.755	3665	IRF7	interferon regulatory factor 7	Miscellanous	ENSG00000185507
+LECT2	-0.521	3950	LECT2	leukocyte cell-derived chemotaxin 2	Oxidative stress/Immune response	ENSG00000145826
+LIFR	0.411	3977	LIFR	leukemia inhibitory factor receptor alpha	Inflammation	ENSG00000113594
+LPL	-0.382	4023	LPL	lipoprotein lipase	Lipoprotein uptake and metabolism	ENSG00000175445
+MBL2	0.424	4153	MBL2	mannose-binding lectin (protein C) 2, soluble (opsonic defect)	Oxidative stress/Immune response	ENSG00000165471
+MT1A	0.373	4489	MT1A	metallothionein 1A	Inflammation	ENSG00000205362
+NPC1	0.371	4864	NPC1	Niemann-Pick disease, type C1	Cholesterol/Bile tansport and metabolism	ENSG00000141458
+OASL	1.331	8638	OASL	2'-5'-oligoadenylate synthetase-like	Oxidative stress/Immune response	ENSG00000135114
+OTC	-1.032	5009	OTC	ornithine carbamoyltransferase	Amino acid metabolism	ENSG00000036473
+PDK4	2.032	5166	PDK4	pyruvate dehydrogenase kinase, isozyme 4	Glucose/glycerol tranport and metabolism	ENSG00000004799
+PEX11A	0.901	8800	PEX11A	peroxisomal biogenesis factor 11A	Peroxisomal ?-oxidation	ENSG00000166821
+PLA1A	0.65	51365	PLA1A	phospholipase A1 member A	Inflammation	ENSG00000144837
+PLTP	-0.748	5360	PLTP	phospholipid transfer protein	Lipoprotein uptake and metabolism	ENSG00000100979
+PNPLA2	0.551	57104	PNPLA2	patatin-like phospholipase domain containing 2	Lipase and lipid droplets	ENSG00000177666
+POR	0.988	5447	POR	P450 (cytochrome) oxidoreductase	Oxidative stress/Immune response	ENSG00000127948
+SAA4	-0.811	6291	SAA4	serum amyloid A4, constitutive	Inflammation	ENSG00000148965
+SGK2	0.919	10110	SGK2	serum/glucocorticoid regulated kinase 2	Miscellanous	ENSG00000101049
+SLC10A1	-1.162	6554	SLC10A1	solute carrier family 10 member 1	Cholesterol/Bile tansport and metabolism	ENSG00000100652
+SLC10A2	0.794	6555	SLC10A2	solute carrier family 10 (sodium/bile acid cotransporter family), member 2	Cholesterol/Bile tansport and metabolism	ENSG00000125255
+SLC25A10	-0.476	1468	SLC25A10	solute carrier family 25 member 10	Lipogenesis	ENSG00000183048
+SLC25A20	0.561	788	SLC25A20	solute carrier family 25, member 20	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000178537
+SLC27A2	0.404	11001	SLC27A2	solute carrier family 27 (fatty acid transporter), member 2	Lipid and hormone transport	ENSG00000140284
+SLC27A4	0.71	10999	SLC27A4	solute carrier family 27 (fatty acid transporter), member 4	Lipid and hormone transport	ENSG00000167114
+SLCO1B3	-0.498	28234	SLCO1B3	solute carrier organic anion transporter family, member 1B3	Cholesterol/Bile tansport and metabolism	ENSG00000111700
+SREBF1	-0.391	6720	SREBF1	sterol regulatory element binding transcription factor 1	Lipogenesis	ENSG00000072310
+TAT	-0.829	6898	TAT	tyrosine aminotransferase	Amino acid metabolism	ENSG00000198650
+TXNIP	0.726	10628	TXNIP	thioredoxin interacting protein	Mitochondrial ?-oxidation and oxidative phosphorylation	ENSG00000265972
+VCAM1	-0.841	7412	VCAM1	vascular cell adhesion molecule 1	Inflammation	ENSG00000162692
+VLDLR	0.783	7436	VLDLR	very low density lipoprotein receptor	Lipoprotein uptake and metabolism	ENSG00000147852
+ADFP	2.084	123	PLIN2	adipose differentiation-related protein	Lipase and lipid droplets	ENSG00000147872
+EMR1	-0.811	2015	ADGRE1	egf-like module containing, mucin-like, hormone receptor-like 1	Inflammation	ENSG00000174837
+PLIN	2.187	5346	PLIN1	perilipin	Lipase and lipid droplets	ENSG00000166819
+KIAA1881	0.928	729359	PLIN4	KIAA1881	Lipase and lipid droplets	ENSG00000167676

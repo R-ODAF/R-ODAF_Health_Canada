@@ -1,0 +1,47 @@
+GeneSymbol	log2FC	ENTREZID	SYMBOL	Description	Rank	EnsemblID
+ABHD2	0.54	11057	ABHD2	abhydrolase domain containing 2	22	ENSG00000140526
+ALAD	-0.339	210	ALAD	aminolevulinate dehydratase	44	ENSG00000148218
+AREG	0.674	374	AREG	amphiregulin	10	ENSG00000109321
+CA12	0.409	771	CA12	carbonic anhydrase XII	38	ENSG00000074410
+CCND1	0.507	595	CCND1	cyclin D1	27	ENSG00000110092
+CCNG2	-0.82	901	CCNG2	cyclin G2	4	ENSG00000138764
+CD44	0.542	960	CD44	CD44 molecule (Indian blood group)	20	ENSG00000026508
+CLMN	-0.532	79789	CLMN	calmin (calponin-like, transmembrane)	23	ENSG00000165959
+CXCL12	0.695	6387	CXCL12	chemokine (C-X-C motif) ligand 12	8	ENSG00000107562
+DYRK2	-0.435	8445	DYRK2	dual-specificity tyrosine-(Y)-phosphorylation regulated kinase 2	35	ENSG00000127334
+EFNA1	-0.566	1942	EFNA1	ephrin-A1	15	ENSG00000169242
+EGR3	1.659	1960	EGR3	early growth response 3	1	ENSG00000179388
+EPHA4	-0.602	2043	EPHA4	EPH receptor A4	12	ENSG00000116106
+FHL2	0.545	2274	FHL2	four and a half LIM domains 2	19	ENSG00000115641
+FOXC1	0.505	2296	FOXC1	forkhead box C1	29	ENSG00000054598
+ID3	-0.506	3399	ID3	inhibitor of DNA binding 3, dominant negative helix-loop-helix protein	29	ENSG00000117318
+JAK2	0.741	3717	JAK2	Janus kinase 2	6	ENSG00000096968
+KYNU	-0.394	8942	KYNU	kynureninase	39	ENSG00000115919
+MICAL2	0.432	9645	MICAL2	microtubule associated monoxygenase, calponin and LIM domain containing 2	36	ENSG00000133816
+MYB	0.344	4602	MYB	v-myb myeloblastosis viral oncogene homolog (avian)	42	ENSG00000118513
+MYBL1	0.927	4603	MYBL1	v-myb myeloblastosis viral oncogene homolog (avian)-like 1	2	ENSG00000185697
+NMRK1	0.698	54981	NMRK1	nicotinamide riboside kinase 1	7	ENSG00000106733
+OLFM1	0.448	10439	OLFM1	olfactomedin 1	34	ENSG00000130558
+PDZK1	0.508	5174	PDZK1	PDZ domain containing 1	26	ENSG00000174827
+PGR	0.459	5241	PGR	progesterone receptor	32	ENSG00000082175
+PIK3R3	-0.373	8503	PIK3R3	phosphoinositide-3-kinase, regulatory subunit 3 (gamma)	40	ENSG00000117461
+PLAUR	0.658	5329	PLAUR	plasminogen activator, urokinase receptor	11	ENSG00000011422
+PLEKHF2	-0.532	79666	PLEKHF2	pleckstrin homology domain containing, family F (with FYVE domain) member 2	23	ENSG00000175895
+PRSS23	0.452	11098	PRSS23	protease, serine, 23	33	ENSG00000150687
+PTGES	0.565	9536	PTGES	prostaglandin E synthase	15	ENSG00000148344
+RAPGEFL1	0.548	51195	RAPGEFL1	Rap guanine nucleotide exchange factor (GEF)-like 1	18	ENSG00000108352
+RBBP8	0.312	5932	RBBP8	retinoblastoma binding protein 8	46	ENSG00000101773
+RCL1	0.369	10171	RCL1	RNA terminal phosphate cyclase-like 1	41	ENSG00000120158
+RET	0.761	5979	RET	ret proto-oncogene	5	ENSG00000165731
+RHBDF1	-0.345	64285	RHBDF1	rhomboid 5 homolog 1 (Drosophila)	42	ENSG00000007384
+SGK1	0.857	6446	SGK1	serum/glucocorticoid regulated kinase 1	3	ENSG00000118515
+SGK3	0.675	23678	SGK3	serum/glucocorticoid regulated kinase family, member 3	9	ENSG00000104205
+SIAH2	0.321	6478	SIAH2	siah E3 ubiquitin protein ligase 2	45	ENSG00000181788
+SLC7A5	0.432	8140	SLC7A5	solute carrier family 7 (amino acid transporter light chain, L system), member 5	36	ENSG00000103257
+SMOX	0.558	54498	SMOX	spermine oxidase	17	ENSG00000088826
+SSBP2	-0.543	23635	SSBP2	single-stranded DNA binding protein 2	20	ENSG00000145687
+SVIL	0.526	6840	SVIL	supervillin	25	ENSG00000197321
+TFAP2A	-0.568	7020	TFAP2A	transcription factor AP-2 alpha (activating enhancer binding protein 2 alpha)	14	ENSG00000137203
+TFAP2C	0.507	7022	TFAP2C	transcription factor AP-2 gamma (activating enhancer binding protein 2 gamma)	27	ENSG00000087510
+TFPI	-0.58	7035	TFPI	tissue factor pathway inhibitor (lipoprotein-associated coagulation inhibitor)	13	ENSG00000003436
+WWC1	0.504	23286	WWC1	WW and C2 domain containing 1	31	ENSG00000113645

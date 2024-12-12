@@ -29,13 +29,6 @@ write_tables <- function(facet, params) {
   allResults <- annotate_deseq_table(resultsListAll, params, filter_results = FALSE)
   significantResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = FALSE)
 
-  if(params$write_additional_output){
-    biosetsFilteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE)  %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
-      arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
-      distinct(Gene_Symbol, .keep_all=TRUE) 
-    colnames(biosetsFilteredResults) <- c("Gene","pval","fc")
-  }
 
   Counts <- counts(dds, normalized = TRUE)
   CPMdds <- cpm(counts(dds, normalized = TRUE))
@@ -123,10 +116,8 @@ write_tables <- function(facet, params) {
 
   if(is.na(params$deseq_facet)){
     output_folder <- paths$DEG_output
-    biosets_folder <- paths$biosets_output
   } else{
     output_folder <- paths$DEG_output[[current_filter]]
-    biosets_folder <- paths$biosets_output[[current_filter]]
   }
 
   #######################################
@@ -156,30 +147,7 @@ write_tables <- function(facet, params) {
               quote = FALSE, sep = "\t", col.names = NA)
 
 
-  if(params$write_additional_output){
-    filteredResults <- annotate_deseq_table(resultsListDEGs, params, filter_results = TRUE, biosets_filter = TRUE) 
-    resultsContrasts <- stringr::str_split(filteredResults$contrast," vs ",2,TRUE)[,1]
-    biosetsFilteredResults <- filteredResults %>%
-      bind_cols(dose=resultsContrasts) %>%
-      dplyr::select(Gene_Symbol, padj, linearFoldChange, dose)
 
-    all_doses <- unique(biosetsFilteredResults$dose)
-    for(d in all_doses){
-      bfr <- biosetsFilteredResults %>%
-        filter(dose==d) %>%
-        dplyr::select(Gene_Symbol, padj, linearFoldChange) %>%
-        arrange(Gene_Symbol,-abs(linearFoldChange)) %>%
-        distinct(Gene_Symbol, .keep_all=TRUE) 
-      colnames(bfr) <- c("Gene","pval","fc")
-      # assume that current_filter includes the chemical + timepoint + dose
-      biosets_fname <- paste(current_filter,d,params$units,params$celltype, sep='_')
-      biosets_fname <- paste0(str_replace_all(biosets_fname, " ", "_"),".txt")
-
-      write.table(bfr %>% mutate(across(where(is.numeric), ~ round(., digits = params$output_digits))),
-                  file = file.path(biosets_folder,biosets_fname),
-                  quote = FALSE, sep = "\t", col.names = NA)
-    }
-  }
   ##########################
   ### Write results in Excel
   ##########################

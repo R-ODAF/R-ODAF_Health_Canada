@@ -69,6 +69,7 @@ rldList <- list()
 mergedDEGsList <- list()
 filtered_table <- data.frame()
 allBiomarkers <- list()
+bioset_input <- list()
 
 if (is.na(params$deseq_facet)){
   message("### Learning a single model for the whole experiment. ###")
@@ -88,6 +89,7 @@ if (is.na(params$deseq_facet)){
   rldList[['all']] <- rld
   mergedDEGsList[['all']] <- DESeq_results$mergedDEGs
   filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+  bioset_input[['all']] <- DESeq_results$bioset_input
 } else {
   for (current_filter in facets) {
     message(paste0("### Learning model for ", current_filter, ". ###"))
@@ -112,6 +114,7 @@ if (is.na(params$deseq_facet)){
     overallResListDEGs[[current_filter]] <- DESeq_results$resListDEGs
     mergedDEGsList[[current_filter]] <- DESeq_results$mergedDEGs
     filtered_table <- rbind(filtered_table, DESeq_results$filtered_table)
+    bioset_input[[current_filter]] <- DESeq_results$bioset_input
   }
   overallAllGenes <- rbindlist(overallAllGenesList, use.names = TRUE, fill = TRUE)
   overallAllGenes <- overallAllGenes[!duplicated(overallAllGenes$gene_id), ]
@@ -124,7 +127,9 @@ if (is.na(params$deseq_facet)) {
   for (comp in comparisons) { # by comparison
     res <- resList[[comp]]
     counts <- nrow(res)
-    row <- data.frame(comparison=comp, DEG=counts)
+    upreg <- nrow(res[res$log2FoldChange > 0,])
+    downreg <- nrow(res[res$log2FoldChange < 0,])
+    row <- data.frame(comparison=comp, DEG=counts, Downregulated=downreg, Upregulated=upreg)
     summary_counts <- rbind(summary_counts, row)
   }
 } else {
@@ -145,6 +150,19 @@ if (is.na(params$deseq_facet)) {
 message(paste0(sum(summary_counts$DEG), " total DEG counts found. Missing rows indicate 0 DEGs passed filters"))
 message(paste(capture.output(summary_counts), collapse = "\n"))
 
+if (is.na(params$deseq_facet)) {
+  facets <- c("all")
+}
+
+# This will have to change once the function returns something instead of just writing files
+bs <- list()
+for (facet in facets) {
+  biosets <- write_biosets(params, facet)
+  
+  # Merge the results into the bs list
+  bs <- c(bs, biosets)
+}
+
 # save DESeq results to a file
 save(ddsList,
      designList,
@@ -163,11 +181,8 @@ save(ddsList,
      filtered_table,
      sample_count_metadata,
      allBiomarkers,
+     bs,
      file = file.path(paths$RData, paste0(params$project_title, "_DEG_data.RData")))
-
-if (is.na(params$deseq_facet)) {
-  facets <- c("all")
-}
 
 if (params$parallel) {
   parallel::mcmapply(
