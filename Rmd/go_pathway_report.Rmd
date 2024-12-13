@@ -86,6 +86,7 @@ startTime <- Sys.time()
 
 library('clusterProfiler')
 library('enrichplot')
+library(KEGGREST)
 
 db <- AnnotationDbi::loadDb(params$species_data$orgdb)
 
@@ -121,6 +122,8 @@ load_facet_data(paths, params)
 This section performs GO enrichment on **all DEGs passing filters**. The background set of genes is those that were identified in this sequencing experiment. The [clusterProfiler](https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html) package is used for this analysis.
 
 ```{r cluster-profiler, warning = FALSE, message = FALSE, collapse = TRUE}
+# Get background genes (everything measured in experiment)
+# Used in overrepresentation analysis, but not in GSEA
 
 if(params$platform == "TempO-Seq"){
 id_table_entrez <- params$biospyder %>%
@@ -134,6 +137,7 @@ id_table_entrez <- params$biospyder %>%
   id_table_entrez$Entrez_ID <- as.integer(id_table_entrez$Entrez_ID)
 }
 
+# Get the Entrez ID of the DEGs
 probeIDDEGs <- data.frame(genes=significantResults[["Feature_ID"]])
 names(probeIDDEGs)[names(probeIDDEGs) == 'genes'] <- "Feature_ID"
 
@@ -141,6 +145,7 @@ DEGs <- dplyr::left_join(probeIDDEGs, id_table_entrez, by = "Feature_ID")
 entrezDEGs <- as.character(DEGs$Entrez_ID)
 entrezDEGs <- entrezDEGs[!is.na(entrezDEGs)] %>% unique()
 
+# Get the background genes (all genes in the dataset, not just DEGs)
 background <- dplyr::left_join(data.frame(genes = row.names(assay(dds))),
                                id_table_entrez,
                                by = c("genes" = "Feature_ID")) %>%
@@ -190,19 +195,6 @@ enrich_go_cc <- enrichGO(gene = entrezDEGs,
 #             file = file.path(paths$pathway_analysis, "Enriched.GO_terms.Molecular_Functions.txt"))
 # write.table(as.data.frame(enrich_go_cc),
 #             file = file.path(paths$pathway_analysis, "Enriched.GO_terms.Cellular_Component.txt"))
-
-
-# get fold-changes
-
-DEGs_full <- dplyr::left_join(significantResults,
-                              id_table_entrez,
-                              by = "Feature_ID") %>%
-  distinct()
-foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
-names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
-foldChanges <- foldChanges %>% sort() %>% rev()
-foldChanges <- foldChanges[!is.na(names(foldChanges))]
-
 
 ```
 
@@ -369,11 +361,10 @@ wp2gene <- clusterProfiler::read.gmt(file.path(paths$wikipathways,params$wikipat
 wp2gene <- wp2gene %>% tidyr::separate(1, c("name","version","wpid","org"), "%")
 wpid2gene <- wp2gene %>% dplyr::select(wpid,gene) #TERM2GENE
 wpid2name <- wp2gene %>% dplyr::select(wpid,name) #TERM2NAME
-wpid2gene
-wpid2name
+
 matches <- wpid2gene %>% filter(gene %in% entrezDEGs)
 
-if(is.null(params$reports_filter)){
+if(is.na(params$reports_filter)){
   pathway_output_dir <- paths$pathway_analysis
 } else {
   pathway_output_dir <- paths$pathway_analysis[[params$reports_filter]]
@@ -382,7 +373,7 @@ if(is.null(params$reports_filter)){
 if (nrow(matches) > 1) {
   DEG_pathways <- clusterProfiler::enricher(
     entrezDEGs,
-    universe = entrez_IDs,
+    universe = entrez_IDs, # Limit universe to genes in the dataset
     pAdjustMethod = "fdr",
     pvalueCutoff = 0.05, #p.adjust cutoff
     TERM2GENE = wpid2gene,
@@ -446,15 +437,41 @@ for (i in seq_along(contrasts)) {
 
 ## GSEA: By contrast {.tabset .tabset-fade}
 
-This section uses clusterProfiler `gseKEGG()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
+This section uses clusterProfiler `GSEA()` to detect enriched KEGG pathways and enrichplot `gseaplot2` to plot running scores.
+
 
 ```{r 'gsea_analysis_by_contrast_make_plots', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
 
 plotListGSEA <- list()
 plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
-config <- yaml::read_yaml(here::here("inputs","config","config.yaml"), eval.expr = T)
-bg_genes <-read.gmt(paste0(params$wikipathways_directory,params$KEGGpathways_filename)) 
+
+# Set species
+# Currently this works for human, mouse, and rat. Otherwise report will error out.
+kegg_organism <- params$species_data$kegg_organism
+
+# Workaround necessary to use GSEA with KEGG data, because gseKEGG doesn't work in this clusterProfiler version
+# Download KEGG data using KEGGREST
+kegg_pathways <- KEGGREST::keggList("pathway", kegg_organism)
+kegg_genes <- KEGGREST::keggLink("pathway", kegg_organism)
+
+# Convert to data frames
+term2name.kegg <- data.frame(pathway_id = names(kegg_pathways), pathway_name = kegg_pathways)
+term2gene.kegg <- data.frame(pathway_id = kegg_genes, gene_id = names(kegg_genes))
+
+# Extract KEGG gene IDs and remove the organism prefix so they match the entrezIDs from dataset
+kegg_gene_ids <- sub(paste0(kegg_organism, ":"), "", term2gene.kegg$gene_id)
+entrez_ids <- clusterProfiler::bitr_kegg(kegg_gene_ids, fromType = "kegg", toType = "ncbi-geneid", organism = kegg_organism)
+
+# Wrangle kegg data to match the DEGs
+term2gene.kegg$gene_id <- sub(paste0(kegg_organism, ":"), "", term2gene.kegg$gene_id)
+
+term2gene.kegg <- merge(term2gene.kegg, entrez_ids, by.x = "gene_id", by.y = "kegg")
+term2gene.kegg <- term2gene.kegg[, c("pathway_id", "ncbi-geneid")]
+colnames(term2gene.kegg) <- c("pathway_id", "gene_id")
+
+term2name.kegg$pathway_id <- sub(kegg_organism, paste0("path:", kegg_organism), term2name.kegg$pathway_id)
+
 
 for (i in seq_along(contrasts)) {
   DEGs_full <- dplyr::left_join(allResults %>% filter(contrast ==  contrasts[i]),
@@ -462,7 +479,7 @@ for (i in seq_along(contrasts)) {
                                 by = c("Feature_ID", "Gene_Symbol"))
   
   foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
-  names(foldChanges) <- DEGs_full %>% dplyr::pull(Gene_Symbol)
+  names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
   foldChanges <- foldChanges %>% sort() %>% rev()
   foldChanges <- foldChanges[!is.na(names(foldChanges))]
   if (length(foldChanges) < 10) {
@@ -470,7 +487,16 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
     next
   }
-  kk <- GSEA(foldChanges, pvalueCutoff = 0.05, TERM2GENE = bg_genes,)
+
+  kk <- GSEA(geneList = foldChanges,
+              TERM2GENE = term2gene.kegg,
+              TERM2NAME = term2name.kegg,
+              minGSSize = 10,
+              maxGSSize = 500,
+              pvalueCutoff = 0.05,
+              pAdjustMethod = "fdr")
+
+
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
   gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
   write.table(as.data.frame(gsea_sorted),
@@ -485,6 +511,7 @@ for (i in seq_along(contrasts)) {
     plotListGSEA_escore[[i]] <- NA
   }
 }
+
 ```
 
 ```{r 'gsea_analysis_by_contrast_print_plots', results='asis', eval=params$run_pathway_analysis, include=params$run_pathway_analysis,  warning = FALSE, message = FALSE}
