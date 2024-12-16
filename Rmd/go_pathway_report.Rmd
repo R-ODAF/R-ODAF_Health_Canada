@@ -187,6 +187,15 @@ enrich_go_cc <- enrichGO(gene = entrezDEGs,
                          pvalueCutoff = 0.01,
                          qvalueCutoff = 0.05)
 
+# get fold-changes
+DEGs_full <- dplyr::left_join(significantResults,
+                              id_table_entrez,
+                              by = "Feature_ID") %>%
+  distinct()
+foldChanges <- DEGs_full %>% dplyr::pull(log2FoldChange)
+names(foldChanges) <- DEGs_full %>% dplyr::pull(Entrez_ID)
+foldChanges <- foldChanges %>% sort() %>% rev()
+foldChanges <- foldChanges[!is.na(names(foldChanges))]
 
 # TODO GO table output?
 # write.table(as.data.frame(enrich_go_bp),
