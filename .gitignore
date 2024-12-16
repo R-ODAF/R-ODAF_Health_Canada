@@ -69,6 +69,8 @@ count_table*.tsv
 checksum*
 truth_checksums/*
 
+# Unpublished Running Fisher Biomarkers
+resources/RF_biomarkers/*UNPUBLISHED.txt
 
 ## Misc
 *Log.out
@@ -85,6 +87,7 @@ extra_stats_report.html
 output/*.png
 
 # Snakemake dummy files
+output/.rodaf_internal/*
 genome.loaded
 genome.removed
 analysis_complete

@@ -54,6 +54,7 @@ params:
   generate_tgxddi_report: TRUE
   generate_tgxhdaci_report: TRUE
   generate_summary_report: TRUE
+  generate_runningfisher_report: TRUE
   output_digits: 5
   parallel: FALSE
   species_data: null
