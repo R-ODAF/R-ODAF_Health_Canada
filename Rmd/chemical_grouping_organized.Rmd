@@ -20,6 +20,7 @@ library('yaml')
 library('stringr')
 library('dendextend')
 library('viridis')
+library('cluster')
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -520,7 +521,7 @@ We want to find the optimal number of clusters for the data. We will use three m
 
 ## Sillouette method
 
-```{r silhouette}
+```{r silhouette_bioactive0.01}
 # SILHOUETTE METHOD FOR NUMBER OF CLUSTERS
 
 # Determine the number of clusters (e.g., using the silhouette method)
@@ -551,7 +552,7 @@ rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 
 
 ## Gap statistic method
 
-```{r gap_stat}
+```{r gap_stat_bioactive0.01}
 # GAP STATISTIC FOR NUMBER OF CLUSTERS
 
 # Calculate the gap statistic
@@ -573,20 +574,23 @@ clusters <- cutree(clustered_DEGs, k = optimal_clusters)
 # Print the cluster assignments
 print(clusters)
 
+unique_clusters <- max(unique(clusters))
 # When estradiol included, Plot fails because gap_stat says the optimal number of clusters is 1
 
-if (include_estradiol == FALSE){
+if (unique_clusters > 1) {
   # Plot the dendrogram with clusters
   par(mar = c(6.5, 4, 4, 4), cex = 1)
   plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
   rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+} else {
+  message("This plot could not be printed because the optimal number of clusters is 1.")
 }
 
 ```
 
 # Elbow method
 
-```{r elbow}
+```{r elbow_bioactive0.01}
 # ELBOW METHOD FOR NUMBER OF CLUSTERS
 
 #For the elbow method, you should also provide the original data matrix (matrix_DEGs_bioactivity_gt_0.01). The elbow method involves calculating the total within-cluster sum of squares (WSS) for different numbers of clusters and plotting these values to identify the "elbow" point where the rate of decrease sharply slows.
@@ -611,8 +615,11 @@ clusters <- cutree(clustered_DEGs, k = optimal_clusters)
 # Print the cluster assignments
 print(clusters)
 
-if (include_estradiol == FALSE){
-  message("This plot could not be printed because the optimal number of cluster (`r optimal_clusters`) exceeds the allowed number.")
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 8) {
+  message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") exceeds the allowed number.")
+  message(message_text)
 } else {
   # Plot the dendrogram with clusters
   par(mar = c(6.5, 4, 4, 4), cex = 1)
@@ -731,7 +738,121 @@ par(mar = c(8,4,4,4), cex = 1)
 plot(dend.top.active_0.1, horiz = F, main = "Top doses of bioactive chemicals with a 1% threshold")
 ```
 
+# Trying to find optimal grouping by 3 methods
 
+We want to find the optimal number of clusters for the data. We will use three methods to do this: the elbow method, the silhouette method, and the gap statistic method.
+
+## Sillouette method
+Sillouette method is not working on this one, it hangs forever on the for (k in 2:10) loop. Commented out the code.
+
+```{r silhouette_topdose_0.01}
+# SILHOUETTE METHOD FOR NUMBER OF CLUSTERS
+
+# # Determine the number of clusters (e.g., using the silhouette method)
+# sil_width <- numeric(10)
+
+# # First have to convert the matrix of log2FCs into a similarity matrix
+# similarity_matrix <- cor(t(matrix_DEGs_top_bioactive_0.1), method = "pearson")
+
+# for (k in 2:10) {
+#   pam_fit <- pam(similarity_matrix, diss = FALSE, k = k)
+#   sil_width[k] <- pam_fit$silinfo$avg.width
+# }
+# optimal_clusters <- which.max(sil_width)
+
+# # Cut the dendrogram into the optimal number of clusters
+# clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# # Print the cluster assignments
+# print(clusters)
+
+# # Plot the dendrogram with clusters
+# par(mar = c(20, 4, 4, 4), cex = 0.5)
+# plot(as.dendrogram(clustered_DEGs), horiz = FALSE, main = "Bioactivity DEGs >1%")
+# rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+
+```
+
+## Gap statistic method
+
+```{r gap_stat_topdose_0.01}
+# GAP STATISTIC FOR NUMBER OF CLUSTERS
+
+# Calculate the gap statistic
+set.seed(123) # For reproducibility
+
+# Provide the matrix of log2 fold changes, not a similarity or dissimilarity matrix. 
+# The clusGap function will internally handle the clustering and calculation of the gap statistic.
+gap_stat <- clusGap(matrix_DEGs_top_bioactive_0.1, 
+                    FUN = function(x, k) list(cluster = cutree(hclust(as.dist(1 - cor(t(x), method = dist_method)), method = link_method), k = k)), 
+                    K.max = 10, B = 50)
+
+
+# Determine the optimal number of clusters
+optimal_clusters <- maxSE(gap_stat$Tab[, "gap"], gap_stat$Tab[, "SE.sim"], method = "firstSEmax")
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+# When estradiol included, Plot fails because gap_stat says the optimal number of clusters is 1
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 1) {
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+} else {
+  message("This plot could not be printed because the optimal number of clusters is 1.")
+}
+
+```
+
+# Elbow method
+
+```{r elbow_topdose_0.01}
+# ELBOW METHOD FOR NUMBER OF CLUSTERS
+
+#For the elbow method, you should also provide the original data matrix (matrix_DEGs_bioactivity_gt_0.01). The elbow method involves calculating the total within-cluster sum of squares (WSS) for different numbers of clusters and plotting these values to identify the "elbow" point where the rate of decrease sharply slows.
+
+# Calculate the total within-cluster sum of squares (WSS) for different numbers of clusters
+wss <- numeric(10)
+for (k in 1:10) {
+  wss[k] <- sum(kmeans(matrix_DEGs_top_bioactive_0.1, centers = k, nstart = 25)$tot.withinss)
+}
+
+# Plot the WSS to visualize the elbow
+plot(1:10, wss, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of clusters K",
+     ylab = "Total within-clusters sum of squares")
+
+# Determine the optimal number of clusters (elbow point)
+optimal_clusters <- which(diff(diff(wss)) == min(diff(diff(wss)))) + 1
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 7){
+  message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") exceeds the allowed number.")
+  message(message_text)
+} else if (unique_clusters < 3) {
+   message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") is too small.")
+   message(message_text)
+} else {
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+}
+```
 
 ### Top doses with inactive chemicals removed @ 2% bioactivity
 
@@ -911,6 +1032,120 @@ plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarke
 ```
 
 
+# Trying to find optimal grouping by 3 methods
+
+We want to find the optimal number of clusters for the data. We will use three methods to do this: the elbow method, the silhouette method, and the gap statistic method.
+
+## Sillouette method
+Sillouette method is not working on this one, it hangs forever on the for (k in 2:10) loop. Commented out the code.
+
+```{r silhouette_erbiomarker}
+# SILHOUETTE METHOD FOR NUMBER OF CLUSTERS
+
+# Determine the number of clusters (e.g., using the silhouette method)
+sil_width <- numeric(10)
+
+# First have to convert the matrix of log2FCs into a similarity matrix
+similarity_matrix <- cor(t(matrix_biomarker_genes_bioactive0.01), method = "pearson")
+
+for (k in 2:10) {
+  pam_fit <- pam(similarity_matrix, diss = FALSE, k = k)
+  sil_width[k] <- pam_fit$silinfo$avg.width
+}
+optimal_clusters <- which.max(sil_width)
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+# Plot the dendrogram with clusters
+par(mar = c(20, 4, 4, 4), cex = 0.5)
+plot(as.dendrogram(clustered_DEGs), horiz = FALSE, main = "Bioactivity DEGs >1%")
+rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+
+```
+
+## Gap statistic method
+
+```{r gap_stat_erbiomarker}
+# GAP STATISTIC FOR NUMBER OF CLUSTERS
+
+# Calculate the gap statistic
+set.seed(123) # For reproducibility
+
+# Provide the matrix of log2 fold changes, not a similarity or dissimilarity matrix. 
+# The clusGap function will internally handle the clustering and calculation of the gap statistic.
+gap_stat <- clusGap(matrix_biomarker_genes_bioactive0.01, 
+                    FUN = function(x, k) list(cluster = cutree(hclust(as.dist(1 - cor(t(x), method = dist_method)), method = link_method), k = k)), 
+                    K.max = 10, B = 50)
+
+
+# Determine the optimal number of clusters
+optimal_clusters <- maxSE(gap_stat$Tab[, "gap"], gap_stat$Tab[, "SE.sim"], method = "firstSEmax")
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+# When estradiol included, Plot fails because gap_stat says the optimal number of clusters is 1
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 1){
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+} else {
+  message("This plot could not be printed because the optimal number of clusters is 1.")
+}
+
+```
+
+# Elbow method
+
+```{r elbow_erbiomarker}
+# ELBOW METHOD FOR NUMBER OF CLUSTERS
+
+#For the elbow method, you should also provide the original data matrix (matrix_DEGs_bioactivity_gt_0.01). The elbow method involves calculating the total within-cluster sum of squares (WSS) for different numbers of clusters and plotting these values to identify the "elbow" point where the rate of decrease sharply slows.
+
+# Calculate the total within-cluster sum of squares (WSS) for different numbers of clusters
+wss <- numeric(10)
+for (k in 1:10) {
+  wss[k] <- sum(kmeans(matrix_biomarker_genes_bioactive0.01, centers = k, nstart = 25)$tot.withinss)
+}
+
+# Plot the WSS to visualize the elbow
+plot(1:10, wss, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of clusters K",
+     ylab = "Total within-clusters sum of squares")
+
+# Determine the optimal number of clusters (elbow point)
+optimal_clusters <- which(diff(diff(wss)) == min(diff(diff(wss)))) + 1
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 7){
+  message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") exceeds the allowed number.")
+  message(message_text)
+} else if (unique_clusters < 3) {
+   message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") is too small.")
+   message(message_text)
+} else {
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+}
+```
 
 ```{r er_genes_PCA}
 # pick columns from matrix_biomarker_genes based on top doses
@@ -937,3 +1172,112 @@ plotPCAcustom(g, trim_names = F, legend.position = "right", title = "ER-biomarke
 
 ```
 
+## Sillouette method
+
+```{r silhouette_erbiomarkertop}
+# SILHOUETTE METHOD FOR NUMBER OF CLUSTERS
+
+# Determine the number of clusters (e.g., using the silhouette method)
+sil_width <- numeric(10)
+
+# First have to convert the matrix of log2FCs into a similarity matrix
+similarity_matrix <- cor(t(matrix_biomarker_genes_topactive), method = "pearson")
+
+for (k in 2:10) {
+  pam_fit <- pam(similarity_matrix, diss = FALSE, k = k)
+  sil_width[k] <- pam_fit$silinfo$avg.width
+}
+optimal_clusters <- which.max(sil_width)
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+# Plot the dendrogram with clusters
+par(mar = c(20, 4, 4, 4), cex = 0.5)
+plot(as.dendrogram(clustered_DEGs), horiz = FALSE, main = "Bioactivity DEGs >1%")
+rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+
+```
+
+## Gap statistic method
+
+```{r gap_stat_erbiomarkertop}
+# GAP STATISTIC FOR NUMBER OF CLUSTERS
+
+# Calculate the gap statistic
+set.seed(123) # For reproducibility
+
+# Provide the matrix of log2 fold changes, not a similarity or dissimilarity matrix. 
+# The clusGap function will internally handle the clustering and calculation of the gap statistic.
+gap_stat <- clusGap(matrix_biomarker_genes_topactive, 
+                    FUN = function(x, k) list(cluster = cutree(hclust(as.dist(1 - cor(t(x), method = dist_method)), method = link_method), k = k)), 
+                    K.max = 10, B = 50)
+
+
+# Determine the optimal number of clusters
+optimal_clusters <- maxSE(gap_stat$Tab[, "gap"], gap_stat$Tab[, "SE.sim"], method = "firstSEmax")
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+
+# When estradiol included, Plot fails because gap_stat says the optimal number of clusters is 1
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 1){
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+} else {
+  message("This plot could not be printed because the optimal number of clusters is 1.")
+}
+
+```
+
+# Elbow method
+
+```{r elbow_erbiomarkertop}
+# ELBOW METHOD FOR NUMBER OF CLUSTERS
+
+#For the elbow method, you should also provide the original data matrix (matrix_DEGs_bioactivity_gt_0.01). The elbow method involves calculating the total within-cluster sum of squares (WSS) for different numbers of clusters and plotting these values to identify the "elbow" point where the rate of decrease sharply slows.
+
+# Calculate the total within-cluster sum of squares (WSS) for different numbers of clusters
+wss <- numeric(10)
+for (k in 1:10) {
+  wss[k] <- sum(kmeans(matrix_biomarker_genes_topactive, centers = k, nstart = 25)$tot.withinss)
+}
+
+# Plot the WSS to visualize the elbow
+plot(1:10, wss, type = "b", pch = 19, frame = FALSE, 
+     xlab = "Number of clusters K",
+     ylab = "Total within-clusters sum of squares")
+
+# Determine the optimal number of clusters (elbow point)
+optimal_clusters <- which(diff(diff(wss)) == min(diff(diff(wss)))) + 1
+
+# Cut the dendrogram into the optimal number of clusters
+clusters <- cutree(clustered_DEGs, k = optimal_clusters)
+
+# Print the cluster assignments
+print(clusters)
+unique_clusters <- max(unique(clusters))
+
+if (unique_clusters > 7){
+  message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") exceeds the allowed number.")
+  message(message_text)
+} else if (unique_clusters < 3) {
+   message_text <- paste("This plot could not be printed because the optimal number of cluster (", unique_clusters, ") is too small.")
+   message(message_text)
+} else {
+  # Plot the dendrogram with clusters
+  par(mar = c(6.5, 4, 4, 4), cex = 1)
+  plot(as.dendrogram(clustered_DEGs), horiz = FALSE)
+  rect.hclust(clustered_DEGs, k = optimal_clusters, border = 2:optimal_clusters + 1)
+}
+```
