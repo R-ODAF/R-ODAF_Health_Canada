@@ -21,6 +21,7 @@ library('stringr')
 library('dendextend')
 library('viridis')
 library('cluster')
+library('pvclust')
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -513,6 +514,13 @@ plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >1%")
 
 ```
 
+#### Clustering with pvclust instead of hclust
+```{r pvclust_bioactive0.01}
+pvresult_0.01 <- pvclust(matrix_DEGs_bioactivity_gt_0.01, method.dist="cor", method.hclust="average", nboot=10000, parallel=TRUE)
+
+plot(pvresult_0.01)
+pvrect(pvresult_0.01, alpha=0.95)
+```
 
 
 # Trying to find optimal grouping by 3 methods
@@ -692,6 +700,8 @@ plot(as.dendrogram(clustered_DEGs), horiz = F, main = "Bioactivity DEGs >2%")
 
 ```
 
+
+
 This is the same plot as above, but with log2FC scaled by the sum of the column.
 
 ```{r bioactivity_0.02_scaled}
@@ -707,6 +717,13 @@ par(mar = c(20,4,4,4), cex = 0.75)
 plot(as.dendrogram(clustered_DEGs_0.02_scaled), horiz = F, main = "Bioactivity DEGs >2%, normalized log2 fold changes")
 ```
 
+#### Clustering with pvclust instead of hclust
+```{r pvclust_bioactive0.02}
+pvresult_0.02 <- pvclust(matrix_DEGs_bioactivity_gt_0.02, method.dist="cor", method.hclust="average", nboot=10000, parallel=TRUE)
+
+plot(pvresult_0.02, cex=0.75)
+pvrect(pvresult_0.02, alpha=0.95)
+```
 
 ### Top doses with inactive chemicals removed @ 1% bioactivity
 
@@ -737,6 +754,15 @@ dend.top.active_0.1 <- as.dendrogram(clustered_DEGs_top_bioactive_0.1)
 par(mar = c(8,4,4,4), cex = 1)
 plot(dend.top.active_0.1, horiz = F, main = "Top doses of bioactive chemicals with a 1% threshold")
 ```
+
+#### Clustering with pvclust instead of hclust
+```{r pvclust_topdose_0.01}
+pvresult_top_0.01 <- pvclust(matrix_DEGs_top_bioactive_0.1, method.dist="cor", method.hclust="average", nboot=10000, parallel=TRUE)
+
+plot(pvresult_top_0.01)
+pvrect(pvresult_top_0.01, alpha=0.95)
+```
+
 
 # Trying to find optimal grouping by 3 methods
 
@@ -873,6 +899,14 @@ dend.top.active_0.2 <- as.dendrogram(clustered_DEGs_top_bioactive_0.2)
 par(mar = c(16,4,4,4), cex = 1)
 plot(dend.top.active_0.2, horiz = F, main = "Highest doses of bioactive chemicals with a 2% threshold")
 
+```
+
+#### Clustering with pvclust instead of hclust
+```{r pvclust_topdose_0.02}
+pvresult_top_0.02 <- pvclust(matrix_DEGs_top_bioactive_0.2, method.dist="cor", method.hclust="average", nboot=10000, parallel=TRUE)
+
+plot(pvresult_top_0.02, cex=0.75)
+pvrect(pvresult_top_0.02, alpha=0.95)
 ```
 
 
@@ -1029,6 +1063,15 @@ f <- prcomp(t(matrix_biomarker_genes_bioactive0.01), retx = TRUE, center = TRUE,
 # plot it
 plotPCAcustom(f, trim_names = F, legend.position = "right", title = "ER-biomarker genes, Bioactivity > 1%, ER biomarker data not included")
 
+```
+
+
+#### Clustering with pvclust instead of hclust
+```{r pvclust_erbiomarker}
+pvresult_erbiomarker <- pvclust(matrix_biomarker_genes_bioactive0.01, method.dist="cor", method.hclust="average", nboot=10000, parallel=TRUE)
+
+plot(pvresult_erbiomarker)
+pvrect(pvresult_erbiomarker, alpha=0.95)
 ```
 
 
