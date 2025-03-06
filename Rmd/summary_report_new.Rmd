@@ -197,7 +197,7 @@ passed <- qc_info %>%
 num_passed_refs <- passed %in% ref_samples %>% sum()
 num_passed_samples <- passed %in% sample_names %>% sum()
 num_passed_solvent <- passed %in% solvent_names %>% sum()
-num_passed_total <- num_passed_samples + num_passed_solvent + num_passed_refs
+num_passed_total <- num_passed_samples + num_passed_solvent
 
 pass_table <- data.frame(
   "Sample Type" = c("Experimental Samples", "Solvent controls","Reference RNA", "Technical Controls"),
@@ -210,7 +210,7 @@ pass_table %>%
         col.names = c("Sample Type", "Total number", "Number passing QC Filters")) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
-*Note: "Technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters."
+*Note: Technical controls and reference RNA are used to check the quality of the sequencing run and to compare between batches. They are not subject to QC filters.
 
 ```{r QC_fails}
 fail_dendro <- qc_info %>%
