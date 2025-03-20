@@ -1,0 +1,150 @@
+# This workflow is used for testing whether the DEG list produced by the new code is identical to the expected result based on example data.
+name: RNAseq_tests
+on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+        - info
+        - warning
+        - debug
+  
+  # schedule:
+  #   - cron: '0 0 1 * *'
+env:
+  CACHE_NUMBER: 0
+permissions:
+  contents: read
+jobs:
+  tests:
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      matrix:
+        include: 
+          - os:  'ubuntu-20.04'  ## self-hosted 
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/base
+        r-version: ['4.3.1']
+        python-version: ['3.11']
+        seq_type: ['rnaseq_singleend'] # add later... , 'rnaseq']
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install libcairo2-dev libxt-dev
+      - name: Set up python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup Miniforge
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+            miniforge-variant: Miniforge3
+            miniforge-version: 23.3.1-0
+            environment-file: workflow/envs/base.yml
+            activate-environment: rodaf_base
+            use-mamba: true
+            python-version: ${{ matrix.python-version }}
+            mamba-version: "*"
+            auto-activate-base: true
+            auto-update-conda: true
+            use-only-tar-bz2: true # This needs to be set for caching to work properly, according to others
+      # - name: Set cache date
+      #   run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      # - uses: actions/cache@v3
+      #   with:
+      #     path: ${{ matrix.prefix }}
+      #     key: ${{ matrix.label }}-conda-${{ hashFiles('workflow/envs/base.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+      #   id: cache
+      - name: List available channels and packages
+        run: |
+          conda config --show channels
+      - name: Update environment
+        run: mamba env update -n rodaf_base -f workflow/envs/base.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Check conda install
+        run: |
+          conda info
+          conda list
+        shell: bash -l {0}
+      - name: Import data
+        run: |
+          ls -alht # What is in the "working directory"?
+          git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
+          rm -r inputs # Remove existing directory before replacing w/ test data
+          mv test-data/${{ matrix.seq_type}}/* ./
+          cd inputs/references
+          wget https://ftp.ensembl.org/pub/release-113/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna_rm.primary_assembly.fa.gz
+          gunzip Mus_musculus.GRCm39.dna_rm.primary_assembly.fa.gz
+          wget https://ftp.ensembl.org/pub/release-113/gtf/mus_musculus/Mus_musculus.GRCm39.113.gtf.gz
+          gunzip Mus_musculus.GRCm39.113.gtf.gz
+          cd ../..
+ 
+      - name: Build snakemake environment
+        run: |
+          snakemake --cores 8 --use-conda --conda-create-envs-only
+      - name: Install extra dependencies
+        run: |
+         conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | \
+         sed s/\.yaml//) Rscript install.R
+      - name: Print env names
+        run: |
+          for yaml in .snakemake/conda/*.yaml; do
+            echo "$yaml:"
+            head -n 1 "$yaml"
+          done
+      - name: Print contents of Conda environments
+        run: |
+          for env in .snakemake/conda/*; do
+            if [ -d "$env" ]; then
+              echo "Contents of $env:"
+              conda activate $env
+              conda list
+              conda deactivate
+            fi
+          done
+        shell: bash -l {0}
+      - name: Run workflow
+        run: |
+          snakemake --cores 8 --use-conda
+      - name: Generate md5sums
+        run: |
+          md5sum output/processed/count_table.tsv > checksum.count_table
+          md5sum output/QC/metadata.QC_applied.txt > checksum.metadata.QC_applied
+          md5sum output/QC/details/QC_per_sample.txt > checksum.QC_per_sample
+          md5sum output/analysis/analysis_default_????????-????/DEG_lists/*.txt > checksums.DEGs #wildcards for timestamped folder
+          md5sum output/analysis/analysis_default_????????-????/BMD_and_biomarker_files/*.txt > checksums.BMD_files
+      - name: Compare pre-processing and QC files to truth set
+        run: |
+          cmp truth_checksums/checksum.count_table checksum.count_table
+          cmp truth_checksums/checksum.metadata.QC_applied checksum.metadata.QC_applied
+          cmp truth_checksums/checksum.QC_per_sample checksum.QC_per_sample
+      - name: Print out checksums for DEG lists
+        run: |
+          echo "DEG checksums from this run:"
+          cat checksums.DEGs # Can be informative if there are errors
+          echo "DEG checksums from 'truth' set:"
+          cat truth_checksums/checksums.DEGs # Can be informative if there are errors
+      - name: Compare DEG lists to truth set
+        run: |
+          # Instead of cmp, this code will check if ALL the checksums from the test have a corresponding match in the larger set of possible "truth" checksums.
+          # This is a hack, but it should work to deal with rounding issues.
+          diff -q <(sort -u checksums.DEGs | awk {'print $1'}) \
+                  <(grep -Fxf \
+                  <(cat checksums.DEGs | awk {'print $1'}) \
+                  <(cat truth_checksums/checksums.DEGs | awk {'print $1'} | sort -u))
+      - name: Compare BMD input files to truth set
+        run: |
+          cat checksums.BMD_files # Can be informative if there are errors
+          cat truth_checksums/checksums.BMD_files # Can be informative if there are errors
+          cmp <(sort -u checksums.BMD_files | awk {'print $1'}) <(sort -u truth_checksums/checksums.BMD_files | awk {'print $1'} )
