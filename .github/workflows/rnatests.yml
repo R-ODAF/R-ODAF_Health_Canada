@@ -83,7 +83,7 @@ jobs:
           git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
           rm -r inputs # Remove existing directory before replacing w/ test data
           mv test-data/${{ matrix.seq_type}}/* ./
-          cd inputs/references
+          mkdir -p inputs/references && cd inputs/references
           wget https://ftp.ensembl.org/pub/release-113/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna_rm.primary_assembly.fa.gz
           gunzip Mus_musculus.GRCm39.dna_rm.primary_assembly.fa.gz
           wget https://ftp.ensembl.org/pub/release-113/gtf/mus_musculus/Mus_musculus.GRCm39.113.gtf.gz

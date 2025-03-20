@@ -30,7 +30,7 @@ COPY . .
 RUN mv inputs inputs.bak \
       && wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/archive/master.tar.gz \
       && tar -zxvf master.tar.gz \
-      && mv -f test-data-main/dev/${PLATFORM}/* ./ \
+      && mv -f test-data-main/${PLATFORM}/* ./ \
       && wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv \
       && rm master.tar.gz
 
