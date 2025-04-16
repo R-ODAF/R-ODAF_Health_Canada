@@ -202,7 +202,7 @@ For example,
 
 ## Running the workflow
 
-*If you installed the conda environments in a [persistent location](#### Persistent environments), remember to use the --conda-prefix flag.*
+*If you installed the conda environments in a [persistent location](####Persistent-environments), remember to use the --conda-prefix flag.*
 
 To run the whole pipeline:
 
