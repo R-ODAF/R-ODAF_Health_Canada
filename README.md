@@ -96,7 +96,7 @@ Other dependencies are managed by snakemake via the creation of conda environmen
 
 
 ### Installing environments
-__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This onlly needs to be done once per project, or once ever if you install environments in a persistent location. 
+__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments in a persistent location. 
 
 From inside the repo directory, run:
 
@@ -122,6 +122,35 @@ conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml/
 ```
 
 *When running the workflow, remember to use the --conda-prefix flag.*
+
+# Running tests
+It's a good idea to run a small test dataset through the workflow when you first install it. To do this:
+
+Rename the inputs folder
+`mv inputs inputs_bak`
+
+Download the test dataset from our repository. This will create a new inputs directory already populated with the temposeq test data.
+
+Be sure to download the CORRECT RELEASE that matches the current state of the R-ODAF_Health_Canada pipeline.
+
+```
+wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/releases/download/latest/temposeq-inputs.tar.gz
+tar -xzf temposeq-inputs.tar.gz
+mv temposeq/inputs .
+```
+
+Test run the pipeline (make sure you activate the snakemake environment first).
+`snakemake --sdm conda --cores 32 -n`
+
+If that works without error, actually run the pipeline.
+`snakemake --sdm conda --cores 32`
+
+Post-test, clean up and reset the repo so you can run the pipeline on your own data.
+```
+rm -r inputs
+rm -r output
+mv inputs_bak inputs
+```
 
 # Set up inputs
 
