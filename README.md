@@ -96,7 +96,7 @@ Other dependencies are managed by snakemake via the creation of conda environmen
 
 
 ### Installing environments
-__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments in a persistent location. 
+__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments [in a persistent location](#### Persistent environments). 
 
 From inside the repo directory, run:
 
@@ -202,7 +202,7 @@ For example,
 
 ## Running the workflow
 
-*If you installed the conda environments in a [persistent location](https://github.com/R-ODAF/R-ODAF_Health_Canada?tab=readme-ov-file#persistent-environments), remember to use the --conda-prefix flag.*
+*If you installed the conda environments in a [persistent location](#### Persistent environments), remember to use the --conda-prefix flag.*
 
 To run the whole pipeline:
 
