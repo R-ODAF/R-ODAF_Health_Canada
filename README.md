@@ -96,7 +96,7 @@ Other dependencies are managed by snakemake via the creation of conda environmen
 
 
 ### Installing environments
-__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments [in a persistent location](#### Persistent environments). 
+__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments [in a persistent location](####Persistent-environments). 
 
 From inside the repo directory, run:
 
@@ -127,11 +127,12 @@ conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml/
 It's a good idea to run a small test dataset through the workflow when you first install it. To do this:
 
 Rename the inputs folder
+
 `mv inputs inputs_bak`
 
 Download the test dataset from our repository. This will create a new inputs directory already populated with the temposeq test data.
 
-Be sure to download the CORRECT RELEASE that matches the current state of the R-ODAF_Health_Canada pipeline.
+Be sure to download the release that matches the current state of the R-ODAF_Health_Canada pipeline.
 
 ```
 wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/releases/download/latest/temposeq-inputs.tar.gz
@@ -140,9 +141,11 @@ mv temposeq/inputs .
 ```
 
 Test run the pipeline (make sure you activate the snakemake environment first).
+
 `snakemake --sdm conda --cores 32 -n`
 
 If that works without error, actually run the pipeline.
+
 `snakemake --sdm conda --cores 32`
 
 Post-test, clean up and reset the repo so you can run the pipeline on your own data.
@@ -210,8 +213,9 @@ To run the whole pipeline:
 
 Choose the number of cores according to what is available in your system.
 
-![pipeline_image](pipeline_figure.png)
 ### Running workflow sections
+
+![pipeline_image](pipeline_figure.png)
 
 This workflow is modularized, so you can run (or re-run) some sections independently if needed. This can be beneficial if, for example:
 - you found samples you wish to manually remove based on QC results and want to re-run the QC and differential expression steps. 
@@ -234,21 +238,23 @@ Once the preprocessing steps are complete, you can run (or re-run) the quality c
 
 `snakemake -s ./workflow/modules/2-qc.smk --software-deployment-method conda --cores 32`
 
+**If you have already run the QC step and want to re-run it, you must delete or rename the output/QC directory**
+
 #### Differential expression analysis
 
 Once the preprocessing and quality control steps are complete, you can run (or re-run) differential analysis via DESeq2 and production of DEG reports. This will produce DEG lists, exploratory reports, and interactive gene expression reports that incorporate DEG filtering according to R-ODAF criteria.
 
 `snakemake -s ./workflow/modules/3-diffexp_and_reports.smk --software-deployment-method conda --cores 32`
 
-**Note that you will have to delete dummy output file "reports_complete" to re-run the differential expression analysis step.**
-
+**Note that you will have to delete dummy output file "output/.rodaf_internal/reports_complete" to re-run the differential expression analysis step.**
+`output/.rodaf_internal/reports_complete`
 
 # Output files
 
 ## Quality control
 
 - A [MultiQC](https://multiqc.info/) report
-- An HMTL study-wide QC report showing pass/fail for samples according to to R-ODAF filtering criteria as set out in [the publication](https://www.sciencedirect.com/science/article/pii/S0273230022000307)
+- An HMTL study-wide QC report showing pass/fail for samples according to to R-ODAF filtering criteria as set out in [Harrill et al. (2021)](https://pubmed.ncbi.nlm.nih.gov/33538836/)
 - An update metadata file containing only samples that passed QC
 
 ## Differentially expressed genes
