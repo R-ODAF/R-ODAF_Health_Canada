@@ -73,9 +73,10 @@ jobs:
       - name: Import data
         run: |
           ls -alht # What is in the "working directory"?
-          git clone https://github.com/EHSRB-BSRSE-Bioinformatics/test-data
+          wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/releases/latest/download/temposeq-inputs.tar.gz
           rm -r inputs # Remove existing directory before replacing w/ test data
-          mv test-data/${{ matrix.seq_type}}/* ./
+          tar -xzf temposeq-inputs.tar.gz
+          mv temposeq/inputs .
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
       - name: Build snakemake environment
         run: |
