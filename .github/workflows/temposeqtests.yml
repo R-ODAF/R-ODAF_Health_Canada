@@ -77,6 +77,7 @@ jobs:
           rm -r inputs # Remove existing directory before replacing w/ test data
           tar -xzf temposeq-inputs.tar.gz
           mv temposeq/inputs .
+          mv temposeq/truth_checksums .
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
       - name: Build snakemake environment
         run: |
