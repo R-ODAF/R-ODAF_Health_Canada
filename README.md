@@ -135,7 +135,7 @@ Download the test dataset from our repository. This will create a new inputs dir
 Be sure to download the release that matches the current state of the R-ODAF_Health_Canada pipeline.
 
 ```
-wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/releases/latest/download/temposeq-inputs.tar.gz
+wget https://github.com/EHSRB-BSRSE-Bioinformatics/test-data/releases/latest/download/temposeq.tar.gz
 tar -xzf temposeq-inputs.tar.gz
 mv temposeq/inputs .
 ```
