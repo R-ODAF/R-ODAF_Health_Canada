@@ -132,14 +132,16 @@ qc_pars <- c(config$QC)
 qc_pars <- replace_nulls_in_config(qc_pars)
 
 criteria <- data.frame(
-  Abbreviation = c("Dendrogram","NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Abbreviation = c("Dendrogram", "Group Dendrogram", "NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
   Description = c("All-samples clustering distance",
+                  "Group-specific clustering distance",
                   "Number of mapped reads",
                   "Fraction of uniquely mapped reads", 
                   "Number of probes with at least 5 uniquely mapped reads", 
                   "Number of probes capturing the top 80% of a signal in a sample", 
                   "Gini coefficient"),
   "Default Threshold" = c("< 0.1",
+                          "N/A",
                           "> 10% of target read depth",
                           "> 0.5",
                           "within 3*IQR",
@@ -147,6 +149,7 @@ criteria <- data.frame(
                           "RNA-Seq: < 0.99, \nTempO-Seq: < 0.95"),
   "Threshold" = c(
     paste0("< ",qc_pars$studywide_tree_height_cutoff),
+    paste0("<", qc_pars$group_tree_height_cutoff),
     paste0("> ",params$nmr_threshold),
     paste0("> ",qc_pars$align_threshold), 
     "within 3*IQR", "within 3*IQR", 
