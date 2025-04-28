@@ -338,7 +338,10 @@ A count matrix containing the $`r num_passed_total`$ samples that passed QC was 
 # read in contrasts
 exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$contrasts_file), paths)
 
-deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = TRUE)
+mixedrank <- function(x) order(gtools::mixedorder(x))
+deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), 
+                         sep = "\t", stringsAsFactors = FALSE, header = TRUE) %>%
+  arrange(mixedrank(comparison))
 
 if (!is.na(params$reports_facet)) {
   colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs", "Downregulated", "Upregulated")
