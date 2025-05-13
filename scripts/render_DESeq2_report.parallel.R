@@ -146,9 +146,6 @@ if (params$write_additional_output && params$generate_runningfisher_report) {
   make_runningfisher_report(pars = params, paths = paths, input = bs)
 }
 
-if (!is.na(params$reports_facet)) {
-  summarize_across_facets(overallResListAll, overallResListDEGs, filtered_table, facets, params)
-}
 
 if (params$generate_summary_report) {
   make_summary_report(params, paths)
