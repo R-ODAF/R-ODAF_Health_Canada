@@ -54,7 +54,7 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
    }
 
    if (length(facets) == 1) {
-      p1 = ggplot(p1_data, aes(x = fct_inorder(contrast))) +
+      p1 = ggplot(p1_data, aes(x = fct_inorder(facet_contrast))) +
          geom_bar(aes(y = ..count..)) +
          theme_bw() +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
