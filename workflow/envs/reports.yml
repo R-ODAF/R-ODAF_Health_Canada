@@ -6,6 +6,7 @@ channels:
 dependencies:
   - conda-forge::pandoc=2.19.2
   # R CRAN
+  - conda-forge::r-base=4.2.3
   - conda-forge::r-devtools=2.4.5
   - conda-forge::r-here = 1.0.1
   - conda-forge::r-curl=4.3.3
