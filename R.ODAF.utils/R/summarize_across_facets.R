@@ -87,43 +87,56 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
 
 
    # plot filter stats
+
+
    p2_data <- filtered_table %>%
-      group_by(facet, contrast) %>%
-      mutate(not_significant = initial - (relevance_filtered + quantile_filtered + spike_filtered)) %>%
-      mutate(contrast = str_replace(contrast, "_vs_", " vs ")) %>%
-      ungroup() %>%
-      tidyr::pivot_longer(cols = c(not_significant, relevance_filtered, quantile_filtered, spike_filtered, passed_all_filters)) %>%
-      mutate(perc = value / initial) %>%
-      mutate(name = factor(name, levels = c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters"))) %>%
-      mutate(facet_contrast = factor(paste0(facet, ": ", contrast), levels = ordered_levels)) %>%
-      dplyr::arrange(mixedrank(contrast))
+   group_by(facet, contrast) %>%
+   mutate(not_significant = initial - (relevance_filtered + quantile_filtered + spike_filtered)) %>%
+   mutate(contrast = str_replace(contrast, "_vs_", " vs ")) %>%
+   ungroup() %>%
+   tidyr::pivot_longer(
+      cols = c(not_significant, relevance_filtered, quantile_filtered, spike_filtered, passed_all_filters)
+   ) %>%
+   mutate(perc = value / initial) %>%
+   mutate(name = factor(
+      name,
+      levels = c("relevance_filtered", "not_significant", "quantile_filtered", "spike_filtered", "passed_all_filters")
+   )) %>%
+   mutate(facet_contrast = paste0(facet, ": ", contrast)) # facet_contrast remains *character* for now
 
+   # Set the right levels using gtools::mixedsort()!
+   ordered_levels <- mixedsort(unique(p2_data$facet_contrast))
+   p2_data$facet_contrast <- factor(p2_data$facet_contrast, levels = ordered_levels)
+
+   ordered_contrasts <- mixedsort(unique(p2_data$contrast))
+   p2_data$contrast <- factor(p2_data$contrast, levels = ordered_contrasts)
+
+   ## Now plotting code as before, referencing the factor columns
    if (length(facets) == 1) {
-      p2 = ggplot(p2_data, aes(x = contrast, y = value)) +
-         theme_bw() +
-         geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free") +
-         theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Number of genes") +
-         xlab("Contrast")
-
+   p2 = ggplot(p2_data, aes(x = contrast, y = value)) +
+      theme_bw() +
+      geom_bar(stat = "identity", position = "dodge") +
+      facet_wrap(~name, scales = "free") +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      ylab("Number of genes") +
+      xlab("Contrast")
    } else if (length(facets) < 10) {
-      p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
-         theme_bw() +
-         geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free_y", ncol = 1) +
-         theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-         ylab("Number of genes") +
-         xlab("Facet: contrast")
+   p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
+      theme_bw() +
+      geom_bar(stat = "identity", position = "dodge") +
+      facet_wrap(~name, scales = "free_y", ncol = 1) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+      ylab("Number of genes") +
+      xlab("Facet: contrast")
    } else {
-      p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
-         theme_bw() +
-         geom_bar(stat = "identity", position = "dodge") +
-         facet_wrap(~name, scales = "free_y", ncol = 1) +
-         theme(axis.text.x = element_blank(),
+   p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
+      theme_bw() +
+      geom_bar(stat = "identity", position = "dodge") +
+      facet_wrap(~name, scales = "free_y", ncol = 1) +
+      theme(axis.text.x = element_blank(),
             legend.position = "none") +
-         ylab("Number of genes") +
-         xlab("Facet: contrast")
+      ylab("Number of genes") +
+      xlab("Facet: contrast")
    }
 
    # ggsave(file.path(paths$reports_dir, paste0(prefix, "_", "filter_summary_plot.png")), p2,
