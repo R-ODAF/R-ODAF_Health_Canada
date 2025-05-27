@@ -52,6 +52,7 @@ dependencies:
   - conda-forge::r-ggh4x
   # - conda-forge::r-matrixstats=1.4.1 # If included, github test workflow fails
   - conda-forge::r-formattable=0.2.1
+  - conda-forge::r-forcats=1.0.0
   # Install these via different mechanism.
   #- bioconda::r-crosstool
   #- bioconda::r-cellWise
