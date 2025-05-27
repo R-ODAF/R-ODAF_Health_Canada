@@ -43,9 +43,14 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
 
 
    p1_data <- significantResultsUnfaceted %>%
-      mutate(facet_contrast = factor(paste0(facet, ": ", contrast))) %>%
-      dplyr::arrange(mixedrank(contrast))
+    mutate(
+    facet_contrast = paste0(facet, ": ", contrast) # Plain string
+    )
 
+   p1_data$facet_contrast <- factor(
+    p1_data$facet_contrast,
+    levels = mixedsort(unique(p1_data$facet_contrast))
+   )
 
    if (length(facets) < 10) {
       plot_size <- 5
@@ -54,21 +59,21 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
    }
 
    if (length(facets) == 1) {
-      p1 = ggplot(p1_data, aes(x = fct_inorder(facet_contrast))) +
+      p1 = ggplot(p1_data, aes(x = facet_contrast)) +
          geom_bar(aes(y = ..count..)) +
          theme_bw() +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
          ylab("Number of DEGs") +
          xlab("Contrast")
    } else if (length(facets) < 10) {
-      p1 = ggplot(p1_data, aes(x = fct_inorder(facet_contrast))) +
+      p1 = ggplot(p1_data, aes(x = facet_contrast)) +
          geom_bar(aes(y = ..count.., fill = facet)) +
          theme_bw() +
          theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
          ylab("Number of DEGs") +
          xlab("Facet: contrast")
    } else {
-      p1 = ggplot(p1_data, aes(x = fct_inorder(facet_contrast))) +
+      p1 = ggplot(p1_data, aes(x = facet_contrast)) +
          geom_bar(aes(y = ..count.., fill = facet)) +
          theme_bw() +
          theme(axis.text.x = element_blank(),
@@ -94,7 +99,7 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
       dplyr::arrange(mixedrank(contrast))
 
    if (length(facets) == 1) {
-      p2 = ggplot(p2_data, aes(x = fct_inorder(contrast), y = value)) +
+      p2 = ggplot(p2_data, aes(x = contrast, y = value)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
          facet_wrap(~name, scales = "free") +
@@ -103,7 +108,7 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          xlab("Contrast")
 
    } else if (length(facets) < 10) {
-      p2 = ggplot(p2_data, aes(x = fct_inorder(facet_contrast), y = value, fill = facet)) +
+      p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
          facet_wrap(~name, scales = "free_y", ncol = 1) +
@@ -111,7 +116,7 @@ summarize_across_facets <- function(overallResListAll, overallResListDEGs, filte
          ylab("Number of genes") +
          xlab("Facet: contrast")
    } else {
-      p2 = ggplot(p2_data, aes(x = fct_inorder(facet_contrast), y = value, fill = facet)) +
+      p2 = ggplot(p2_data, aes(x = facet_contrast, y = value, fill = facet)) +
          theme_bw() +
          geom_bar(stat = "identity", position = "dodge") +
          facet_wrap(~name, scales = "free_y", ncol = 1) +

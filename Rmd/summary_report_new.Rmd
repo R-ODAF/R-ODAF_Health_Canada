@@ -407,7 +407,7 @@ deg_counts %>%
 <br>
 
 ```{r DEG_figures}
-facets <- R.ODAF.utils::get_facets(qc_metadata, params)
+# facets <- R.ODAF.utils::get_facets(qc_metadata, params)
 
 if (!is.na(params$reports_facet)) {
   show_deg_plots <- TRUE
