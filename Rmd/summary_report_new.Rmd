@@ -498,7 +498,8 @@ hdaci_formatter <- formatter("span",
 # If biomarker_table is not NULL, print the table
 if (!is.null(biomarker_table)) {
   biomarker_table %>%
-    rename(Contrast = ID) %>%
+    rename(Group = ID) %>%
+    arrange(mixedrank(Group)) %>%
     formattable(list(DDI_result = ddi_formatter, HDACi_result = hdaci_formatter)) %>%
     formattable::as.htmlwidget()
 } else {
