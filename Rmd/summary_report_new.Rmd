@@ -132,14 +132,16 @@ qc_pars <- c(config$QC)
 qc_pars <- replace_nulls_in_config(qc_pars)
 
 criteria <- data.frame(
-  Abbreviation = c("Dendrogram","NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
+  Abbreviation = c("Dendrogram", "Group Dendrogram", "NMR", "FMR", "Ncov5", "Nsig80", "GiC"),
   Description = c("All-samples clustering distance",
+                  "Group-specific clustering distance",
                   "Number of mapped reads",
                   "Fraction of uniquely mapped reads", 
                   "Number of probes with at least 5 uniquely mapped reads", 
                   "Number of probes capturing the top 80% of a signal in a sample", 
                   "Gini coefficient"),
   "Default Threshold" = c("< 0.1",
+                          "N/A",
                           "> 10% of target read depth",
                           "> 0.5",
                           "within 3*IQR",
@@ -147,6 +149,7 @@ criteria <- data.frame(
                           "RNA-Seq: < 0.99, \nTempO-Seq: < 0.95"),
   "Threshold" = c(
     paste0("< ",qc_pars$studywide_tree_height_cutoff),
+    paste0("<", qc_pars$group_tree_height_cutoff),
     paste0("> ",params$nmr_threshold),
     paste0("> ",qc_pars$align_threshold), 
     "within 3*IQR", "within 3*IQR", 
@@ -338,7 +341,10 @@ A count matrix containing the $`r num_passed_total`$ samples that passed QC was 
 # read in contrasts
 exp_contrasts <- R.ODAF.utils::get_contrasts(file.path(paths$contrasts, params$contrasts_file), paths)
 
-deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), sep = "\t", stringsAsFactors = FALSE, header = TRUE)
+mixedrank <- function(x) order(gtools::mixedorder(x))
+deg_counts <- read.delim(file.path(paths$summary, "DEG_counts.txt"), 
+                         sep = "\t", stringsAsFactors = FALSE, header = TRUE) %>%
+  arrange(mixedrank(comparison))
 
 if (!is.na(params$reports_facet)) {
   colnames(deg_counts) <- c(params$reports_facet, "Contrast", "DEGs", "Downregulated", "Upregulated")
@@ -401,7 +407,7 @@ deg_counts %>%
 <br>
 
 ```{r DEG_figures}
-facets <- R.ODAF.utils::get_facets(qc_metadata, params)
+# facets <- R.ODAF.utils::get_facets(qc_metadata, params)
 
 if (!is.na(params$reports_facet)) {
   show_deg_plots <- TRUE
@@ -492,7 +498,8 @@ hdaci_formatter <- formatter("span",
 # If biomarker_table is not NULL, print the table
 if (!is.null(biomarker_table)) {
   biomarker_table %>%
-    rename(Contrast = ID) %>%
+    rename(Group = ID) %>%
+    arrange(mixedrank(Group)) %>%
     formattable(list(DDI_result = ddi_formatter, HDACi_result = hdaci_formatter)) %>%
     formattable::as.htmlwidget()
 } else {
