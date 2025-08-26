@@ -479,7 +479,9 @@ t1 <- all_pc1 %>%
 
 t2 <- t1
 
-t2$PCA <- ifelse(t1$PCA < -0.768, "DDI", "Non-DDI")
+t2$PCA <- ifelse(t1$PCA < -0.768, "DDI", 
+                 ifelse(t1$PCA < 0, "Inconclusive", "Non-DDI"))
+
 t2$NSC <- ifelse(t1$NSC > 0.9, "DDI",
                   ifelse(t1$NSC > 0.1, "Inconclusive", "Non-DDI"))
 
@@ -536,10 +538,10 @@ color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
 
 # Define the color mapping for each annotation bar
 annotation_colors <- list(
-  PCA = c("Non-DDI" = "blue", "DDI" = "red"),
-  HC = c("Non-DDI" = "blue", "UNCERTAIN" = "yellow", "DDI" = "red"),
-  NSC = c("Non-DDI" = "blue", "DDI" = "red"),
-  Overall = c("Non-DDI" = "blue", "DDI" = "red")
+  PCA = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  HC = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  NSC = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  Overall = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI"))
 )
 
 # Column order
