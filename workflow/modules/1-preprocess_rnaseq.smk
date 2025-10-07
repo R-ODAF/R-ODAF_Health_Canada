@@ -2,8 +2,6 @@ include: "define.smk"
 include: "trim.smk"
 include: "align.smk"
 
-##### Dummy rule all for testing purposes
-##### Don't forget to change it!
 rule pp_rs_all:
     input: 
         processed_dir / "count_table.tsv",
@@ -43,11 +41,11 @@ if pipeline_config["mode"] == "pe":
         conda:
             "../envs/preprocessing.yml"
         params:
-            threads = workflow.cores,
+            threads = pipeline_config["threads"],
             output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
             index_name = pipeline_config["genome_name"]
         benchmark: log_dir / "benchmark.{sample}.RSEM_pe.txt"
-        threads: workflow.cores
+        threads: pipeline_config["threads"]
         shell:
             '''
             rsem-calculate-expression \
@@ -70,11 +68,11 @@ if pipeline_config["mode"] == "se":
         conda:
             "../envs/preprocessing.yml"
         params:
-            threads = workflow.cores,
+            threads = pipeline_config["threads"],
             output_prefix =  lambda wildcards : quant_dir / "{}".format(wildcards.sample),
             index_name = pipeline_config["genome_name"]
         benchmark: log_dir / "benchmark.{sample}.RSEM_se.txt"
-        threads: workflow.cores
+        threads: pipeline_config["threads"]
         shell:
             '''
             rsem-calculate-expression \
