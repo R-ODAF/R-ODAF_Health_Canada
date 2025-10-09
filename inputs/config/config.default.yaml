@@ -31,7 +31,7 @@ pipeline:
   genome_name: "S1500_2.0" # used for labeling genome index files
   sample_id: "sample_ID" # header for the column for sample identifier in the metadata file.
   mode: se # one of 'se' (single end) or 'pe' (paired end)
-  threads: 8 # number of threads to use for multi-threaded programs
+  threads: 4 # number of threads to use for multi-threaded programs
 
 ###### QC parameters
 QC:

@@ -111,7 +111,7 @@ if pipeline_config["mode"] == "se":
             annotations = genome_dir / pipeline_config["annotation_filename"],
             folder = "{sample}",
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
-        benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
+        benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
         threads: num_threads
         shell:
             '''
@@ -152,7 +152,7 @@ if pipeline_config["mode"] == "pe":
             bam_prefix = lambda wildcards : align_dir / "{}.".format(wildcards.sample)
         resources:
             load=100
-        benchmark: log_dir / "benchmark.{sample}.STAR_se.txt"
+        benchmark: log_dir / "benchmark.{sample}.STAR_pe.txt"
         threads: num_threads
         shell:
             '''
