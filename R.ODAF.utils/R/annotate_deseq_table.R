@@ -31,20 +31,39 @@ annotate_deseq_table <- function(deseq_results_list,
       deg_table <- dplyr::left_join(deg_table, params$biospyder, by = c("Feature_ID" = params$feature_id))
     } else {
       # Annotation using orgdb package
+      annotations <- NULL # Initialize annotations to NULL
       tryCatch({
+        orgdb_path <- params$species_data$orgdb
+        if (!file.exists(orgdb_path)) {
+          stop("orgdb file not found at: ", orgdb_path)
+        }
+        orgdb <- AnnotationDbi::loadDb(orgdb_path)
+
         annotations <- AnnotationDbi::select(
-          AnnotationDbi::loadDb(params$species_data$orgdb),
+          orgdb,
           columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
           keys = feature_ids,
           keytype = "ENSEMBL")
+        
         # Ensuring unique rows for annotations
         annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
         colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
-        deg_table <- deg_table %>%  dplyr::mutate(Ensembl_Gene_ID = Feature_ID) # duplicate columns to prevent erroring out on last chunk
-        deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
+         # duplicate columns to prevent erroring out on last chunk
+        
       }, error = function(e) {
         message("Error during annotation: ", e$message)
       })
+    } ## NOTE only partway through implementing changes! 
+    deg_table <- deg_table %>%  dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
+    
+    
+    if (!is.null(annotations)) {
+      deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
+    } else {
+      message("Warning: Annotation failed or returned no results for all Feature_IDs in this contrast. Adding placeholder columns.")
+      deg_table$Gene_Symbol <- deg_table$Feature_ID # Default to Feature_ID if no annotation
+      deg_table$description <- NA
+      deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
     }
 
     # Transform log2 fold changes into linear fold changes
