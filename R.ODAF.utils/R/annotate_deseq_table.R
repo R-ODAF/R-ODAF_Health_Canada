@@ -21,40 +21,32 @@ annotate_deseq_table <- function(deseq_results_list,
     if (is.null(deg_table) || nrow(deg_table) == 0) {
       return(NULL)
     }
-    message("Column names: ", paste(colnames(deg_table), collapse = ", "))
-    message("Row names: ", paste(head(rownames(deg_table)), collapse = ", "))
     # Proceed with the annotation and transformation
     feature_ids <- rownames(deg_table)
-    message(paste("Feature ids:", paste(head(feature_ids, min(10, length(feature_ids))), collapse=", ")))
     contrast <- gsub(pattern = paste0("log2.*", params$design, "\ "), replacement = "", deg_table@elementMetadata[[2]][2])
     deg_table <- cbind(Feature_ID = feature_ids, as.data.frame(deg_table), contrast = contrast)
 
-    message(paste("After cbind - deg_table rows:", nrow(deg_table)))
-message(paste("After cbind - deg_table cols:", ncol(deg_table)))
-message(paste("Feature_ID column length:", length(deg_table$Feature_ID)))
-message(paste("Feature_ID values:", paste(head(deg_table$Feature_ID, min(10, nrow(deg_table))), collapse=", ")))
-message(paste("Any NAs in Feature_ID?", any(is.na(deg_table$Feature_ID))))
 
     if (params$platform == "TempO-Seq") {
       deg_table <- dplyr::left_join(deg_table, params$biospyder, by = c("Feature_ID" = params$feature_id))
-} else {
-  tryCatch({
-    annotations <- AnnotationDbi::select(
-      AnnotationDbi::loadDb(params$species_data$orgdb),
-      columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
-      keys = feature_ids,
-      keytype = "ENSEMBL")
-    annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
-    colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
-    deg_table <- deg_table %>% dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
-    deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
-  }, error = function(e) {
-    message("Error during annotation: ", e$message)
-    deg_table <<- deg_table %>% 
-      dplyr::mutate(
-        Ensembl_Gene_ID = Feature_ID,
-        Gene_Symbol = NA_character_,
-        description = NA_character_
+    } else {
+      tryCatch({
+        annotations <- AnnotationDbi::select(
+          AnnotationDbi::loadDb(params$species_data$orgdb),
+          columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
+          keys = feature_ids,
+          keytype = "ENSEMBL")
+        annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
+        colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
+        deg_table <- deg_table %>% dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
+        deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
+   }, error = function(e) {
+     message("Error during annotation: ", e$message)
+     deg_table <<- deg_table %>% 
+       dplyr::mutate(
+         Ensembl_Gene_ID = Feature_ID,
+         Gene_Symbol = NA_character_,
+         description = NA_character_
       )
   })
 }
