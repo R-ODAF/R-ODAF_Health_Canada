@@ -34,10 +34,11 @@ In its current state of development, this repository should be used by individua
 ## Annotation versions
 For reasons of reproducibility, this respository uses the following annotation versions:
 
-org.Hs.eg.db 3.14.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
+org.Hs.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Hs.eg.db.html)
 
-org.Mm.eg.db 3.14.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Mm.eg.db.html)
+org.Mm.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Mm.eg.db.html)
 
+org.Dr.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Dr.eg.db.html)
 
 # Installation and getting started
 

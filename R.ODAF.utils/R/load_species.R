@@ -60,6 +60,19 @@ load_species <- function(species, wiki, manifest) {
     species_data$ensembl_species <- "mauratus_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
     species_data$loaded <- TRUE
+  } else if (species == "mouse") {
+    if (!requireNamespace("org.Dr.eg.db", quietly = TRUE)) {
+      stop("Package 'org.Dr.eg.db' is required for zebrafish species data.")
+    }
+    library(org.Dr.eg.db)
+    species_data$orgdb <- AnnotationDbi::dbfile(get("org.Dr.eg.db"))
+    species_data$species_sci <- "Danio rerio"
+    species_data$wiki <- wiki
+    species_data$ensembl_species <- "drerio_gene_ensembl"
+    species_data$species_gene_symbol <- "external_gene_name"
+    species_data$kegg_organism <- "dre"
+    species_data$temposeq_manifest <- manifest
+    species_data$loaded <- TRUE
   } else {
     stop("No species picked!")
   }
