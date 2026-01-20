@@ -40,6 +40,8 @@ org.Mm.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/h
 
 org.Dr.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Dr.eg.db.html)
 
+org.Rn.eg.db 3.16.0 (https://bioconductor.org/packages/release/data/annotation/html/org.Rn.eg.db.html)
+
 # Installation and getting started
 
 ## Installation option 1: Docker container
