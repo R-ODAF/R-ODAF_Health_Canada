@@ -21,32 +21,35 @@ annotate_deseq_table <- function(deseq_results_list,
     if (is.null(deg_table) || nrow(deg_table) == 0) {
       return(NULL)
     }
-
     # Proceed with the annotation and transformation
     feature_ids <- rownames(deg_table)
     contrast <- gsub(pattern = paste0("log2.*", params$design, "\ "), replacement = "", deg_table@elementMetadata[[2]][2])
     deg_table <- cbind(Feature_ID = feature_ids, as.data.frame(deg_table), contrast = contrast)
 
+
     if (params$platform == "TempO-Seq") {
       deg_table <- dplyr::left_join(deg_table, params$biospyder, by = c("Feature_ID" = params$feature_id))
     } else {
-      # Annotation using orgdb package
       tryCatch({
         annotations <- AnnotationDbi::select(
           AnnotationDbi::loadDb(params$species_data$orgdb),
           columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
           keys = feature_ids,
           keytype = "ENSEMBL")
-        # Ensuring unique rows for annotations
         annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
         colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
-        deg_table <- deg_table %>%  dplyr::mutate(Ensembl_Gene_ID = Feature_ID) # duplicate columns to prevent erroring out on last chunk
+        deg_table <- deg_table %>% dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
         deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
-      }, error = function(e) {
-        message("Error during annotation: ", e$message)
-      })
-    }
-
+   }, error = function(e) {
+     message("Error during annotation: ", e$message)
+     deg_table <<- deg_table %>% 
+       dplyr::mutate(
+         Ensembl_Gene_ID = Feature_ID,
+         Gene_Symbol = NA_character_,
+         description = NA_character_
+      )
+  })
+}
     # Transform log2 fold changes into linear fold changes
     deg_table <- deg_table %>%
       dplyr::mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2^log2FoldChange, -1 / (2^log2FoldChange)),
