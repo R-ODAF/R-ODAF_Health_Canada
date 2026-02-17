@@ -99,7 +99,7 @@ library(kableExtra)
 library(plotly)
 library(gtable)
 library(grid)
-library(fs)
+library(gtools)
 ```
 
 
@@ -144,7 +144,7 @@ Results of all three analyses are summarized in a table at the end of this repor
 
 ```{r load_facet_data, include=FALSE}
 # Load facet data. Gets allBiomarkers and contrasts_subset for current facet
-load_facet_data(paths, params)
+load_facet_data(paths, params, facet_override = NA, filter_override = NA)
 
 # Have to deal with weird data setup in case2
 if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
@@ -160,6 +160,7 @@ control <- contrasts_subset %>%
   slice(1) %>%
   pull(V2)
 ```
+
 
 ```{r get_IDs}
 # Temposeq rows are named by gene symbol
@@ -241,6 +242,10 @@ log2ratios <- select(log2ratios, -one_of(control))
 
 log10ratios <- log2ratios %>%
   mutate_at(vars(-ID), ~ log10(2^.))
+
+samples <- colnames(log10ratios)
+samples <- samples[-1] # Remove "ID"
+samples <- mixedsort(samples)
 ```
 
 ```{r classifier}
@@ -427,7 +432,7 @@ for (j in 30:ncol(pc_calc)){
   if (same_group_count == length(DDI_chems)) {
     result <- "DDI"
   } else if (same_group_count > 0) {
-    result <- "UNCERTAIN"
+    result <- "Inconclusive"
   } else {
     result <- "Non-DDI"
   }
@@ -474,8 +479,13 @@ t1 <- all_pc1 %>%
 
 t2 <- t1
 
-t2$PCA <- ifelse(sign(t1$PCA) == -1, "DDI", "Non-DDI")
-t2$NSC <- ifelse(t1$NSC == 1, "DDI", "Non-DDI")
+t2$PCA <- ifelse(t1$PCA < -0.768, "DDI", 
+                 ifelse(t1$PCA < 0, "Inconclusive", "Non-DDI"))
+
+t2$NSC <- ifelse(t1$NSC > 0.9, "DDI",
+                  ifelse(t1$NSC > 0.1, "Inconclusive", "Non-DDI"))
+
+
 t2$Overall <- apply(t2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("DDI" %in% x, "DDI", "Non-DDI"))
 
 rownames(t2) <- t2$ID
@@ -528,14 +538,19 @@ color_scale <- colorRampPalette(c("blue", "white", "gold1"))(17)
 
 # Define the color mapping for each annotation bar
 annotation_colors <- list(
-  PCA = c("Non-DDI" = "blue", "DDI" = "red"),
-  HC = c("Non-DDI" = "blue", "UNCERTAIN" = "yellow", "DDI" = "red"),
-  NSC = c("Non-DDI" = "blue", "DDI" = "red"),
-  Overall = c("Non-DDI" = "blue", "DDI" = "red")
+  PCA = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  HC = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  NSC = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI")),
+  Overall = setNames(c("blue", "yellow", "red"), c("Non-DDI", "Inconclusive", "DDI"))
 )
 
+# Column order
+pca_order <- c(DDI_chems, NDDI_chems, samples)
+
+std_win_log10 <- std_win_log10[, pca_order]
+
 # Reorder the rows in the annotation to match the matrix
-t2 <- t2[match(colnames(std_win_log10), rownames(t2)), ]
+t2 <- t2[match(pca_order, rownames(t2)), ]
 
 # Create the heatmap
 p <- pheatmap(std_win_log10,
@@ -577,37 +592,25 @@ grid::grid.draw(gt)
 # Summary Table
 
 ```{r summary}
-# Create a summary table of test chemicals
-summary_table1 <- testchem_pc1 %>%
-  merge(dendro_results_testchems, by = "ID") %>%
-  merge(pred, by = "ID") %>%
-  rename(PCA = PC1, NSC = probG)
-
-# Initialize
-summary_table2 <- summary_table1
-
-# Assign "DDI" or "Non-DDI" based on results in the three tests
-summary_table2$PCA <- ifelse(sign(summary_table1$PCA) == -1, "DDI", "Non-DDI")
-summary_table2$HC <- summary_table1$HC
-summary_table2$NSC <- ifelse(summary_table1$NSC == 1, "DDI", "Non-DDI")
-summary_table2$Overall <- apply(summary_table2[, c("PCA", "HC", "NSC")], 1, function(x) ifelse("DDI" %in% x, "DDI", "Non-DDI"))
+summary_table <- t2 %>% filter(row.names(t2) %in% samples)
 
 # Color table cells
 color_cells <- function(x) {
   ifelse(x == "DDI", cell_spec(x, "html", color = "red"), cell_spec(x, "html", color = "blue"))
 }
-summary_table2$Overall <- sapply(summary_table2$Overall, color_cells)
+summary_table$Overall <- sapply(summary_table$Overall, color_cells)
 
 # Print the formatted table
-kable(summary_table2, caption = "Summary Table", escape = FALSE) %>%
+kable(summary_table, caption = "Summary Table", escape = FALSE) %>%
   kable_styling("striped", full_width = FALSE)
 
-
+summary_table$ID <- rownames(summary_table)
+summary_table <- summary_table %>% select(ID, everything())
 # Output the summary table to a file
 # Remove HTML tags from the 'Overall' column
-summary_table2$Overall <- gsub("<.*?>", "", summary_table2$Overall)
+summary_table$Overall <- gsub("<.*?>", "", summary_table$Overall)
 
-write.csv(summary_table2, file = file.path(paths$reports_dir, paste0(params$reports_filter, "_tgx-ddi_results.csv")), row.names = FALSE)
+write.csv(summary_table, file = file.path(paths$reports_dir, paste0(params$reports_filter, "_tgx-ddi_results.csv")), row.names = FALSE)
 ```
 
 
