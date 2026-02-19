@@ -30,32 +30,46 @@ annotate_deseq_table <- function(deseq_results_list,
     if (params$platform == "TempO-Seq") {
       deg_table <- dplyr::left_join(deg_table, params$biospyder, by = c("Feature_ID" = params$feature_id))
     } else {
-      tryCatch({
-        orgdb_path <- params$species_data$orgdb
-        if (!file.exists(orgdb_path)) {
-          stop("orgdb file not found at: ", orgdb_path)
-        }
-        orgdb <- AnnotationDbi::loadDb(orgdb_path)
+      # 1. Try to get annotations, returning NULL if anything goes wrong
+     annotations <- tryCatch({
 
-        annotations <- AnnotationDbi::select(
-          orgdb,
-          columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
-          keys = feature_ids,
-          keytype = "ENSEMBL")
-        annotations <- dplyr::distinct(annotations, ENSEMBL, .keep_all = TRUE)
-        colnames(annotations) <- c("Feature_ID", "Gene_Symbol", "description")
-        deg_table <- deg_table %>% dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
-        deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
-   }, error = function(e) {
-     message("Error during annotation: ", e$message)
-     deg_table <<- deg_table %>% 
-       dplyr::mutate(
-         Ensembl_Gene_ID = Feature_ID,
-         Gene_Symbol = NA_character_,
-         description = NA_character_
+      # Annotate using orgdb package for the species given in config
+      orgdb <- AnnotationDbi::loadDb(params$species_data$orgdb)
+
+      ann_df <- AnnotationDbi::select(
+        orgdb,
+        columns = c("ENSEMBL", "SYMBOL", "GENENAME"),
+        keys = feature_ids,
+        keytype = "ENSEMBL"
       )
+
+      # Ensure unique rows for annotations
+      ann_df <- dplyr::distinct(ann_df, ENSEMBL, .keep_all = TRUE)
+      colnames(ann_df) <- c("Feature_ID", "Gene_Symbol", "description")
+
+    # RETURN the dataframe to the 'annotations' variable
+    ann_df 
+
+  }, error = function(e) {
+    # If error, assign NULL to annotations
+    message("Warning: Annotation failed. Reason: ", e$message)
+    return(NULL)
   })
+
+  # 2. Prepare the base table
+  deg_table <- deg_table %>% dplyr::mutate(Ensembl_Gene_ID = Feature_ID)
+
+  # 3. Merge logic based on annotation success or failure
+  if (!is.null(annotations)) {
+    deg_table <- dplyr::left_join(deg_table, annotations, by = "Feature_ID")
+  } else {
+    # Fallback: Create columns with NA or Feature_ID
+    deg_table$Gene_Symbol <- deg_table$Feature_ID # Default to Feature_ID if no annotation
+    deg_table$description <- NA
+    deg_table$Ensembl_Gene_ID <- deg_table$Feature_ID
+    }
 }
+
     # Transform log2 fold changes into linear fold changes
     deg_table <- deg_table %>%
       dplyr::mutate(linearFoldChange = ifelse(log2FoldChange > 0, 2^log2FoldChange, -1 / (2^log2FoldChange)),
@@ -72,15 +86,15 @@ annotate_deseq_table <- function(deseq_results_list,
         contrast)
 
     # Apply biosets-specific filtering
-    if (biosets_filter) {
+    if (biosets_filter == TRUE) {
       deg_table <- deg_table[
         !is.na(deg_table$pvalue) &
           deg_table$pvalue < params$alpha &
           abs(deg_table$linearFoldChange) > params$linear_fc_filter_biosets, ]
     }
     return(deg_table %>% dplyr::distinct())
-  })
-
+  }
+  )
   # Combine the individual tables into one large table
   combined_results <- data.table::rbindlist(annotated_results, fill = TRUE)
   return(combined_results)
