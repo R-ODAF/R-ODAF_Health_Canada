@@ -79,33 +79,9 @@ jobs:
           mv temposeq/inputs .
           mv temposeq/truth_checksums .
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
-      - name: Build snakemake environment
+      - name: Run workflow, includes environments creation
         run: |
-          snakemake --cores 8 --use-conda --conda-create-envs-only
-      - name: Install extra dependencies
-        run: |
-         conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | \
-         sed s/\.yaml//) Rscript install.R
-      - name: Print env names
-        run: |
-          for yaml in .snakemake/conda/*.yaml; do
-            echo "$yaml:"
-            head -n 1 "$yaml"
-          done
-      - name: Print contents of Conda environments
-        run: |
-          for env in .snakemake/conda/*; do
-            if [ -d "$env" ]; then
-              echo "Contents of $env:"
-              conda activate $env
-              conda list
-              conda deactivate
-            fi
-          done
-        shell: bash -l {0}
-      - name: Run workflow
-        run: |
-          snakemake --cores 8 --use-conda
+          snakemake --cores 8 --sdm conda
       - name: Generate md5sums
         run: |
           md5sum output/processed/count_table.tsv > checksum.count_table

@@ -5,5 +5,5 @@ name: rodaf_base
 channels:
   - conda-forge
 dependencies:
-  - bioconda::snakemake
+  - bioconda::snakemake==8.0
   - conda-forge::setuptools<71 # Workaround for can't import from backports error
