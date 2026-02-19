@@ -79,9 +79,9 @@ jobs:
           mv temposeq/inputs .
           mv temposeq/truth_checksums .
           wget https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/raw/main/output_manifests/Human_S1500_1.2_standardized.csv
-      - name: Run workflow, includes environments creation
+      - name: Run workflow, includes environment creation
         run: |
-          snakemake --cores 8 --sdm conda
+          snakemake --cores 8 --use-conda
       - name: Generate md5sums
         run: |
           md5sum output/processed/count_table.tsv > checksum.count_table
