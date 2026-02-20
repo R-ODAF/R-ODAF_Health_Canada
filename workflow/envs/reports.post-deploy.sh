@@ -1,4 +1,4 @@
-#!env bash
+#!/bin/bash
 set -o pipefail
 
 # This script runs after the reports environment is installed
