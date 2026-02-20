@@ -23,6 +23,8 @@ if [ ! -f "$CONDA_PREFIX/bin/Rscript" ]; then
     exit 1 # Exit with an error
 fi
 
-"$CONDA_PREFIX"/bin/Rscript workflow/envs/install_from_github.R >> output/.rodaf_internal/install_logs/install_from_github.post-deploy.log 2>&1
+# Remove output redirection to see Rscript errors directly
+"$CONDA_PREFIX"/bin/Rscript workflow/envs/install_from_github.R
+
 echo "Rscript command finished."
 
