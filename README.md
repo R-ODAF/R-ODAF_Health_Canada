@@ -94,34 +94,25 @@ To activate this environment:
 Other dependencies are managed by snakemake via the creation of conda environments. The conda environments needed for various steps of the workflow are defined in a series of .yml files in workflow/envs.
 
 
-
-### Installing environments
-__Environments must be installed *prior* to running the workflow__ because of additional dependencies that must be added to the R-ODAF_reports environment via the install.R script included in this repo. If you use snakemake to run the full workflow without first installing and fixing the environments, the workflow will not run to completion. This only needs to be done once per project, or once ever if you install environments [in a persistent location](####Persistent-environments). 
-
-From inside the repo directory, run:
-
-`snakemake --cores 32 --software-deployment-method conda --conda-create-envs-only`
-
-*Choose the number of cores according to what is available in your system.*
-
-Then install additional software in the reports environment: 
-
-`conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R`
+### Creating environments
+Conda environments with the dependencies for each step of the pipeline will be created automatically the first time you run the pipeline. This can take some time.
+Note that this workflow requires the expected input data to exist before snakemake is run. If you want to install conda environments before preparing your input files, download the test dataset as explained in the "Running Tests" section below.
 
 #### Persistent environments
-If you intend to run this analysis on multiple datasets, it can be advantageous to instead install the environments in a persistent location, and point to this location with snakemake's --conda-prefix flag. This avoids having to install the environments multiple times, which saves both time and disk place.
+By default, conda environments will be created in a hidden subdirectory (.snakemake/conda).
+
+If you intend to run this analysis on multiple datasets, it can be advantageous to instead create the environments in a persistent location elsewhere in your filesystem, and point to this location with snakemake's --conda-prefix flag. This avoids having to install the environments in a new location each time you clone the repo, which saves both time and disk place.
 
 For example, the code below installs the environments in ~/snakemake_envs. Using this method, every time the analysis is run with snakemake, the command must include `--conda-prefix ~/snakemake_envs`
 
 ```
 mkdir ~/snakemake_envs #Place and name this directory as you wish, and use correctly later with --conda-prefix
 
-snakemake --cores 32 --software-deployment-method conda --conda-create-envs-only --conda-prefix ~/snakemake_envs/
-
-conda run -p $(grep -rl "R-ODAF_reports" ~/snakemake_envs/*.yaml | sed s/\.yaml//) Rscript install.R
+snakemake --cores 32 --software-deployment-method conda --conda-prefix ~/snakemake_envs/
 ```
 
 *When running the workflow, remember to use the --conda-prefix flag.*
+
 
 # Running tests
 It's a good idea to run a small test dataset through the workflow when you first install it. To do this:
@@ -144,7 +135,7 @@ Test run the pipeline (make sure you activate the snakemake environment first).
 
 `snakemake --sdm conda --cores 32 -n`
 
-If that works without error, actually run the pipeline.
+If that works without error, actually run the pipeline. Note that on the first run, conda environments will install unless you have installed them in a persistent location that you indicate with the --conda-prefix flag. Environment installation can take some time.
 
 `snakemake --sdm conda --cores 32`
 
