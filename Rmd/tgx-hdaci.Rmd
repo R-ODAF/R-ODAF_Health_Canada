@@ -159,6 +159,14 @@ if (is.na(params$deseq_facet) && !is.na(params$reports_facet)) {
 control <- contrasts_subset %>%
   dplyr::slice(1) %>%
   pull(V2)
+
+# If there is > 1 control across all contrasts, report will exit early
+n_controls <- contrasts_subset$V2 %>% unique() %>% length()
+
+if (n_controls > 1) {
+  message("This analysis can only be done when all contrasts have the same control. There are multiple controls in this set of contrasts. Fix coming soon (we hope).")
+  knitr::knit_exit()
+}
 ```
 
 ```{r get_IDs}
