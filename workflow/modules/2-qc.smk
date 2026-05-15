@@ -13,28 +13,69 @@ rule qc_all:
 ### MultiQC ###
 ###############
 
-rule multiqc:
-    message: "running multiqc data"
-    input:
-        expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
-        expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES)
-    output:
-        qc_dir / "MultiQC_Report.html"
+if common_config["platform"] == "DRUG-Seq":
+    rule mapstats:
+    """
+    Extract mapped and unmapped read counts from demultiplexed BAM files
+    """
+    input: "output/{library}/demux_bam/{sample}.bam"
+    output: "output/QC/demuxbams_stats/{library}_{sample}.stats.txt"
     conda:
-        "../envs/preprocessing.yml"
-    benchmark: log_dir / "benchmark.multiqc.txt"
+        "envs/drugseq.yaml"
     shell:
-        '''
-        multiqc \
-        --cl-config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
-        --cl-config "sample_names_replace_exact: True" \
-        --filename MultiQC_Report.html \
-        --interactive \
-        --sample-names {metadata_file} \
-        -m fastp -m star -m rsem \
-        -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
-        mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
-        '''
+        """
+        samtools stats {input} > {output}
+        """
+     
+    rule multiqc:
+        """
+        Consolidate QC files (fastqc, alignment stats) into one report.
+        Create summary files used for Studywide QC report
+        """
+        input:  
+            files=expand("output/QC/demuxbams_stats/{library}_{sample}.stats.txt", 
+                        library=LIBRARIES, 
+                        sample=[s for lib in LIBRARIES for s in LIBRARY_SAMPLES[lib]]),
+            fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
+                        library=LIBRARIES, 
+                        read=["R1", "R2"])
+        output: 
+            "output/QC/MultiQC_Report.html"
+        params:
+            outdir="output/QC"
+        conda:
+            "envs/drugseq.yaml"
+        shell:
+            """
+            multiqc \
+            --filename MultiQC_Report.html \
+            --interactive \
+            -fz \
+            -o {params.outdir} output/QC/demuxbams_stats/ output/QC/fastqc/
+            """
+else:
+    rule multiqc:
+        message: "running multiqc data"
+        input:
+            expand(str(align_dir / "{sample}.Aligned.toTranscriptome.out.bam"), sample=SAMPLES),
+            expand(str(trim_dir / "{sample}_fastp.json"), sample=SAMPLES)
+        output:
+            qc_dir / "MultiQC_Report.html"
+        conda:
+            "../envs/preprocessing.yml"
+        benchmark: log_dir / "benchmark.multiqc.txt"
+        shell:
+            '''
+            multiqc \
+            --cl-config "extra_fn_clean_exts: {{ '_fastp.json' }}" \
+            --cl-config "sample_names_replace_exact: True" \
+            --filename MultiQC_Report.html \
+            --interactive \
+            --sample-names {metadata_file} \
+            -m fastp -m star -m rsem \
+            -fz {raw_dir} {trim_dir} {align_dir} {quant_dir} {processed_dir}
+            mv MultiQC_Report.html MultiQC_Report_data.zip {qc_dir}
+            '''
 
 #####################
 ### Study-wide QC ###
