@@ -37,7 +37,7 @@ rule fastqc:
     params:
         outdir="output/QC/fastqc"
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     shell:
         """
         fastqc --outdir {params.outdir} {input.fastq}
@@ -131,7 +131,7 @@ rule star_index:
         genomeDir=index_dir,
         threads=workflow.cores
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     resources:
         mem_mb=40000,
         threads=workflow.cores
@@ -175,7 +175,7 @@ rule starsolo:
         cell_filter=cell_filter,
         multimap_nmax=multimap_nmax
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     resources:
         threads=workflow.cores
     shell:
@@ -217,7 +217,7 @@ rule mtx_to_counts:
     params:
         matrix_dir="routput/{library}/STARsolo/Solo.out/Gene/raw"
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     shell:
         "Rscript scripts/mtx_to_counts.R {input.mtx} {wildcards.library} {input.barcodes}"
 
@@ -229,7 +229,7 @@ rule ercc_qc:
     output:
         stats="output/QC/{library}_umi{method}_ercc_stats.tsv"
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     shell:
         """
         Rscript workflow/scripts/count_ERCC.R {input.counts} {output.stats}
@@ -243,7 +243,7 @@ rule quantify_dedup:
     params:
         outdir = "output/QC"
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     shell:
         """
         Rscript scripts/dedup_stats.R {input.dedup} {input.nodedup} {params.outdir}
@@ -281,7 +281,7 @@ rule picard_demultiplex_sample:
     params:
         tag_value=lambda wildcards: get_barcode_for_sample(wildcards)
     conda:
-        "envs/drugseq.yaml"
+        "../envs/drugseq.yaml"
     shell:
         """
         picard FilterSamReads \
