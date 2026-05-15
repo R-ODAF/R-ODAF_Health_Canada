@@ -258,6 +258,7 @@ rule combine_counttables:
         tables=expand("output/{library}/{library}_umiDedup-1MM_Directional.tsv", library = LIBRARIES)
     output: 
         counttable = "output/processed/count_table.tsv" # To fit into current R-ODAF needs
+        dummy=touch(sm_temp_dir / "genome.removed") # Super annoying, but other preprocessing paths make it, needed for QC to run
     shell:
         """
         python scripts/combine_counts.py {input.tables} {output.counttable}
@@ -277,7 +278,7 @@ rule picard_demultiplex_sample:
         bam="output/{library}/STARsolo/Aligned.sortedByCoord.out.bam",
         demux_info="output/barcodes/barcodes_sampleIDs.txt"
     output:
-        bam="output/{library}/demux_bam/{sample}.bam"
+        bam="output/{library}/demux_bam/{sample}.bam",
     params:
         tag_value=lambda wildcards: get_barcode_for_sample(wildcards)
     conda:
