@@ -14,8 +14,8 @@ rule pp_ds_all:
     input:
         # Drug-seq specific QC 
         expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
-        expand("output/QC/{library}_{method}_ercc_stats.tsv", library=LIBRARIES, method=DEDUP_METHODS),
-        expand("output/QC/{library}_{method}_dedupratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
+        expand("output/QC/{library}_umi{method}_ercc_stats.tsv", library=LIBRARIES, method=DEDUP_METHODS),
+        expand("output/QC/{library}_umi{method}_dedupratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
         # Demultiplexed BAMs
         expand(
             "output/{library}/demux_bam/{sample}.bam",
@@ -227,7 +227,7 @@ rule ercc_qc:
     input:
         counts="output/{library}/{library}_umiDedup-{method}.tsv"
     output:
-        stats="output/QC/{library}_{method}_ercc_stats.tsv"
+        stats="output/QC/{library}_umi{method}_ercc_stats.tsv"
     conda:
         "envs/drugseq.yaml"
     shell:
@@ -239,7 +239,7 @@ rule quantify_dedup:
     input:
         dedup = "output/{library}/{library}_umiDedup-{method}.tsv",
         nodedup = "output/{library}/{library}_umiDedup-NoDedup.tsv"
-    output: "output/QC/{library}_{method}_dedupratios.txt"
+    output: "output/QC/{library}_umi{method}_dedupratios.txt"
     params:
         outdir = "output/QC"
     conda:
