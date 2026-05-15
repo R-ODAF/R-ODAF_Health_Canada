@@ -15,43 +15,45 @@ rule qc_all:
 
 if common_config["platform"] == "DRUG-Seq":
     rule mapstats:
-    """
-    Extract mapped and unmapped read counts from demultiplexed BAM files
-    """
-    input: "output/{library}/demux_bam/{sample}.bam"
-    output: "output/QC/demuxbams_stats/{library}_{sample}.stats.txt"
-    conda:
-        "envs/drugseq.yaml"
-    shell:
         """
-        samtools stats {input} > {output}
+        Extract mapped and unmapped read counts from demultiplexed BAM files
         """
+        input: "output/{library}/demux_bam/{sample}.bam"
+        output: "output/QC/demuxbams_stats/{library}/{sample}.stats.txt"
+        conda:
+            "../envs/drugseq.yaml"
+        shell:
+            """
+            samtools stats {input} > {output}
+            """
      
     rule multiqc:
         """
         Consolidate QC files (fastqc, alignment stats) into one report.
         Create summary files used for Studywide QC report
         """
-        input:  
-            files=expand("output/QC/demuxbams_stats/{library}_{sample}.stats.txt", 
+        input:
+            files=expand("output/QC/demuxbams_stats/{library}/{sample}.stats.txt", 
                         library=LIBRARIES, 
                         sample=[s for lib in LIBRARIES for s in LIBRARY_SAMPLES[lib]]),
             fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
                         library=LIBRARIES, 
                         read=["R1", "R2"])
         output: 
-            "output/QC/MultiQC_Report.html"
+            qc_dir / "MultiQC_Report.html"
         params:
-            outdir="output/QC"
+            outdir="output/QC",
+            # This works for projects with a single library, I suspect it will break for multiple libraries :(
+            demuxstats_dirs = expand(qc_dir / "demuxbams_stats/{library}", library=LIBRARIES)
         conda:
-            "envs/drugseq.yaml"
+            "../envs/drugseq.yaml"
         shell:
             """
             multiqc \
             --filename MultiQC_Report.html \
             --interactive \
             -fz \
-            -o {params.outdir} output/QC/demuxbams_stats/ output/QC/fastqc/
+            -o {params.outdir} {params.demuxstats_dirs} output/QC/fastqc/
             """
 else:
     rule multiqc:
