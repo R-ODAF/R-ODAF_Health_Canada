@@ -20,7 +20,7 @@ fname <- basename(args[1])
 library <- str_extract(fname, "^[^_]+")
 umimethod <- str_extract(fname, "(?<=umiDedup-)[^.]+")
 
-outfile <- paste0(outdir, "/", library, "_", umimethod, "_dedupratios.txt")
+outfile <- paste0(outdir, "/", library, "_umi", umimethod, "_dedupratios.txt")
 
 print(paste0("Library: ", library))
 print(paste0("UMI Method: ", umimethod))
