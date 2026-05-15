@@ -232,7 +232,7 @@ rule ercc_qc:
         "../envs/drugseq.yaml"
     shell:
         """
-        Rscript workflow/scripts/count_ERCC.R {input.counts} {output.stats}
+        Rscript scripts/count_ERCC.R {input.counts} {output.stats}
         """
 
 rule quantify_dedup:
@@ -260,7 +260,7 @@ rule combine_counttables:
         counttable = "output/processed/count_table.tsv" # To fit into current R-ODAF needs
     shell:
         """
-        python workflow/scripts/combine_counts.py {input.tables} {output.counttable}
+        python scripts/combine_counts.py {input.tables} {output.counttable}
         """
 
 
