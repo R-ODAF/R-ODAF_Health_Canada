@@ -257,7 +257,7 @@ rule combine_counttables:
     input: 
         tables=expand("output/{library}/{library}_umiDedup-1MM_Directional.tsv", library = LIBRARIES)
     output: 
-        counttable = "output/processed/count_table.tsv" # To fit into current R-ODAF needs
+        counttable = "output/processed/count_table.tsv", # To fit into current R-ODAF needs
         dummy=touch(sm_temp_dir / "genome.removed") # Super annoying, but other preprocessing paths make it, needed for QC to run
     shell:
         """
