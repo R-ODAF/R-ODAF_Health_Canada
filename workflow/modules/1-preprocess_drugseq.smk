@@ -16,16 +16,14 @@ rule pp_ds_all:
         expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
         expand("output/QC/{library}_umi{method}_ercc_stats.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         expand("output/QC/{library}_umi{method}_dedupratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
-        # Demultiplexed BAMs
-        expand(
-            "output/{library}/demux_bam/{sample}.bam",
-            library=LIBRARIES,
-            sample=[s for lib in LIBRARIES for s in LIBRARY_SAMPLES[lib]]
-        ),
+        # Demultiplexed BAMs - only valid library-sample combinations
+        [f"output/{lib}/demux_bam/{samp}.bam" 
+         for lib in LIBRARIES 
+         for samp in LIBRARY_SAMPLES[lib]],
         # Per-library count matrices for each dedup method
         expand("output/{library}/{library}_umiDedup-{method}.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         # Final combined count table
-        "output/processed/count_table.tsv"
+        processed_dir / "count_table.tsv"
 
 rule fastqc:
     """Quality control of raw FASTQ files"""
