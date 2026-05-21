@@ -15,7 +15,7 @@ rule pp_ds_all:
         # Drug-seq specific QC 
         expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
         expand("output/QC/{library}_umi{method}_ercc_stats.tsv", library=LIBRARIES, method=DEDUP_METHODS),
-        expand("output/QC/{library}_umi{method}_dedupratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
+        expand("output/QC/{library}_umi{method}_dedup_max_ratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
         # Demultiplexed BAMs - only valid library-sample combinations
         [f"output/{lib}/demux_bam/{samp}.bam" 
          for lib in LIBRARIES 
@@ -239,14 +239,14 @@ rule quantify_dedup:
     input:
         dedup = "output/{library}/{library}_umiDedup-{method}.tsv",
         nodedup = "output/{library}/{library}_umiDedup-NoDedup.tsv"
-    output: "output/QC/{library}_umi{method}_dedupratios.txt"
+    output: "output/QC/{library}_umi{method}_dedup_max_ratios.txt"
     params:
         outdir = "output/QC"
     conda:
         "../envs/drugseq.yaml"
     shell:
         """
-        Rscript scripts/dedup_stats.R {input.dedup} {input.nodedup} {params.outdir}
+        Rscript scripts/dedup_stats.R {input.dedup} {input.nodedup} {params.outdir} {wildcards.library} {wildcards.method}
         """
 
 rule combine_counttables:
