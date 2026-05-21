@@ -36,9 +36,12 @@ rule fastqc:
         outdir="output/QC/fastqc"
     conda:
         "../envs/drugseq.yaml"
+    resources:
+        threads=6,
+        mem_mb=1000 
     shell:
         """
-        fastqc --outdir {params.outdir} {input.fastq}
+        fastqc  --threads {resources.threads} --outdir {params.outdir} {input.fastq}
         """
 
 rule format_barcodes:
@@ -174,8 +177,7 @@ rule starsolo:
         multimap_nmax=multimap_nmax
     conda:
         "../envs/drugseq.yaml"
-    resources:
-        threads=workflow.cores
+    threads: workflow.cores # Run a single starsolo job at a time
     shell:
         """
         STAR --runMode alignReads \
