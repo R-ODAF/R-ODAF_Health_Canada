@@ -33,9 +33,9 @@ if common_config["platform"] == "DRUG-Seq":
         Create summary files used for Studywide QC report
         """
         input:
-            files=expand("output/QC/demuxbams_stats/{library}/{sample}.stats.txt", 
-                        library=LIBRARIES, 
-                        sample=[s for lib in LIBRARIES for s in LIBRARY_SAMPLES[lib]]),
+            files=[f"output/QC/demuxbams_stats/{library}/{sample}.stats.txt" 
+                   for library in LIBRARIES 
+                   for sample in LIBRARY_SAMPLES[library]],
             fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
                         library=LIBRARIES, 
                         read=["R1", "R2"])
