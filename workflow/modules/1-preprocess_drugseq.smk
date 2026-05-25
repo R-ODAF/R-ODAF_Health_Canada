@@ -44,20 +44,18 @@ rule fastqc:
         fastqc  --threads {resources.threads} --outdir {params.outdir} {input.fastq}
         """
 
-rule format_barcodes:
+rule whitelist_barcodes:
     """Format all barcodes for both STARsolo and Picard demultiplexing
     
-    This single rule reads the metadata file and generates two output files:
-    1. Barcode whitelist for STARsolo (one barcode per line, NO HEADER)
-    2. Demux info file for Picard (WITH HEADER: sample_id<tab>barcode)
+    This single rule reads the metadata file
+    and outputs a single barcode whitelist for STARsolo (one barcode per line, NO HEADER)
     
-    These are project-wide files used for all libraries.
+    This is a project-wide file used for all libraries.
     """
     input:
         metadata=metadata_file
     output:
         starsolo="output/barcodes/barcode_whitelist.txt",
-        picard="output/barcodes/barcodes_sampleIDs.txt"
     params:
         sample_id_col=config["pipeline"]["sample_id"],
         barcode_col=config["pipeline"]["sample_barcode"]
@@ -67,7 +65,7 @@ rule format_barcodes:
         # Load metadata
         df = pd.read_csv(input.metadata, sep="\t")
         
-        # Output 1: STARsolo whitelist (one barcode per line, unique barcodes, NO HEADER)
+        # Output STARsolo whitelist (one barcode per line, unique barcodes, NO HEADER)
         barcodes = df[params.barcode_col].unique().tolist()
         
         with open(output.starsolo, 'w') as f:
@@ -75,21 +73,45 @@ rule format_barcodes:
                 f.write(f"{barcode}\n")
         
         print(f"✓ Created STARsolo barcode file: {output.starsolo} ({len(barcodes)} unique barcodes)")
+
+
+rule barcodes_w_IDs:
+    """Format barcodes for identifying STARsolo output and demultiplexing with Picard 
+    
+    This rule outputs a tsv file with barcodes and samleIDs for each library.
+    """
+    input:
+        metadata=metadata_file
+    output:
+        picard="output/barcodes/{library}_barcodes_sampleIDs.txt"
+    params:
+        sample_id_col=config["pipeline"]["sample_id"],
+        barcode_col=config["pipeline"]["sample_barcode"]
+    run:
+        import pandas as pd
         
-        # Output 2: Picard demux info (WITH HEADER: sample_id and barcode)
+        # Load metadata
+        df = pd.read_csv(input.metadata, sep="\t")
+        
+        # Output demux info (WITH HEADER: sample_id and barcode)
+        # libraries = df['library_ID'].unique().tolist()
+        
+        dffilt = df[df['library_ID'].str.contains(wildcards.library)]
+
         picard_data = []
-        for _, row in df.iterrows():
+        for _, row in dffilt.iterrows():
             sample_id = row[params.sample_id_col]
             barcode = row[params.barcode_col]
             picard_data.append({'sample_id': sample_id, 'barcode': barcode})
         
         # Remove duplicates (in case same sample_id/barcode used across libraries)
         picard_df = pd.DataFrame(picard_data).drop_duplicates()
-        
+         
         # Write with header
         picard_df.to_csv(output.picard, sep='\t', index=False, header=True)
-        
+      
         print(f"✓ Created Picard demux info: {output.picard} ({len(picard_df)} unique sample_id/barcode combinations)")
+
 
 ####################################################################################
 # STARsolo alignment and matrix production
@@ -211,7 +233,7 @@ rule mtx_to_counts:
     input:
         mtx="output/{library}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx",
         # features="output/{library}/STARsolo/Solo.out/Gene/raw/features.tsv",
-        barcodes="output/barcodes/barcodes_sampleIDs.txt"
+        barcodes="output/barcodes/{library}_barcodes_sampleIDs.txt"
     output:
         counts="output/{library}/{library}_umiDedup-{method}.tsv"
     params:
@@ -277,7 +299,7 @@ rule picard_demultiplex_sample:
     """
     input:
         bam="output/{library}/STARsolo/Aligned.sortedByCoord.out.bam",
-        demux_info="output/barcodes/barcodes_sampleIDs.txt"
+        demux_info="output/barcodes/{library}_barcodes_sampleIDs.txt"
     output:
         bam="output/{library}/demux_bam/{sample}.bam",
     params:
