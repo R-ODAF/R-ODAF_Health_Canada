@@ -201,10 +201,20 @@ if (params$collapse_replicates == T) {
                            check.names = FALSE)
   multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
   # NOTE won't this break if collapse_replicate is true? No multiQC loaded for later?
+  
+  if (params$platform == "DRUG-Seq") {
+    # MultiQC file is quite  different for DrugSeq vs. TempO-Seq and RNA-Seq
+    multiqc_general_stats <- read.table(unz(multiQCFile, "multiqc_samtools_stats.txt"), 
+                                      header = TRUE, sep = '\t')
+    mu <- data.frame(Sample = multiqc_general_stats$Sample, 
+                   FMR = multiqc_general_stats$reads_mapped_percent/100)
+  } else {
   multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
                    FMR = multiqc_general_stats$uniquely_mapped_percent/100)
+  }
+  
   row.names(mu) <- mu[,1]
 }
 
@@ -348,9 +358,22 @@ Details on each sample can be seen in the MultiQC report.
 ```{r summary-stats}
 # NOTE won't this break if collapse_replicate is true? No multiQC loaded in load_files line 202?
 summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
+
 stat_metrics <- summary_stats %>%
   group_by(name) %>%
   summarise(Mean=mean(value), Median=median(value))
+
+# Stat column names are different for DRUG-Seq vs. TempO-Seq or RNA-Seq
+if (params$platform == "DRUG-Seq") {
+  ggplot(summary_stats %>%
+         dplyr::filter(name %in% c("raw_total_sequences", "reads_mapped",
+                       "reads_mapped_percent", "mismatches",
+                       "reads_unmapped_percent")),
+        aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
+  geom_violin(fill = "transparent") +
+  facet_wrap(name~., scales = "free")
+} else {
 ggplot(summary_stats %>%
          dplyr::filter(name %in% c("total_reads", "uniquely_mapped",
                        "uniquely_mapped_percent", "mismatch_rate",
@@ -360,6 +383,7 @@ ggplot(summary_stats %>%
   geom_jitter(alpha = 0.1) +
   geom_violin(fill = "transparent") +
   facet_wrap(name~., scales = "free")
+}
 
 stat_metrics %>%
   kable(caption = "Summary statistics from the alignments for all samples") %>%
