@@ -11,6 +11,9 @@ cell_filter = "None" # STARsolo cell filtering
 multimap_nmax = 1 # Maximum number of multimapping alignments to output
 
 rule pp_ds_all:
+    input: sm_temp_dir / "drugseq_preprocess_complete"
+
+rule expected_output_files:
     input:
         # Drug-seq specific QC 
         expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
@@ -23,6 +26,12 @@ rule pp_ds_all:
         expand("output/{library}/{library}_umiDedup-{method}.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         # Final combined count table
         processed_dir / "count_table.tsv"
+    output:
+        preprocess_complete_dummy = sm_temp_dir / "drugseq_preprocess_complete"
+    shell:
+        """
+        touch {output.preprocess_complete_dummy}
+        """
 
 rule fastqc:
     """Quality control of raw FASTQ files"""

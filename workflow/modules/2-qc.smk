@@ -38,7 +38,8 @@ if common_config["platform"] == "DRUG-Seq":
                    for sample in LIBRARY_SAMPLES[library]],
             fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
                         library=LIBRARIES, 
-                        read=["R1", "R2"])
+                        read=["R1", "R2"]),
+            sm_temp_dir / "drugseq_preprocess_complete" # dummy file shows preprocessing is complete
         output: 
             qc_dir / "MultiQC_Report.html"
         params:
