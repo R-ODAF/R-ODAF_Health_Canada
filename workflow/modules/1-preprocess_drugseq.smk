@@ -14,7 +14,6 @@ rule pp_ds_all:
     input:
         # Drug-seq specific QC 
         expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
-        expand("output/QC/{library}_umi{method}_ercc_stats.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         expand("output/QC/{library}_umi{method}_dedup_max_ratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
         # Demultiplexed BAMs - only valid library-sample combinations
         [f"output/{lib}/demux_bam/{samp}.bam" 
@@ -243,19 +242,6 @@ rule mtx_to_counts:
     shell:
         "Rscript scripts/mtx_to_counts.R {input.mtx} {wildcards.library} {input.barcodes}"
 
-
-rule ercc_qc:
-    """Quality control: Count reads mapping to ERCC spike-ins"""
-    input:
-        counts="output/{library}/{library}_umiDedup-{method}.tsv"
-    output:
-        stats="output/QC/{library}_umi{method}_ercc_stats.tsv"
-    conda:
-        "../envs/drugseq.yaml"
-    shell:
-        """
-        Rscript scripts/count_ERCC.R {input.counts} {output.stats}
-        """
 
 rule quantify_dedup:
     input:

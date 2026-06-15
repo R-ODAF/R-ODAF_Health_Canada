@@ -1631,6 +1631,64 @@ plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of p
 ```
 
 
+# DRUG-Seq QC Checks
+
+If your experiment used the DRUG-seq method, quality control metrics that are only applicable to DRUG-seq data will appear here.
+
+## Proportion of ERCC spike-in reads
+
+If you included ERCC spike-in RNA [NOTE add link/citation], reads matching the ERCC sequences should represent 3-5% of the obtained mapped reads.
+
+The green bar in the ERCC plot represents the 3-5% range.
+
+Higher proportions of ERCC reads in a sample suggest that there was not as much input RNA as expected.
+
+Note that these plots are made using the data from count_table.tsv, and reflect whatever UMI deduplication method was used to produce that count table.
+(As of June 12, 2026, the authoritative UMI dedup method is 1MM_Directional.)
+
+```{r ercc_stats, eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
+# Ideally this would evaluation only if params$include_ercc is TRUE,
+# But params$include_ercc isn't part of the loaded params
+
+# Calculate and plot the proportion of reads that match ERCC spike-in sequences
+count_ercc <- count_data %>%
+  rownames_to_column("gene") %>%
+  filter(grepl("ERCC", gene)) %>%
+  column_to_rownames("gene")
+
+ercc_sums <- colSums(count_ercc)
+total_sums <- colSums(count_data)
+
+ercc_stats <- tibble(
+  sample_ID = names(total_sums),
+  ercc_reads = as.numeric(ercc_sums),
+  total_reads = as.numeric(total_sums),
+  ercc_proportion = ercc_reads / total_reads) %>% 
+  as.data.frame() %>%
+  dplyr::arrange(sample_ID) %>%
+  dplyr::left_join(exp_metadata, by = "sample_ID") #add metadata to get library_ID for faceting
+
+# Output table
+write.table(ercc_stats, file.path(paths$details, "ercc_stats.txt"), quote = FALSE, sep = "\t", row.names = FALSE)
+# The figure height should probably be improved
+
+ercc_plot <- ggplot(ercc_stats, aes(y = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
+  annotate(
+    "rect",
+    xmin = 0.03, xmax = 0.05,
+    ymin = -Inf, ymax = Inf,  # Full vertical range
+    fill = "green", alpha = 0.3
+  ) +
+  geom_boxplot(aes(x = ercc_proportion)) +
+  # geom_point(aes(x = ercc_proportion)) +
+  facet_wrap(~library_ID, 
+             ncol = 1,
+             scales = "free_y") +
+  ggtitle("Proportion of mapped reads that map to ERCC spike-in RNA")
+
+ercc_plot
+```
+
 # Write tables to disk {-}
 
 ```{r write_output}
