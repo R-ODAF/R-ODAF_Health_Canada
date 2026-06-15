@@ -70,7 +70,8 @@ ratio_long <- dedup_long %>%
   mutate(
     ratio = nodedup_counts / dedup_counts,
     ratio = ifelse(is.infinite(ratio) | is.nan(ratio), 0, ratio)
-  )
+  ) %>%
+  dplyr::filter(ratio > 0)
 
 
 # Convert back to wide format 
@@ -94,8 +95,11 @@ print(paste0("Created file: ", outfile_max))
 
 p <- ggplot(ratio_long, aes(x = ratio)) +
   geom_histogram(binwidth = 1) +
-  facet_wrap(~sample,
-             ncol = 2)
+  scale_y_log10() +
+  theme_bw() +
+  labs (title = paste0("Dedup Ratio Histogram. Library: ", library, ". UMI method: ", umimethod),
+        y = "N mapped genes (log10 scale)",
+        x = "Deduplication ratio (non-dedup count / dedup count)")
 
 ggsave(outfile_hist, p)
 print(paste0("Created file: ", outfile_hist))
