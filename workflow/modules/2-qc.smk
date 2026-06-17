@@ -39,12 +39,11 @@ if common_config["platform"] == "DRUG-Seq":
             fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
                         library=LIBRARIES, 
                         read=["R1", "R2"]),
-            sm_temp_dir / "drugseq_preprocess_complete" # dummy file shows preprocessing is complete
+            preprocess_done=sm_temp_dir / "drugseq_preprocess_complete"
         output: 
             qc_dir / "MultiQC_Report.html"
         params:
             outdir="output/QC",
-            # This works for projects with a single library, I suspect it will break for multiple libraries :(
             demuxstats_dirs = expand(qc_dir / "demuxbams_stats/{library}", library=LIBRARIES)
         conda:
             "../envs/drugseq.yaml"
