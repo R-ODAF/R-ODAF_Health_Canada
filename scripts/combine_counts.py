@@ -4,10 +4,15 @@ import sys
 import pandas as pd
 
 # Get input files and output file from command line
-input_files = sys.argv[1:-1]  # All but last argument
+md_file = sys.argv[1]
+input_files = sys.argv[2:-1]  # All but last argument
 output_file = sys.argv[-1] # Last argument only
 
-# Read all tables
+# Read metadata
+md = pd.read_csv(md_file, sep="\t")
+SAMPLES = md["sample_ID"].tolist()
+
+# Read all count tables
 tables = []
 for f in input_files:
     print(f"  Reading: {f}")
@@ -18,10 +23,16 @@ for f in input_files:
 # Fill missing values with 0
 combined = pd.concat(tables, axis=1).fillna(0).astype(int)
 
-# Sort by index (gene names) for consistency
-combined = combined.sort_index()
+# Keep only columns with names matching the samples in metadata
+# Needed in cases where, ex. one library uses 96 barcodes and another only 48
+# All barcodes will be searched for in both libraries by STARsolo, 
+# and even barcodes that weren't used will get a few hits, creating new (not real!) columns
+combined_filt = combined[SAMPLES]
 
-print(f"Combined table: {combined.shape[0]} genes x {combined.shape[1]} samples")
+# Sort by index (gene names) for consistency
+combined_filt = combined_filt.sort_index()
+
+print(f"Combined table: {combined_filt.shape[0]} genes x {combined_filt.shape[1]} samples")
 print(f"Writing to: {output_file}")
 
 # Write output
