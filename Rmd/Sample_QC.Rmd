@@ -1689,6 +1689,85 @@ ercc_plot <- ggplot(ercc_stats, aes(y = .data[[params$treatment_var]], color = .
 ercc_plot
 ```
 
+## UMI Deduplication
+
+```{r dedup_figures,  eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
+# Library IDs for faceting
+libraries <- exp_metadata$library_ID %>% unique()
+
+extract_library <- function(file_string, lib_list) {
+  for (lib in lib_list) {
+    if (grepl(lib, file_string)) {
+      return(lib)
+    }
+  }
+  return("NA")
+}
+
+# Import deduplication data from files made by rule quantify_dedup
+dedup_files <- list.files(path = paths$qc, pattern = "countsums.txt$", full.names = TRUE)
+
+dedup_tables <- lapply(dedup_files, read.table)
+names(dedup_tables) <- tools::file_path_sans_ext(basename(dedup_files))
+dedup_tables <- lapply(dedup_tables, rownames_to_column, var = "sample")
+
+# Add a column with the file name (contains library and UMI method) to each dataframe
+dedup_tables <- lapply(names(dedup_tables), function(name) {
+  dedup_tables[[name]] %>%
+    mutate(file = name)
+})
+
+# Merge all tables into one big dataframe
+dedup_df <- bind_rows(dedup_tables)
+
+# Create new columns by pattern matching to get library and UMI method info
+dedup_df <- dedup_df %>%
+  mutate(
+    umiMethod = case_when(
+      grepl("umi1MM_All", file) ~ "All",
+      grepl("umi1MM_CR", file) ~ "CR",
+      grepl("umi1MM_Directional_dedup", file) ~ "Directional",
+      grepl("umi1MM_Directional_UMItools", file) ~ "Directional_UMItools",
+      grepl("umiExact", file) ~ "Exact",
+      TRUE ~ "NA"
+    )
+  ) %>%
+  mutate(
+    # Use helper function from above to get library name from filename
+    Library = sapply(file, function(x) extract_library(x, libraries))
+  )
+
+# To plot just one UMI method for simplicity
+# dedup_df <- dedup_df %>% dplyr::filter(umiMethod == "Directional")
+
+# NOTE this probably should be box plots, not individual samples
+# But I'm not sure how to do that nicely with the different UMI methods
+
+# Plot
+ggplot(dedup_df, aes(x = sample, y = ratio)) +
+  geom_point(aes(color = umiMethod)) +
+  facet_wrap(~Library, scales = "free_x") +
+  ylim(0,1) +
+  labs(y = "Percent unique reads (dedup ratio)",) +
+  theme(axis.text.x = element_blank())
+
+# ggplot(dedup_df, aes(x = sample, y = sumreads_dedup)) +
+#   geom_point(aes(color = umiMethod)) +
+#   facet_wrap(~Library, scales = "free_x") +
+#   labs(y = "Number of mapped deduplicated reads",) +
+#   theme(axis.text.x = element_blank(),
+#   (text=element_text(size=30))) +
+#   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# ggplot(dedup_df, aes(x = sample, y = sumreads_nodedup)) +
+#   geom_point() +
+#   facet_wrap(~Library, scales = "free_x") +
+#   labs(y = "Number of mapped reads (no deduplication)",) +
+#   theme(axis.text.x = element_blank())
+
+```
+
+
 # Write tables to disk {-}
 
 ```{r write_output}
