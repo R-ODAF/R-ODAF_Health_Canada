@@ -30,5 +30,10 @@ md <- fread(barcodefile, header = TRUE, stringsAsFactors = FALSE, data.table = F
 barcode_to_sample <- setNames(md$sample_id, md$barcode)
 colnames(mat) <- barcode_to_sample[colnames(mat)]
 
+# Filter only for samples in metadata
+# To get rid of columns for barcodes that weren't used in this library
+samples <- md$sample_id
+mat <- mat[, colnames(mat) %in% samples]
+
 print(paste0("Creating ", outfile))
 fwrite(mat, file = outfile, sep = "\t", quote = F, row.names = T, col.names = T)
