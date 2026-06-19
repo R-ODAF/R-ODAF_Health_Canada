@@ -16,7 +16,6 @@ rule pp_ds_all:
 rule expected_output_files:
     input:
         # Drug-seq specific QC 
-        expand("output/QC/fastqc/{library}_{read}_fastqc.html", library=LIBRARIES, read=["R1", "R2"]),
         expand("output/QC/{library}_umi{method}_dedup_max_ratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
         # Demultiplexed BAMs - only valid library-sample combinations
         [f"output/{lib}/demux_bam/{samp}.bam" 
@@ -31,25 +30,6 @@ rule expected_output_files:
     shell:
         """
         touch {output.preprocess_complete_dummy}
-        """
-
-rule fastqc:
-    """Quality control of raw FASTQ files"""
-    input:
-        fastq= os.path.join(raw_dir, "{library}_{read}.fastq.gz")
-    output:
-        html="output/QC/fastqc/{library}_{read}_fastqc.html",
-        zip="output/QC/fastqc/{library}_{read}_fastqc.zip"
-    params:
-        outdir="output/QC/fastqc"
-    conda:
-        "../envs/drugseq.yaml"
-    resources:
-        threads=6,
-        mem_mb=1000 
-    shell:
-        """
-        fastqc  --threads {resources.threads} --outdir {params.outdir} {input.fastq}
         """
 
 rule whitelist_barcodes:
