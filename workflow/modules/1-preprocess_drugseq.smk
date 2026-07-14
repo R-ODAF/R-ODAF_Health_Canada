@@ -13,10 +13,8 @@ multimap_nmax = 1 # Maximum number of multimapping alignments to output
 rule pp_ds_all:
     input: sm_temp_dir / "drugseq_preprocess_complete"
 
-rule expected_output_files:
+rule preprocess_output_files:
     input:
-        # Drug-seq specific QC 
-        expand("output/QC/{library}_umi{method}_dedup_max_ratios.txt", library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON),
         # Demultiplexed BAMs - only valid library-sample combinations
         [f"output/{lib}/demux_bam/{samp}.bam" 
          for lib in LIBRARIES 
@@ -231,20 +229,6 @@ rule mtx_to_counts:
     shell:
         "Rscript scripts/mtx_to_counts.R {input.mtx} {wildcards.library} {input.barcodes}"
 
-
-rule quantify_dedup:
-    input:
-        dedup = "output/{library}/{library}_umiDedup-{method}.tsv",
-        nodedup = "output/{library}/{library}_umiDedup-NoDedup.tsv"
-    output: "output/QC/{library}_umi{method}_dedup_max_ratios.txt"
-    params:
-        outdir = "output/QC"
-    conda:
-        "../envs/drugseq.yaml"
-    shell:
-        """
-        Rscript scripts/dedup_stats.R {input.dedup} {input.nodedup} {params.outdir} {wildcards.library} {wildcards.method}
-        """
 
 rule combine_counttables:
     """

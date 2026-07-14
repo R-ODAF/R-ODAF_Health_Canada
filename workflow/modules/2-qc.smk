@@ -27,6 +27,24 @@ if common_config["platform"] == "DRUG-Seq":
             samtools stats {input} > {output}
             """
     
+    rule quantify_dedup:
+        """
+        Calculate the number of reads in samples when deduplicated vs non-deduplicated.
+        Separate output files will be produced for all deduplication methods.
+        """
+        input:
+            dedup = "output/{library}/{library}_umiDedup-{method}.tsv",
+            nodedup = "output/{library}/{library}_umiDedup-NoDedup.tsv"
+        output: qc_dir / "{library}_umi{method}_dedup_countsums.txt"
+        params:
+            outdir = "output/QC"
+        conda:
+            "../envs/drugseq.yaml"
+        shell:
+            """
+            Rscript scripts/dedup_stats.R {input.dedup} {input.nodedup} {params.outdir} {wildcards.library} {wildcards.method}
+            """
+    
     rule fastqc:
         """Quality control of raw FASTQ files"""
         input:
@@ -74,6 +92,7 @@ if common_config["platform"] == "DRUG-Seq":
             -fz \
             -o {params.outdir} {params.demuxstats_dirs} output/QC/fastqc/
             """
+            
 else:
     rule multiqc:
         message: "running multiqc data"
@@ -102,12 +121,19 @@ else:
 ### Study-wide QC ###
 #####################
 
+# Set expected inputs for studywide QC, depending on platform
+studywide_qc_input = [qc_dir / "MultiQC_Report.html", processed_dir / "count_table.tsv", sm_temp_dir / "genome.removed",]
+if common_config["platform"] == "DRUG-Seq":
+    # For drugseq, add deduplication count files to input list
+    DEDUP_FILES = expand(qc_dir / "{library}_umi{method}_dedup_countsums.txt", 
+                         library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON)
+    studywide_qc_input.extend(DEDUP_FILES)
+
+
 rule studywideqc:
     message: "generating study-wide QC report in R"
     input:
-        qc_dir / "MultiQC_Report.html",
-        processed_dir / "count_table.tsv",
-        sm_temp_dir / "genome.removed"
+        studywide_qc_input
     output:
         qc_dir / "details/samples_removed.txt"
     conda:
