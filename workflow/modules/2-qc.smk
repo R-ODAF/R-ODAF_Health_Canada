@@ -18,8 +18,8 @@ if common_config["platform"] == "DRUG-Seq":
         """
         Extract mapped and unmapped read counts from demultiplexed BAM files
         """
-        input: "output/{library}/demux_bam/{sample}.bam"
-        output: "output/QC/demuxbams_stats/{library}/{sample}.stats.txt"
+        input: processed_dir / "{library}/demux_bam/{sample}.bam"
+        output: qc_dir / "demuxbams_stats/{library}/{sample}.stats.txt"
         conda:
             "../envs/drugseq.yaml"
         shell:
@@ -33,11 +33,11 @@ if common_config["platform"] == "DRUG-Seq":
         Separate output files will be produced for all deduplication methods.
         """
         input:
-            dedup = "output/{library}/{library}_umiDedup-{method}.tsv",
-            nodedup = "output/{library}/{library}_umiDedup-NoDedup.tsv"
+            dedup = processed_dir / "{library}/{library}_umiDedup-{method}.tsv",
+            nodedup = processed_dir / "{library}/{library}_umiDedup-NoDedup.tsv"
         output: qc_dir / "{library}_umi{method}_dedup_countsums.txt"
         params:
-            outdir = "output/QC"
+            outdir = qc_dir
         conda:
             "../envs/drugseq.yaml"
         shell:
@@ -50,10 +50,10 @@ if common_config["platform"] == "DRUG-Seq":
         input:
             fastq= os.path.join(raw_dir, "{library}_{read}.fastq.gz")
         output:
-            html="output/QC/fastqc/{library}_{read}_fastqc.html",
-            zip="output/QC/fastqc/{library}_{read}_fastqc.zip"
+            html= qc_dir / "fastqc/{library}_{read}_fastqc.html",
+            zip= qc_dir / "fastqc/{library}_{read}_fastqc.zip"
         params:
-            outdir="output/QC/fastqc"
+            outdir= qc_dir / "fastqc"
         conda:
             "../envs/drugseq.yaml"
         resources:
@@ -70,17 +70,17 @@ if common_config["platform"] == "DRUG-Seq":
         Create summary files used for Studywide QC report
         """
         input:
-            files=[f"output/QC/demuxbams_stats/{library}/{sample}.stats.txt" 
+            files=[f"{qc_dir}/demuxbams_stats/{library}/{sample}.stats.txt" 
                    for library in LIBRARIES 
                    for sample in LIBRARY_SAMPLES[library]],
-            fastqc=expand("output/QC/fastqc/{library}_{read}_fastqc.zip", 
+            fastqc=expand(qc_dir / "fastqc/{library}_{read}_fastqc.zip", 
                         library=LIBRARIES, 
                         read=["R1", "R2"]),
             preprocess_done=sm_temp_dir / "drugseq_preprocess_complete"
         output: 
             qc_dir / "MultiQC_Report.html"
         params:
-            outdir="output/QC",
+            outdir= qc_dir,
             demuxstats_dirs = expand(qc_dir / "demuxbams_stats/{library}", library=LIBRARIES)
         conda:
             "../envs/drugseq.yaml"

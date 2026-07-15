@@ -16,11 +16,11 @@ rule pp_ds_all:
 rule preprocess_output_files:
     input:
         # Demultiplexed BAMs - only valid library-sample combinations
-        [f"output/{lib}/demux_bam/{samp}.bam" 
+        [f"{processed_dir}/{lib}/demux_bam/{samp}.bam" 
          for lib in LIBRARIES 
          for samp in LIBRARY_SAMPLES[lib]],
         # Per-library count matrices for each dedup method
-        expand("output/{library}/{library}_umiDedup-{method}.tsv", library=LIBRARIES, method=DEDUP_METHODS),
+        expand(processed_dir / "{library}/{library}_umiDedup-{method}.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         # Final combined count table
         processed_dir / "count_table.tsv"
     output:
@@ -41,7 +41,7 @@ rule whitelist_barcodes:
     input:
         metadata=metadata_file
     output:
-        starsolo="output/barcodes/barcode_whitelist.txt",
+        starsolo= output_dir / "barcodes/barcode_whitelist.txt",
     params:
         sample_id_col=config["pipeline"]["sample_id"],
         barcode_col=config["pipeline"]["sample_barcode"]
@@ -69,7 +69,7 @@ rule barcodes_w_IDs:
     input:
         metadata=metadata_file
     output:
-        picard="output/barcodes/{library}_barcodes_sampleIDs.txt"
+        picard= output_dir / "barcodes/{library}_barcodes_sampleIDs.txt"
     params:
         sample_id_col=config["pipeline"]["sample_id"],
         barcode_col=config["pipeline"]["sample_barcode"]
@@ -171,7 +171,7 @@ rule star_index:
 rule STAR_unload:
     input:
         # idx = sm_temp_dir / "genome.loaded",
-        bams = [f"output/{lib}/demux_bam/{samp}.bam" 
+        bams = [f"{processed_dir}/{lib}/demux_bam/{samp}.bam" 
                  for lib in LIBRARIES 
                  for samp in LIBRARY_SAMPLES[lib]]
     output:
@@ -191,18 +191,18 @@ rule starsolo:
         r2=os.path.join(raw_dir, "{library}_R2.fastq.gz"),
         r1=os.path.join(raw_dir, "{library}_R1.fastq.gz"),
         genome=index_genome,
-        barcodes="output/barcodes/barcode_whitelist.txt"
+        barcodes=output_dir / "barcodes/barcode_whitelist.txt"
     output:
-        "output/{library}/STARsolo/Aligned.sortedByCoord.out.bam",
-        "output/{library}/STARsolo/Solo.out/Gene/raw/features.tsv",
-        "output/{library}/STARsolo/Solo.out/Gene/raw/barcodes.tsv",
-        "output/{library}/STARsolo/Solo.out/Barcodes.stats",
-        "output/{library}/STARsolo/Log.final.out",
+        processed_dir / "{library}/STARsolo/Aligned.sortedByCoord.out.bam",
+        processed_dir / "{library}/STARsolo/Solo.out/Gene/raw/features.tsv",
+        processed_dir / "{library}/STARsolo/Solo.out/Gene/raw/barcodes.tsv",
+        processed_dir / "{library}/STARsolo/Solo.out/Barcodes.stats",
+        processed_dir / "{library}/STARsolo/Log.final.out",
         # MTX files for each dedup method
-        *[f"output/{{library}}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx" 
+        *[f"{processed_dir}/{{library}}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx" 
           for method in DEDUP_METHODS]
     params:
-        outprefix="output/{library}/STARsolo/",
+        outprefix= processed_dir / "{library}/STARsolo/",
         genomeDir=index_dir,
         threads=workflow.cores,
         cb_start=cb_start,
@@ -250,13 +250,13 @@ rule starsolo:
 rule mtx_to_counts:
     """Convert STARsolo MTX format to tsv count matrix"""
     input:
-        mtx="output/{library}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx",
-        # features="output/{library}/STARsolo/Solo.out/Gene/raw/features.tsv",
-        barcodes="output/barcodes/{library}_barcodes_sampleIDs.txt"
+        mtx= processed_dir / "{library}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx",
+        # features=processed_dir / "{library}/STARsolo/Solo.out/Gene/raw/features.tsv",
+        barcodes= output_dir / "barcodes/{library}_barcodes_sampleIDs.txt"
     output:
-        counts="output/{library}/{library}_umiDedup-{method}.tsv"
+        counts= processed_dir / "{library}/{library}_umiDedup-{method}.tsv"
     params:
-        matrix_dir="routput/{library}/STARsolo/Solo.out/Gene/raw"
+        matrix_dir= processed_dir / "{library}/STARsolo/Solo.out/Gene/raw"
     conda:
         "../envs/drugseq.yaml"
     shell:
@@ -269,7 +269,7 @@ rule combine_counttables:
     Combines tables deduplicated with 1MM_Directional method
     """
     input: 
-        tables=expand("output/{library}/{library}_umiDedup-1MM_Directional.tsv", library = LIBRARIES),
+        tables=expand(processed_dir / "{library}/{library}_umiDedup-1MM_Directional.tsv", library = LIBRARIES),
         metadata=metadata_file
     output: 
         counttable = processed_dir / "count_table.tsv", # To fit into current R-ODAF needs
@@ -277,7 +277,6 @@ rule combine_counttables:
     shell:
         """
         python scripts/combine_counts.py {input.metadata} {input.tables} {output.counttable}
-        # touch {output.dummy}
         """
 
 
@@ -291,10 +290,10 @@ rule picard_demultiplex_sample:
     Uses CB (corrected barcode), not CR (raw barcode) as in Alithea manual
     """
     input:
-        bam="output/{library}/STARsolo/Aligned.sortedByCoord.out.bam",
-        demux_info="output/barcodes/{library}_barcodes_sampleIDs.txt"
+        bam=processed_dir / "{library}/STARsolo/Aligned.sortedByCoord.out.bam",
+        demux_info=output_dir / "barcodes/{library}_barcodes_sampleIDs.txt"
     output:
-        bam="output/{library}/demux_bam/{sample}.bam",
+        bam=processed_dir / "{library}/demux_bam/{sample}.bam",
     params:
         tag_value=lambda wildcards: get_barcode_for_sample(wildcards)
     conda:
