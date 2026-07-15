@@ -153,6 +153,38 @@ rule star_index:
             --runThreadN {params.threads}
         """
 
+# rule STAR_load:
+#         input:
+#             genome_dir / "STAR_index"
+#         output:
+#             touch(sm_temp_dir / "genome.loaded")
+#         conda:
+#             "../envs/preprocessing.yml"
+#         params:
+#             index = index_dir
+#         benchmark: log_dir / "benchmark.STAR_load.txt"
+#         shell:
+#             '''
+#             STAR --genomeLoad LoadAndExit --genomeDir {params.index}
+#             '''
+
+rule STAR_unload:
+    input:
+        # idx = sm_temp_dir / "genome.loaded",
+        bams = [f"output/{lib}/demux_bam/{samp}.bam" 
+                 for lib in LIBRARIES 
+                 for samp in LIBRARY_SAMPLES[lib]]
+    output:
+        touch(sm_temp_dir / "genome.removed")
+    conda:
+        "../envs/preprocessing.yml"
+    params:
+        genome_dir = index_dir
+    shell:
+        """
+        STAR --genomeLoad Remove --genomeDir {params.genome_dir}
+        """
+
 rule starsolo:
     """Align reads and generate count matrices using STARsolo"""
     input:
@@ -189,6 +221,7 @@ rule starsolo:
     shell:
         """
         STAR --runMode alignReads \
+            --genomeLoad LoadAndKeep \
             --outSAMmapqUnique {params.mapq} \
             --runThreadN {params.threads} \
             --outSAMunmapped Within \
@@ -240,11 +273,11 @@ rule combine_counttables:
         metadata=metadata_file
     output: 
         counttable = processed_dir / "count_table.tsv", # To fit into current R-ODAF needs
-        dummy= sm_temp_dir / "genome.removed" # Super annoying, but other preprocessing paths make it, needed for QC to run
+        # dummy= sm_temp_dir / "genome.removed" # Super annoying, but other preprocessing paths make it, needed for QC to run
     shell:
         """
         python scripts/combine_counts.py {input.metadata} {input.tables} {output.counttable}
-        touch {output.dummy}
+        # touch {output.dummy}
         """
 
 
