@@ -266,10 +266,10 @@ rule mtx_to_counts:
 rule combine_counttables:
     """
     Combine count tables from multiple libraries into a single project-wide count table for downstream analysis.
-    Combines tables deduplicated with 1MM_Directional method
+    Combines tables deduplicated with the definitive UMI deduplication method specified in the config file.
     """
     input: 
-        tables=expand(processed_dir / "{library}/{library}_umiDedup-1MM_Directional.tsv", library = LIBRARIES),
+        tables=expand(processed_dir / f"{{library}}/{{library}}_umiDedup-{dedup_method_for_downstream}.tsv", library = LIBRARIES),
         metadata=metadata_file
     output: 
         counttable = processed_dir / "count_table.tsv", # To fit into current R-ODAF needs

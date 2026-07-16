@@ -69,6 +69,8 @@ if common_config["platform"] == "DRUG-Seq":
 
     DEDUP_METHODS = pipeline_config["umi_dedup_method"].split(sep = " ")
     DEDUP_METHODS_FOR_COMPARISON = [m for m in DEDUP_METHODS if m != "NoDedup"] # To avoid stats on NoDedup vs NoDedup in rule quantify_dedup
+
+    dedup_method_for_downstream = pipeline_config["umi_method_definitive"]
     
     print(f"UMI deduplication method(s) used by STARsolo: {DEDUP_METHODS}")
 
