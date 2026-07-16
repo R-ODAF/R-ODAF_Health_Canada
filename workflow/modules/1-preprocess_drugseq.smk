@@ -171,13 +171,11 @@ rule star_index:
 rule STAR_unload:
     input:
         # idx = sm_temp_dir / "genome.loaded",
-        bams = [f"{processed_dir}/{lib}/demux_bam/{samp}.bam" 
-                 for lib in LIBRARIES 
-                 for samp in LIBRARY_SAMPLES[lib]]
+        bams = expand(processed_dir / "{library}/STARsolo/Aligned.sortedByCoord.out.bam", library=LIBRARIES)
     output:
         touch(sm_temp_dir / "genome.removed")
     conda:
-        "../envs/preprocessing.yml"
+        "../envs/drugseq.yaml"
     params:
         genome_dir = index_dir
     shell:
