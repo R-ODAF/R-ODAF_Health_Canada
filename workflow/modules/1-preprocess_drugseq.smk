@@ -260,7 +260,7 @@ rule mtx_to_counts:
     conda:
         "../envs/drugseq.yaml"
     shell:
-        "Rscript scripts/mtx_to_counts.R {input.mtx} {wildcards.library} {input.barcodes}"
+        "Rscript scripts/mtx_to_counts.R {input.mtx} {wildcards.library} {input.barcodes} {output.counts}"
 
 
 rule combine_counttables:

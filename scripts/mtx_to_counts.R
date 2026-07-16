@@ -5,7 +5,7 @@ library(tools)
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length(args) == 0) {
-  stop("Arguments must be supplied in this order: (1) full path to mtx file (2) Library name (3) path to table of barcodes and sampleIDs", call. = FALSE)
+  stop("Arguments must be supplied in this order: (1) full path to mtx file (2) Library name (3) path to table of barcodes and sampleIDs (4) full path to output file. ", call. = FALSE)
 }
 
 infile <- args[1]
@@ -13,7 +13,7 @@ library <- args[2]
 barcodefile <- args[3]
 matrix_dir <- dirname(infile)
 fname <- file_path_sans_ext(basename(infile))
-outfile <- paste0("output/", library, "/", library, "_", fname, ".tsv") 
+outfile <- args[4]
 
 print(paste0("Importing ", infile))
 

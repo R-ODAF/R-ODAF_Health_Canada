@@ -1705,7 +1705,7 @@ extract_library <- function(file_string, lib_list) {
 }
 
 # Import deduplication data from files made by rule quantify_dedup
-dedup_files <- list.files(path = paths$qc, pattern = "countsums.txt$", full.names = TRUE)
+dedup_files <- list.files(path = paste0(paths$qc, "drugseqQC/"), pattern = "countsums.txt$", full.names = TRUE)
 
 dedup_tables <- lapply(dedup_files, read.table)
 names(dedup_tables) <- tools::file_path_sans_ext(basename(dedup_files))
