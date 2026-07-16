@@ -200,7 +200,7 @@ rule starsolo:
         *[f"{processed_dir}/{{library}}/STARsolo/Solo.out/Gene/raw/umiDedup-{method}.mtx" 
           for method in DEDUP_METHODS]
     params:
-        outprefix= processed_dir / "{library}/STARsolo/",
+        outprefix= "output/processed/{library}/STARsolo/", # this path MUST be hardcoded for {library} wildcard to work. I don't understand why
         genomeDir=index_dir,
         threads=workflow.cores,
         cb_start=cb_start,
@@ -212,7 +212,8 @@ rule starsolo:
         strand=strand,
         umi_dedup=pipeline_config["umi_dedup_method"],
         cell_filter=cell_filter,
-        multimap_nmax=multimap_nmax
+        multimap_nmax=multimap_nmax,
+        max_RAM=pipeline_config["max_memory"]
     conda:
         "../envs/drugseq.yaml"
     threads: workflow.cores # Run a single starsolo job at a time
@@ -220,6 +221,7 @@ rule starsolo:
         """
         STAR --runMode alignReads \
             --genomeLoad LoadAndKeep \
+            --limitBAMsortRAM={params.max_RAM} \
             --outSAMmapqUnique {params.mapq} \
             --runThreadN {params.threads} \
             --outSAMunmapped Within \
