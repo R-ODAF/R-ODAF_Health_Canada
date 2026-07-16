@@ -35,9 +35,9 @@ if common_config["platform"] == "DRUG-Seq":
         input:
             dedup = processed_dir / "{library}/{library}_umiDedup-{method}.tsv",
             nodedup = processed_dir / "{library}/{library}_umiDedup-NoDedup.tsv"
-        output: qc_dir / "{library}_umi{method}_dedup_countsums.txt"
+        output: qc_dir / "drugseqQC/{library}_umi{method}_dedup_countsums.txt"
         params:
-            outdir = qc_dir
+            outdir = qc_dir / "drugseqQC"
         conda:
             "../envs/drugseq.yaml"
         shell:
@@ -125,7 +125,7 @@ else:
 studywide_qc_input = [qc_dir / "MultiQC_Report.html", processed_dir / "count_table.tsv", sm_temp_dir / "genome.removed",]
 if common_config["platform"] == "DRUG-Seq":
     # For drugseq, add deduplication count files to input list
-    DEDUP_FILES = expand(qc_dir / "{library}_umi{method}_dedup_countsums.txt", 
+    DEDUP_FILES = expand(qc_dir / "drugseqQC/{library}_umi{method}_dedup_countsums.txt", 
                          library=LIBRARIES, method=DEDUP_METHODS_FOR_COMPARISON)
     studywide_qc_input.extend(DEDUP_FILES)
 
