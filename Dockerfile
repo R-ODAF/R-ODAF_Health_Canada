@@ -40,9 +40,6 @@ USER R-ODAF
 # Build environments with Snakemake
 RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda --conda-create-envs-only 
 
-# Install extra dependency for reports
-RUN conda run -p $(grep -rl "R-ODAF_reports" .snakemake/conda/*.yaml | sed s/\.yaml//) Rscript install.R 
-
 RUN snakemake --cores ${BUILD_CORES} --software-deployment-method conda \
       && df -h \
       && mkdir ./tests \

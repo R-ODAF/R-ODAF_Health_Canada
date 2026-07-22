@@ -2,8 +2,9 @@ name: Build and push a container to GHCR
 on:
   push:
     branches:
-      - try_miniforge
+      - 'hotfix/**'
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
