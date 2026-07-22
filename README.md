@@ -99,7 +99,7 @@ Conda environments with the dependencies for each step of the pipeline will be c
 Note that this workflow requires the expected input data to exist before snakemake is run. If you want to install conda environments before preparing your input files, download the test dataset as explained in the "Running Tests" section below.
 
 #### Persistent environments
-By default, conda environments will be created in a hidden subdirectory (.snakemake/conda).
+By default, conda environments will be created in a hidden subdirectory (.snakemake/conda) within the R-ODAF_Health_Canada directory you cloned.
 
 If you intend to run this analysis on multiple datasets, it can be advantageous to instead create the environments in a persistent location elsewhere in your filesystem, and point to this location with snakemake's --conda-prefix flag. This avoids having to install the environments in a new location each time you clone the repo, which saves both time and disk place.
 
@@ -158,6 +158,9 @@ mv inputs_bak inputs
 - __TempO-seq experiments only__ : TempO-Seq manifest file matching the genome reference files. We have created standardized TempO-Seq manifests, available at https://github.com/EHSRB-BSRSE-Bioinformatics/unify_temposeq_manifests/
   - Note that files may be stored elsewhere and their location given in the config parameter *biospyder_dbs*
   - The manifest file name (ex. "181019_Human_S1500_Surrogate_1.2_Manifest.txt") must be provided in the config parameter *biospyder_manifest_file*
+- __DRUG-Seq experiments only__ : If your laboratory workflow included ERCC spike-ins, you must provide the ERCC spike-in reference files (fasta and gtf).
+  - Give the location of these files in the config parameter *erccdir*, and the file names in config parameters *ercc_fasta* and *ercc_gtf*.
+  - If the config parameter *include_ERCC* is set to TRUE and the files are provided, ERCC sequences will be included in the reference genome index created by STAR
 - Raw fastq files (inputs/raw/) - file names must match the information in the metadata file.
 
 ### Config.yaml

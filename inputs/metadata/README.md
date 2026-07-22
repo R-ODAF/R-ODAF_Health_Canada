@@ -14,6 +14,9 @@ The following columns are required in the metadata file:
   - *technical_control* (boolean): Allowed values are "T" or "F". Defines whether a sample was a technical control
   - *reference_rna* (boolean): Allowed values are "T" or "F". Defines whether a sample was an RNA control in a TempO-Seq experiment.  Set all to F for RNA-seq data.
   - *solvent_control* (boolean): Allowed values are "T" or "F". Defines whether a sample was a solvent control
+Additional columns required for DRUG-Seq experiments:
+  - *library_ID* (str): 
+  - *sample_barcode* (str): the per-sample unique barcode sequence. Used for assigning read counts to samples for the count table, and for demultiplexing reads into per-sample BAM files.
 
 ### Optional columns
 Any additional columns should be descriptive information about the samples. Suggested columns:
@@ -21,6 +24,7 @@ Any additional columns should be descriptive information about the samples. Sugg
 - *chemical*: The name of the treatment chemical
 - *dose*: Treatment dose given
 - *day*:  For time-series experiments
+- *hour*: for time-series experiments
 - *batch*: Batches are technical groups that could influence sequencing outcome. For example, if samples are sequenced in different library pools, include a column with pool number. If necessary, include multiple columns for batch variables (named appropriately)
 - *cell_line*: if your experiment included multiple cell lines.
 
