@@ -25,6 +25,8 @@ if main_dir is None:
 main_dir = Path(main_dir)
 
 
+
+
 genome_dir = Path(pipeline_config["genomedir"])
 num_threads = pipeline_config["threads"]
 
@@ -46,6 +48,32 @@ sample_id_col = pipeline_config["sample_id"]
 SAMPLES = pd.read_table(metadata_file)[sample_id_col].tolist()
 print("samples: " + str(SAMPLES))
 
+if common_config["platform"] == "DRUG-Seq":
+    # Special information onlu
+    LIBRARIES = meta_pandas["library_ID"].unique().tolist()
+    LIBRARY_SAMPLES = {lib: meta_pandas[meta_pandas["library_ID"] == lib]["sample_ID"].tolist() 
+                   for lib in LIBRARIES}
+    
+    # Create a dictionary mapping (library, sample_id) to barcode
+    SAMPLE_BARCODE_MAP = {}
+    for _, row in meta_pandas.iterrows():
+        key = (row["library_ID"], row["sample_ID"])
+        SAMPLE_BARCODE_MAP[key] = row["sample_barcode"]
+
+    def get_barcode_for_sample(wildcards):
+        """Get the barcode for a given sample_id in a library"""
+        key = (wildcards.library, wildcards.sample)
+        return SAMPLE_BARCODE_MAP.get(key, "")
+    
+    print(f"Found {len(LIBRARIES)} libraries: {LIBRARIES}")
+
+    DEDUP_METHODS = pipeline_config["umi_dedup_method"].split(sep = " ")
+    DEDUP_METHODS_FOR_COMPARISON = [m for m in DEDUP_METHODS if m != "NoDedup"] # To avoid stats on NoDedup vs NoDedup in rule quantify_dedup
+
+    dedup_method_for_downstream = pipeline_config["umi_method_definitive"]
+    
+    print(f"UMI deduplication method(s) used by STARsolo: {DEDUP_METHODS}")
+
 # Import and validate contrasts file
 contrasts_dir = input_dir / "contrasts"
 contrasts_file =  contrasts_dir / common_config["contrasts_file"]
@@ -56,11 +84,35 @@ if contrasts_pandas.shape[1] != 2:
     sys.exit(f"Error! The contrasts file should have two tab-delimited columns, but it has {contrasts_pandas.shape[1]} columns. \n Double check that your file is tab-separated, not space separated.")
 
 # Check existence of reference files, break if not there
-genome_filename = pipeline_config["genome_filename"]
-annotation_filename = pipeline_config["annotation_filename"]
+if common_config["platform"] == "DRUG-Seq":
+    genome_filepath = os.path.join(genome_dir, pipeline_config["genome_filename"])
+    annotation_filepath = os.path.join(genome_dir, pipeline_config["annotation_filename"])
+    ercc_fasta = os.path.join(pipeline_config["erccdir"], pipeline_config["ercc_fasta"])
+    ercc_gtf = os.path.join(pipeline_config["erccdir"], pipeline_config["ercc_gtf"])
 
-genome_filepath = genome_dir / genome_filename
-annotation_filepath = genome_dir / annotation_filename
+    if pipeline_config["include_ercc"] == True:
+        # Can't check for combined files yet, they'll be created by a rule
+        genome_fasta = os.path.join(pipeline_config["genomedir"], f"{pipeline_config['genome_name']}_ERCC_combined.fa")
+        genome_gtf = os.path.join(pipeline_config["genomedir"], f"{pipeline_config['genome_name']}_ERCC_combined.gtf")
+        index_dir = os.path.join(pipeline_config["genomedir"], pipeline_config["genome_name"] + "_ERCC_" + "STARindex")
+        index_genome = os.path.join(pipeline_config["genomedir"], pipeline_config["genome_name"] + "_ERCC_" + "STARindex", "Genome")
+        
+        if os.path.exists(ercc_fasta) == False:
+            sys.exit(f"Error! You are missing the expected ERCC fasta file: {ercc_fasta}")
+        
+        if os.path.exists(ercc_gtf) == False:
+            sys.exit(f"Error! You are missing the expected ERCC fasta file: {ercc_gtf}")
+    else:
+        genome_fasta = genome_filepath
+        genome_gtf = annotation_filepath
+        index_dir = os.path.join(pipeline_config["genomedir"], pipeline_config["genome_name"] + "_STARindex")
+        index_genome = os.path.join(pipeline_config["genomedir"], pipeline_config["genome_name"] + "_STARindex", "Genome")
+else:
+    # TempO-Seq or RNA-seq do not use ERCC spike-ins
+    genome_filename = pipeline_config["genome_filename"]
+    annotation_filename = pipeline_config["annotation_filename"]
+    genome_filepath = genome_dir / genome_filename
+    annotation_filepath = genome_dir / annotation_filename
 
 check_ref_fasta = os.path.exists(genome_filepath)
 

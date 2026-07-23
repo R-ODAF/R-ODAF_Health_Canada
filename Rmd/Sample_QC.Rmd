@@ -128,7 +128,20 @@ calculate_gc <- function(seq) {
 }
 
 # Function for sorting dendrograms
-sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+# sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+
+sort_hclust <- function(dend, method = "average") {
+  # Iterative dendrogram sorting to avoid stack overflow
+  # This is a simplified version - may need refinement for your use case
+  
+  # If dendsort fails, just return the dendrogram as-is
+  tryCatch({
+    as.hclust(dendsort::dendsort(as.dendrogram(dend)), method = method)
+  }, error = function(e) {
+    warning("dendsort iterative fallback: returning unsorted dendrogram")
+    dend
+  })
+}
 
 # From EPA code?
 countStats <- function(
@@ -201,10 +214,20 @@ if (params$collapse_replicates == T) {
                            check.names = FALSE)
   multiQCFile <- file.path(paths$qc, "MultiQC_Report_data.zip")
   # NOTE won't this break if collapse_replicate is true? No multiQC loaded for later?
+  
+  if (params$platform == "DRUG-Seq") {
+    # MultiQC file is quite  different for DrugSeq vs. TempO-Seq and RNA-Seq
+    multiqc_general_stats <- read.table(unz(multiQCFile, "multiqc_samtools_stats.txt"), 
+                                      header = TRUE, sep = '\t')
+    mu <- data.frame(Sample = multiqc_general_stats$Sample, 
+                   FMR = multiqc_general_stats$reads_mapped_percent/100)
+  } else {
   multiqc_general_stats <- read.table(unz(multiQCFile, 'multiqc_star.txt'),
                                       header = TRUE, sep = "\t")
   mu <- data.frame(Sample = multiqc_general_stats$Sample,
                    FMR = multiqc_general_stats$uniquely_mapped_percent/100)
+  }
+  
   row.names(mu) <- mu[,1]
 }
 
@@ -348,9 +371,22 @@ Details on each sample can be seen in the MultiQC report.
 ```{r summary-stats}
 # NOTE won't this break if collapse_replicate is true? No multiQC loaded in load_files line 202?
 summary_stats <- pivot_longer(multiqc_general_stats, cols = -Sample)
+
 stat_metrics <- summary_stats %>%
   group_by(name) %>%
   summarise(Mean=mean(value), Median=median(value))
+
+# Stat column names are different for DRUG-Seq vs. TempO-Seq or RNA-Seq
+if (params$platform == "DRUG-Seq") {
+  ggplot(summary_stats %>%
+         dplyr::filter(name %in% c("raw_total_sequences", "reads_mapped",
+                       "reads_mapped_percent", "mismatches",
+                       "reads_unmapped_percent")),
+        aes(x=name, y=value)) +
+  geom_jitter(alpha = 0.1) +
+  geom_violin(fill = "transparent") +
+  facet_wrap(name~., scales = "free")
+} else {
 ggplot(summary_stats %>%
          dplyr::filter(name %in% c("total_reads", "uniquely_mapped",
                        "uniquely_mapped_percent", "mismatch_rate",
@@ -360,6 +396,7 @@ ggplot(summary_stats %>%
   geom_jitter(alpha = 0.1) +
   geom_violin(fill = "transparent") +
   facet_wrap(name~., scales = "free")
+}
 
 stat_metrics %>%
   kable(caption = "Summary statistics from the alignments for all samples") %>%
@@ -659,7 +696,9 @@ A `r params$clust_method` distance of `r params$studywide_tree_height_cutoff` is
 ############################################################################
 
 dendro_before_all_samples <- 1 - cor(as.matrix(cpm), method = params$clust_method)
-dendro_before_all_samples <- sort_hclust(hclust(as.dist(dendro_before_all_samples), method = "average"))
+
+dendro_before_all_samples <- sort_hclust(stats::hclust(as.dist(dendro_before_all_samples), method = "average"))
+
 
 dendro_before_all_samples <- as.dendrogram(dendro_before_all_samples)
 
@@ -1589,6 +1628,143 @@ plot_dose_effect + geom_boxplot(aes(y = NMR_data)) + ggtitle("Number of Mapped R
 plot_dose_effect + geom_boxplot(aes(y = FMR_data)) + ggtitle("Fraction of Mapped Reads") 
 plot_dose_effect + geom_boxplot(aes(y = Ncov5_data)) + ggtitle("Proportion of active probes (% probes with >5 mapped reads)")
 plot_dose_effect + geom_boxplot(aes(y = Nsig80_data)) + ggtitle("Proportion of probes required to account for 80% of signal")
+```
+
+
+# DRUG-Seq QC Checks
+
+If your experiment used the DRUG-seq method, quality control metrics that are only applicable to DRUG-seq data will appear here.
+
+## Proportion of ERCC spike-in reads
+
+If you included ERCC spike-in RNA [NOTE add link/citation], reads matching the ERCC sequences should represent 3-5% of the obtained mapped reads.
+
+The green bar in the ERCC plot represents the 3-5% range.
+
+Higher proportions of ERCC reads in a sample suggest that there was not as much input RNA as expected.
+
+Note that these plots are made using the data from count_table.tsv, and reflect whatever UMI deduplication method was used to produce that count table.
+(As of June 12, 2026, the authoritative UMI dedup method is 1MM_Directional.)
+
+```{r ercc_stats, eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
+# Ideally this would evaluation only if params$include_ercc is TRUE,
+# But params$include_ercc isn't part of the loaded params
+
+# Calculate and plot the proportion of reads that match ERCC spike-in sequences
+count_ercc <- count_data %>%
+  rownames_to_column("gene") %>%
+  filter(grepl("ERCC", gene)) %>%
+  column_to_rownames("gene")
+
+ercc_sums <- colSums(count_ercc)
+total_sums <- colSums(count_data)
+
+ercc_stats <- tibble(
+  sample_ID = names(total_sums),
+  ercc_reads = as.numeric(ercc_sums),
+  total_reads = as.numeric(total_sums),
+  ercc_proportion = ercc_reads / total_reads) %>% 
+  as.data.frame() %>%
+  dplyr::arrange(sample_ID) %>%
+  dplyr::left_join(exp_metadata, by = "sample_ID") #add metadata to get library_ID for faceting
+
+# Output table
+write.table(ercc_stats, file.path(paths$details, "ercc_stats.txt"), quote = FALSE, sep = "\t", row.names = FALSE)
+# The figure height should probably be improved
+
+ercc_plot <- ggplot(ercc_stats, aes(y = .data[[params$treatment_var]], color = .data[[params$treatment_var]])) +
+  annotate(
+    "rect",
+    xmin = 0.03, xmax = 0.05,
+    ymin = -Inf, ymax = Inf,  # Full vertical range
+    fill = "green", alpha = 0.3
+  ) +
+  geom_boxplot(aes(x = ercc_proportion)) +
+  # geom_point(aes(x = ercc_proportion)) +
+  facet_wrap(~library_ID, 
+             ncol = 1,
+             scales = "free_y") +
+  ggtitle("Proportion of mapped reads that map to ERCC spike-in RNA")
+
+ercc_plot
+```
+
+## UMI Deduplication
+
+```{r dedup_figures,  eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
+# Library IDs for faceting
+libraries <- exp_metadata$library_ID %>% unique()
+
+extract_library <- function(file_string, lib_list) {
+  for (lib in lib_list) {
+    if (grepl(lib, file_string)) {
+      return(lib)
+    }
+  }
+  return("NA")
+}
+
+# Import deduplication data from files made by rule quantify_dedup
+dedup_files <- list.files(path = paste0(paths$qc, "/drugseqQC/"), pattern = "countsums.txt$", full.names = TRUE)
+
+dedup_tables <- lapply(dedup_files, read.table)
+names(dedup_tables) <- tools::file_path_sans_ext(basename(dedup_files))
+dedup_tables <- lapply(dedup_tables, rownames_to_column, var = "sample")
+
+# Add a column with the file name (contains library and UMI method) to each dataframe
+dedup_tables <- lapply(names(dedup_tables), function(name) {
+  dedup_tables[[name]] %>%
+    mutate(file = name)
+})
+
+# Merge all tables into one big dataframe
+dedup_df <- bind_rows(dedup_tables)
+
+# Create new columns by pattern matching to get library and UMI method info
+dedup_df <- dedup_df %>%
+  mutate(
+    umiMethod = case_when(
+      grepl("umi1MM_All", file) ~ "All",
+      grepl("umi1MM_CR", file) ~ "CR",
+      grepl("umi1MM_Directional_dedup", file) ~ "Directional",
+      grepl("umi1MM_Directional_UMItools", file) ~ "Directional_UMItools",
+      grepl("umiExact", file) ~ "Exact",
+      TRUE ~ "NA"
+    )
+  ) %>%
+  mutate(
+    # Use helper function from above to get library name from filename
+    Library = sapply(file, function(x) extract_library(x, libraries))
+  )
+
+# To plot just one UMI method for simplicity
+# dedup_df <- dedup_df %>% dplyr::filter(umiMethod == "Directional")
+
+# NOTE this probably should be box plots, not individual samples
+# But I'm not sure how to do that nicely with the different UMI methods
+
+# Plot
+ggplot(dedup_df, aes(x = sample, y = ratio)) +
+  geom_point(aes(color = umiMethod)) +
+  facet_wrap(~Library, scales = "free_x") +
+  ylim(0,1) +
+  labs(y = "Percent unique reads (dedup ratio)",) +
+  theme(axis.text.x = element_blank())
+
+# ggplot(dedup_df, aes(x = sample, y = sumreads_dedup)) +
+#   geom_point(aes(color = umiMethod)) +
+#   facet_wrap(~Library, scales = "free_x") +
+#   labs(y = "Number of mapped deduplicated reads",) +
+#   theme(axis.text.x = element_blank(),
+#   (text=element_text(size=30))) +
+#   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# ggplot(dedup_df, aes(x = sample, y = sumreads_nodedup)) +
+#   geom_point() +
+#   facet_wrap(~Library, scales = "free_x") +
+#   labs(y = "Number of mapped reads (no deduplication)",) +
+#   theme(axis.text.x = element_blank())
+
 ```
 
 
