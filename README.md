@@ -57,13 +57,6 @@ You can clone the repository using this command:
 
 `git clone https://github.com/R-ODAF/R-ODAF_Health_Canada.git`
 
-#### Note: Working in RStudio
-Typically, when undertaking a new analysis, it is a good idea to have a separate folder for each project. This makes it easier to manage, and also makes your code more portable. Working in RStudio facilitates these tasks.
-
-Therefore, it is a good idea to open the cloned repository in RStudio as a project (there is already a project file by default in this repository, so RStudio should recognize it). This tells RStudio where to look for files, which is better than setting a working directory.
-
-Note that R Studio Server has a built-in terminal in which unix commands can be run. However, you should use the command line in a separate terminal rather than using the one in R Studio Server. This is because Rstudio will try to use packages installed in user directories rather than those installed in conda environments, causing the pipeline run to abort.
-
 ### Installing Dependencies
 
 - conda
