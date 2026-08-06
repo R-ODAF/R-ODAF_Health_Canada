@@ -27,5 +27,5 @@ design: "group"
 
 And contents of the contrasts file would be:
 
-BaP_1	vehicle_ctrl
+BaP_1	vehicle_ctrl \\
 BaP_10	vehicle_ctrl
