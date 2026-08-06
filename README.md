@@ -43,7 +43,8 @@ org.Mm.eg.db 3.14.0 (https://bioconductor.org/packages/release/data/annotation/h
 
 ## Installation option 1: Docker container
 
-*Section coming soon!*
+An up-to-date container is available through the Github Container Registry. It can be installed via Docker:
+`docker pull ghcr.io/r-odaf/r-odaf_health_canada:latest`
 
 
 ## Installation option 2: Clone the repo and install dependencies
