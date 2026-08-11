@@ -22,7 +22,9 @@ rule preprocess_output_files:
         # Per-library count matrices for each dedup method
         expand(processed_dir / "{library}/{library}_umiDedup-{method}.tsv", library=LIBRARIES, method=DEDUP_METHODS),
         # Final combined count table
-        processed_dir / "count_table.tsv"
+        processed_dir / "count_table.tsv",
+        # Unload the STAR index from memory
+        sm_temp_dir / "genome.removed"
     output:
         preprocess_complete_dummy = sm_temp_dir / "drugseq_preprocess_complete"
     shell:
