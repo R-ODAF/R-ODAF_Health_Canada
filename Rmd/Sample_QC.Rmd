@@ -1637,14 +1637,14 @@ If your experiment used the DRUG-seq method, quality control metrics that are on
 
 ## Proportion of ERCC spike-in reads
 
-If you included ERCC spike-in RNA [NOTE add link/citation], reads matching the ERCC sequences should represent 3-5% of the obtained mapped reads.
+If you included [ERCC spike-in RNA](https://www.thermofisher.com/order/catalog/product/4456740) , reads matching the ERCC sequences should represent 3-5% of the obtained mapped reads.
 
 The green bar in the ERCC plot represents the 3-5% range.
 
 Higher proportions of ERCC reads in a sample suggest that there was not as much input RNA as expected.
 
-Note that these plots are made using the data from count_table.tsv, and reflect whatever UMI deduplication method was used to produce that count table.
-(As of June 12, 2026, the authoritative UMI dedup method is 1MM_Directional.)
+Note that these plots are made using the data from count_table.tsv, and reflect the UMI deduplication method used to produce that count table.
+In this project, that UMI deduplication method was `r {params$umi_method_definitive}`.
 
 ```{r ercc_stats, eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
 # Ideally this would evaluation only if params$include_ercc is TRUE,
@@ -1690,6 +1690,11 @@ ercc_plot
 ```
 
 ## UMI Deduplication
+This plot shows the percent of sequences in each sample that were unique. This is calculated as the sum of reads in the deduplicated count table over the sum of reads in a non-deduplicated count table for each sample.
+
+Percent unique read values lower than approximately 70% suggest that there may not have been sufficient RNA input, or there were other problems prior to sequencing.
+
+
 
 ```{r dedup_figures,  eval=isTRUE(params$platform == "DRUG-Seq"), fig.height = as.numeric(custom_fig_height)*1.5}
 # Library IDs for faceting
@@ -1735,35 +1740,23 @@ dedup_df <- dedup_df %>%
   mutate(
     # Use helper function from above to get library name from filename
     Library = sapply(file, function(x) extract_library(x, libraries))
-  )
+  ) %>%
+  dplyr::rename(sample_ID = "sample")
 
-# To plot just one UMI method for simplicity
-# dedup_df <- dedup_df %>% dplyr::filter(umiMethod == "Directional")
-
-# NOTE this probably should be box plots, not individual samples
-# But I'm not sure how to do that nicely with the different UMI methods
-
-# Plot
-ggplot(dedup_df, aes(x = sample, y = ratio)) +
-  geom_point(aes(color = umiMethod)) +
-  facet_wrap(~Library, scales = "free_x") +
-  ylim(0,1) +
-  labs(y = "Percent unique reads (dedup ratio)",) +
-  theme(axis.text.x = element_blank())
-
-# ggplot(dedup_df, aes(x = sample, y = sumreads_dedup)) +
-#   geom_point(aes(color = umiMethod)) +
-#   facet_wrap(~Library, scales = "free_x") +
-#   labs(y = "Number of mapped deduplicated reads",) +
-#   theme(axis.text.x = element_blank(),
-#   (text=element_text(size=30))) +
-#   scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
-
-# ggplot(dedup_df, aes(x = sample, y = sumreads_nodedup)) +
-#   geom_point() +
-#   facet_wrap(~Library, scales = "free_x") +
-#   labs(y = "Number of mapped reads (no deduplication)",) +
-#   theme(axis.text.x = element_blank())
+# Add grouping info from metadata then plot
+exp_metadata %>% dplyr::select(c("sample_ID", params$treatment_var)) %>%
+  full_join(dedup_df) %>%
+  ggplot(aes(y = .data[[params$treatment_var]])) +
+    annotate(
+    "rect",
+    xmin = 0.7, xmax = 1.0,
+    ymin = -Inf, ymax = Inf,  # Full vertical range
+    fill = "green", alpha = 0.3
+  ) +
+    geom_boxplot(aes(x = ratio, color = umiMethod)) +
+    facet_wrap(~Library, scales = "free_x") +
+    xlim(0,1) +
+    labs(x = "Percent unique reads (dedup ratio)",)
 
 ```
 
