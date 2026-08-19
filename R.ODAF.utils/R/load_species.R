@@ -60,7 +60,7 @@ load_species <- function(species, wiki, manifest) {
     species_data$ensembl_species <- "mauratus_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
     species_data$loaded <- TRUE
-  } else if (species == "mouse") {
+  } else if (species == "zebrafish") {
     if (!requireNamespace("org.Dr.eg.db", quietly = TRUE)) {
       stop("Package 'org.Dr.eg.db' is required for zebrafish species data.")
     }
