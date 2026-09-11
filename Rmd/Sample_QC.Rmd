@@ -1754,7 +1754,9 @@ exp_metadata %>% dplyr::select(c("sample_ID", params$treatment_var)) %>%
     fill = "green", alpha = 0.3
   ) +
     geom_boxplot(aes(x = ratio, color = umiMethod)) +
-    facet_wrap(~Library, scales = "free_x") +
+    facet_wrap(~Library, 
+               scales = "free_x", 
+               ncol = 1) +
     xlim(0,1) +
     labs(x = "Percent unique reads (dedup ratio)",)
 
