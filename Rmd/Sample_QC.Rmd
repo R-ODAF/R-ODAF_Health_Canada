@@ -1118,6 +1118,31 @@ if (!is.na(params$batch_var)) {
   )
 }
 
+# Helper function: Scale plate plot colours around the threshold values
+# `trans = "log10"` requires the midpoint in log space; symmetric = TRUE gives
+# equal colour range on both sides so hue intensity is comparable above/below.
+scale_threshold <- function(x, threshold, trans = "identity",
+                            low = "#B2182B", mid = "#FFFFBF", high = "#2166AC",
+                            symmetric = FALSE, aesthetics = "colour", ...) {
+  f <- if (trans == "log10") function(v) log10(pmax(v, 1)) else identity
+  m <- f(threshold)
+  rng <- range(f(x), na.rm = TRUE)
+  lims <- if (symmetric) {
+    half <- max(abs(rng - m))
+    c(m - half, m + half)
+  } else {
+    c(min(rng[1], m), max(rng[2], m))
+  }
+  lims <- lims + c(-1, 1) * diff(lims) * 0.001  # keep extreme breaks inside the limits
+  ggplot2::scale_colour_gradient2(
+    low = low, mid = mid, high = high,
+    midpoint = m,
+    limits = if (trans == "log10") 10^lims else lims,
+    trans = trans,
+    aesthetics = aesthetics,
+    ...
+  )
+}
 ```
 
 
@@ -1125,8 +1150,18 @@ if (!is.na(params$batch_var)) {
 
 ```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
-  geom_point(mapping = aes(color = NMR_data, val = NMR_data), data = QAQC_annotated, size = 3) +
-  ggtitle("Number of mapped reads"))  %>%
+  geom_point(mapping = aes(fill = NMR_data, val = NMR_data), data = QAQC_annotated,
+             shape = 21, size = 3, colour = "grey20", stroke = 0.5) +
+  # Colour scale around the NMR threshold
+  scale_threshold(QAQC_annotated$NMR_data,
+                  threshold = params$nmr_threshold,
+                  trans = "log10",
+                  aesthetics = "fill",
+                  name = "Mapped\nreads",
+                  breaks = c(min(QAQC_annotated$NMR_data), params$nmr_threshold,
+                             max(QAQC_annotated$NMR_data)),
+                  labels = scales::comma) +
+  ggtitle("Number of mapped reads")) %>%
   ggplotly(tooltip = c("name", "treat", "dose", "val"))
 ```
 
@@ -1134,7 +1169,14 @@ if (!is.na(params$batch_var)) {
 
 ```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
-  geom_point(mapping = aes(color = FMR_data, val = FMR_data), data = QAQC_annotated, size = 3) +
+  geom_point(mapping = aes(fill = FMR_data, val = FMR_data), data = QAQC_annotated,
+           shape = 21, size = 3, colour = "grey20", stroke = 0.5) +
+  # Colour scale around the FMR threshold
+  scale_threshold(QAQC_annotated$FMR_data, 
+                  threshold = params$align_threshold, 
+                  aesthetics = "fill",
+                  name = "FMR", 
+                  breaks = c(0, params$align_threshold, 1), labels = scales::percent) +
   ggtitle("Fraction of mapped reads")) %>%
   ggplotly(tooltip = c("name","treat","dose","val"))
 ```
@@ -1143,7 +1185,7 @@ if (!is.na(params$batch_var)) {
 
 ```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
-  geom_point(mapping = aes(color = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
+  geom_point(mapping = aes(fill = Nsig80_data, val = Nsig80_data), data = QAQC_annotated, size = 3) +
   ggtitle("Nsig80")) %>%
   ggplotly(tooltip = c("name", "treat", "dose", "val"))
 ```
@@ -1152,7 +1194,7 @@ if (!is.na(params$batch_var)) {
 
 ```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
-  geom_point(mapping = aes(color = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
+  geom_point(mapping = aes(fill = Ncov5_data, val = Ncov5_data), data = QAQC_annotated, size = 3) +
   ggtitle("Ncov5")) %>%
   ggplotly(tooltip = c("name", "treat", "dose", "val"))
 ```
@@ -1161,7 +1203,15 @@ if (!is.na(params$batch_var)) {
 
 ```{r fig.height = as.numeric(custom_fig_height), fig.width = custom_fig_width, eval = are_there_plates}
 (plate_plot +
-  geom_point(mapping = aes(color = Gini_data, val = Gini_data), data = QAQC_annotated, size = 3) +
+  geom_point(mapping = aes(fill = Gini_data, val = Gini_data), data = QAQC_annotated,
+             shape = 21, size = 3, colour = "grey20", stroke = 0.5) +
+  scale_threshold(QAQC_annotated$Gini_data,
+                  threshold = params$gini_cutoff,
+                  aesthetics = "fill",
+                  low = "#2166AC", high = "#B2182B",  # high Gini is the failing direction
+                  name = "Gini",
+                  breaks = c(min(QAQC_annotated$Gini_data), params$gini_cutoff,
+                             max(QAQC_annotated$Gini_data))) +
   ggtitle("Gini")) %>%
   ggplotly(tooltip = c("name", "treat", "dose", "val"))
 ```
