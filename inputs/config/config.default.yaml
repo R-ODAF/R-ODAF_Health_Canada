@@ -10,28 +10,36 @@ common:
   project_description: null # description of project for report, optional
   batch_var: "batch"          # For example, multiple plates
   dose: "dose"               # If there is a dose in the experiment; otherwise use NULL
-  platform: "TempO-Seq"      # TempO-Seq Or RNA-Seq
-  nmr_threshold: 100000    # 10% of 1M reads for TempOSeq = 100,000; 10% of 10M reads for RNA-Seq = 1,000,000.
+  platform: "DRUG-Seq"       # One of: DRUG-Seq, TempO-Seq, or RNA-Seq
+  nmr_threshold: 100000    # 10% of aimed-for depth per sample. Ex. 1M reads for TempOSeq = nmr_threshold of 100000; 10% of 10M reads for RNA-Seq = 1000000.
   write_additional_output: TRUE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
   celltype: "MCF7" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   solvent_control: "solvent_control"
-  biospyder_dbs: "~/shared/dbs/biospyder/"
-  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
-  # "191113_Human_S1500_Surrogate_2.0_Manifest.csv"
-  # "181019_Human_S1500_Surrogate_1.2_Manifest.txt"
-  # "191004_Human_Whole_Transcriptome_2.0_Manifest.txt"
-
-###### Alignment and processing pipeline parameters
+  biospyder_dbs: "~/shared/dbs/biospyder/" # Path to location of biospyder manifest file. Only needed if platform = TempO-Seq. Otherwise, set to null.
+  biospyder_manifest_file:  "181019_Human_S1500_Surrogate_1.2_Manifest.txt" # Only needed if platform = TempO-Seq. Otherwise, set to null.
 
 pipeline:
-  genomedir: ~/shared/dbs/biospyder/humansurrogate2_0/ # directory where genome information can be found (the files below should be in this directory)
-  genome_filename: humansurrogate2_0.fa # filename for genome
-  annotation_filename: humansurrogate2_0.gtf # filename for gene annotations
-  genome_name: "S1500_2.0" # used for labeling genome index files
-  sample_id: "sample_ID" # header for the column for sample identifier in the metadata file.
-  mode: se # one of 'se' (single end) or 'pe' (paired end)
-  threads: 4 # number of threads to use for multi-threaded programs
+  sample_id: "sample_ID" # header for the column for sample identifier in the metadata file
+  library_id: "library_ID" # header for the column for library identifier in the metadata file
+  sample_barcode: "sample_barcode" # header for the column containing sample barcodes
+  mode: "pe" # paired end for DRUG-seq
+  threads: 8 # number of threads to use for multi-threaded programs
+  max_memory: 100000000000 # In bytes (1 GB = 1000000000 bytes) . Total RAM that can be used by STAR
+
+  # Reference genome
+  genomedir: /home/bradford/storage/dbs/GRCh38  # Directory where genome information can be found (the files below should be in this directory)
+  genome_filename: Homo_sapiens.GRCh38.dna.primary_assembly.fa # Genome fasta filename
+  annotation_filename: Homo_sapiens.GRCh38.108.gtf # Genome gtf filename
+  genome_name: "GRCh38_drugseq" # Used for labeling genome index files
+
+  # DRUG-seq only parameters (leave null for RNA-seq and TempOseq)
+  include_ercc: TRUE # TRUE to quantify reads aligning to ERCC spike-ins. If TRUE, the ercc files below are required.
+  erccdir: "/home/bradford/storage/dbs/ERCC_spikein" # Location of the ERCC fasta and gtf files
+  ercc_fasta: "ERCC92.fa"
+  ercc_gtf: "ERCC92.gtf"
+  umi_dedup_method: "NoDedup 1MM_Directional 1MM_Directional_UMItools 1MM_All 1MM_CR Exact" # UMI deduplication method(s), separated with spaces. MUST include NoDedup. Options are: NoDedup 1MM_Directional 1MM_Directional_UMItools 1MM_All 1MM_CR Exact
+  umi_method_definitive: "1MM_Directional" # Choose ONLY ONE of the UMI methods specified in umi_dedup_method. The counts will be combined into a studywide count table used for QC and downstream steps.
 
 ###### QC parameters
 QC:
@@ -47,12 +55,13 @@ QC:
     three: ["row", "column"]
       #4: ["batch"]
       #As many groups as desired...up to a maximum of 6
-  treatment_var: "chemical"
+  treatment_var: "chemical" # A column name from your metadata that represents the treatment
   collapse_replicates: F # Set to true if you have replicate flow cells that need to be summed into a single value
   # Column names for metadata, if applicable
   technical_control: "technical_control"
   reference_rna: "reference_rna"
 
+  
 ###### DESeq2 parameters
 DESeq2:
   analysis_name: "default"  # short string identifying analysis settings. This will appear in the analysis directory and file names
@@ -95,3 +104,4 @@ DESeq2:
   generate_runningfisher_report: TRUE
   output_digits: 5 # control rounding of DEG output. Primarily used to suppress RNG variability so our tests don't fail :)
   parallel: FALSE
+  

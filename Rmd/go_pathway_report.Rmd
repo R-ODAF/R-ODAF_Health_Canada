@@ -373,10 +373,10 @@ wpid2name <- wp2gene %>% dplyr::select(wpid,name) #TERM2NAME
 
 matches <- wpid2gene %>% filter(gene %in% entrezDEGs)
 
-if(is.na(params$reports_filter)){
+if(is.na(params$reports_facet)){
   pathway_output_dir <- paths$pathway_analysis
 } else {
-  pathway_output_dir <- paths$pathway_analysis[[params$reports_filter]]
+  pathway_output_dir <- paths$pathway_analysis[[params$reports_facet]]
 }
 
 if (nrow(matches) > 1) {

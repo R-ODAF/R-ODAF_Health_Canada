@@ -21,6 +21,11 @@ set_up_platform_params <- function(params) {
     bs <- load_biospyder_new(params$biospyder_dbs, species_data$temposeq_manifest)
     params$feature_id <- bs$feature_id # Probe_Name
     params$biospyder <- bs$biospyder # manifest
+  } else if (params$platform == "DRUG-Seq") {
+    # params just copied from RNA-seq, I have NO IDEA if these are correct for DRUG-seq
+    params$MinCount <- 1
+    params$alpha <- 0.05 # Relaxed from 0.01
+    params$feature_id <- "Ensembl_Gene_ID"  
   } else {
     stop("Platform/technology not recognized")
   }

@@ -11,6 +11,9 @@ if common_config["platform"] == "TempO-Seq":
 if common_config["platform"] == "RNA-Seq":
 	include: "modules/1-preprocess_rnaseq.smk"
 
+if common_config["platform"] == "DRUG-Seq":
+    include: "modules/1-preprocess_drugseq.smk"
+
 include: "modules/2-qc.smk"
 
 include: "modules/3-diffexp_and_reports.smk"

@@ -35,6 +35,7 @@ properties:
         enum:
           - TempO-Seq
           - RNA-Seq
+          - DRUG-Seq
       nmr_threshold:
         type: integer
         minimum: 0
