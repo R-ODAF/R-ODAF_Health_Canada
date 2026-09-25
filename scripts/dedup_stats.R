@@ -13,8 +13,8 @@ if (length(args) == 0) {
 }
 
 # Import count tables
-dedup <- read.delim(args[1], sep = "\t", header = TRUE, row.names = 1)
-nodedup <- read.delim(args[2], sep = "\t", header = TRUE, row.names = 1)
+dedup <- read.delim(args[1], sep = "\t", header = TRUE, row.names = 1, check.names = FALSE)
+nodedup <- read.delim(args[2], sep = "\t", header = TRUE, row.names = 1, check.names = FALSE)
 
 # Get outdir from arguments
 outdir <- args[3]
