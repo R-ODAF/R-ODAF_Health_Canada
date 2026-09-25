@@ -1,0 +1,14 @@
+name: drugseq
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bioconda::fastqc=0.12.1 # require v0.11.9 or higher
+  - bioconda::STAR=2.7.9a # require v2.7.9a exactly
+  - bioconda::picard=3.2.0 # require v2.17.8 or higher
+  - bioconda::samtools=1.23 # require v1.9 or higher
+  - conda-forge::r-base=4.4.1 # require v3 or higher
+  - conda-forge::r-devtools
+  - bioconda::fqtk=0.3.1 # require 0.3.1 but that's not available on bioconda
+  # - bioconda::kallisto=0.48.0 # require 0.48.0
+  - bioconda::multiqc=1.18

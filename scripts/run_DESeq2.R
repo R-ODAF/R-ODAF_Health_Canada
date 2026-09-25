@@ -77,7 +77,7 @@ if (is.na(params$deseq_facet)){
     allBiomarkers[['all']] <- write_additional_output(count_data, exp_metadata, params[["design"]], params)
   }
   dds <- learn_deseq_model(count_data, exp_metadata, params[["design"]], params)
-  rld <- regularize_data(dds, original_design, covariates, params$batch_var)
+  rld <- regularize_data(dds, original_design, covariates = NA, params$batch_var)
   DESeq_results <- get_DESeq_results(dds, exp_metadata, exp_contrasts, params[["design"]], params, NA)
   ddsList[['all']] <- dds
   overallAllGenes <- DESeq_results$dfGenes
