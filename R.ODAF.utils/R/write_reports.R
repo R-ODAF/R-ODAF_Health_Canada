@@ -12,7 +12,7 @@
 make_main_reports <- function(pars, paths, facet) {
   message("Making main report")
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
@@ -39,7 +39,7 @@ make_main_reports <- function(pars, paths, facet) {
 #' @export
 make_stats_reports <- function(pars, paths, facet) {
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
@@ -65,7 +65,7 @@ make_stats_reports <- function(pars, paths, facet) {
 #' @export
 make_data_reports <- function(pars, paths, facet) {
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
@@ -90,7 +90,7 @@ make_data_reports <- function(pars, paths, facet) {
 #' @export
 make_pathway_reports <- function(pars, paths, facet)  {
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
@@ -115,7 +115,7 @@ make_pathway_reports <- function(pars, paths, facet)  {
 #' @export
 make_tgxddi_reports <- function(pars, paths, facet) {
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
@@ -155,7 +155,7 @@ make_summary_report <- function(pars, paths) {
 #' @export
 make_hdaci_reports <- function(pars, paths, facet) {
   if (is.na(pars$deseq_facet) && is.na(pars$reports_facet)) {
-    pars$reports_filter <- NULL
+    pars$reports_filter <- NA
   } else {
     pars$reports_filter <- facet
   }
