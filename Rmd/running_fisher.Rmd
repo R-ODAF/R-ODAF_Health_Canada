@@ -162,7 +162,7 @@ runningFisher <- function(bm, bioset, N){
 			Runs$pval <- 1
 			for(k in 1:nrow(Runs)){
 				bs <- bioset[1:Runs$Rank[k]]
-				m <- mat(bm, bs, N)				
+				m <- mat(bm, bs, N)
 				Runs$pval[k] <- test(m)
 			}
 			score <- min(Runs$pval*length(Runs$pval))
@@ -248,24 +248,81 @@ select_and_rename <- function(df) {
   colnames(df) <- c("Gene", "pval", "fc")           # Rename the columns
   return(df)
 }
-bs <- lapply(bs, select_and_rename)
-
-# Remove rows with NA ensemble IDs
-bs <- lapply(bs, function(x) x[!is.na(x$Gene), ])
-
-# Number of rows per bioset
-# sapply(bs, nrow)
-
-# Rename the biosets to remove extra information (which clutters up the plots)
 original_names <- names(bs)
+
+# Match biosets to the requested metadata facet before shortening their names.
+if (is.null(params$reports_facet)) {
+  bs_by_facet <- list(All = bs)
+} else {
+  design_column <- params$design
+  facet_column <- params$reports_facet
+
+  stopifnot(
+    length(design_column) == 1,
+    design_column %in% names(exp_metadata),
+    length(facet_column) == 1,
+    facet_column %in% names(exp_metadata)
+  )
+
+  metadata_lookup <- unique(data.frame(
+    design_value = exp_metadata[[design_column]],
+    facet_value = exp_metadata[[facet_column]]
+  ))
+
+  matches <- do.call(
+    rbind,
+    lapply(original_names, function(bs_name) {
+      matching_design_values <- metadata_lookup$design_value[
+        vapply(
+          metadata_lookup$design_value,
+          function(design_value) grepl(design_value, bs_name, fixed = TRUE),
+          logical(1)
+        )
+      ]
+
+      if (length(matching_design_values) == 0) {
+        return(data.frame(
+          bs_name = bs_name,
+          design_value = NA_character_,
+          facet_value = NA_character_
+        ))
+      }
+
+      data.frame(
+        bs_name = bs_name,
+        design_value = matching_design_values[1],
+        facet_value = metadata_lookup$facet_value[
+          match(matching_design_values[1], metadata_lookup$design_value)
+        ]
+      )
+    })
+  )
+
+  facet_by_bs <- matches$facet_value[match(original_names, matches$bs_name)]
+  facet_by_bs[is.na(facet_by_bs)] <- "Unmatched"
+  names(facet_by_bs) <- original_names
+  bs_by_facet <- split(bs, facet_by_bs)
+}
+
+bs_by_facet <- lapply(
+  bs_by_facet,
+  function(facet_bs) {
+    facet_bs <- lapply(facet_bs, select_and_rename)
+    lapply(facet_bs, function(x) x[!is.na(x$Gene), ])
+  }
+)
 
 rename_function <- function(name) {
   sub("(_[0-9.]+).*", "\\1", name)
 }
 
-new_names <- sapply(original_names, rename_function)
-names(bs) <- new_names
-# print(names(bs))
+bs_by_facet <- lapply(
+  bs_by_facet,
+  function(facet_bs) {
+    names(facet_bs) <- sapply(names(facet_bs), rename_function)
+    facet_bs
+  }
+)
 
 ```
 
@@ -282,27 +339,45 @@ if (params$platform == "TempO-Seq") {
 }
 
 
-out <- NULL
-out2 <- data.frame(Biomarker = names(bm))
+run_rf <- function(bs, bm, N) {
+  out <- NULL
+  out2 <- data.frame(Biomarker = names(bm))
 
-for(f in 1:length(bs)){
-	x <- bs[f][[1]]
-	nms <- names(bs)[f]
-	oo <- NULL
-	for(b in 1:length(bm)){
-		o <- RF(bm[b][[1]], x, N)
-		o <- cbind.data.frame(data.frame(Chem = nms, Biomarker = names(bm)[b]), o)
-		out <- rbind.data.frame(out, o)
-		oo <- rbind.data.frame(oo,o)
-	}
-	out2[[nms]] <- oo$o
+  for (f in seq_along(bs)) {
+    x <- bs[[f]]
+    bioset_name <- names(bs)[f]
+    bioset_results <- NULL
+
+    for (b in seq_along(bm)) {
+      result <- data.frame(
+        Chem = bioset_name,
+        Biomarker = names(bm)[b],
+        o = RF(bm[[b]], x, N)
+      )
+      out <- rbind.data.frame(out, result)
+      bioset_results <- rbind.data.frame(bioset_results, result)
+    }
+
+    out2[[bioset_name]] <- bioset_results$o
+  }
+
+  list(out = out, out2 = out2)
 }
 
-# Export the results to a file
-write.table(out2, file = file.path(paths$BMD_output, "RF_results.txt"), sep = "\t", row.names = FALSE)
+rf_by_facet <- lapply(bs_by_facet, run_rf, bm = bm, N = N)
+
+for (facet_name in names(rf_by_facet)) {
+  output_facet <- gsub("[^[:alnum:]_.-]+", "_", facet_name)
+  write.table(
+    rf_by_facet[[facet_name]]$out2,
+    file = file.path(paths$BMD_output, paste0("RF_results_", output_facet, ".txt")),
+    sep = "\t",
+    row.names = FALSE
+  )
+}
 ```
 
-## Number of Genes and Matching Genes Between Biomarkers and Biosets {-}
+## Number of Genes and Matching Genes Between Biomarkers and Biosets {.tabset .tabset-pills}
 
 This table shows the number of genes in each biomarker, and how many of those genes are present in your dataset.
 If your project used TempO-seq, "Matches in Dataset" refers to the number of genes in the biomarker that are present in the TempO-seq manifest.
@@ -354,46 +429,57 @@ if (params$platform == "TempO-Seq") {
 
 ```
 
-```{r match_bm_bs, echo=FALSE, fig.height=6}
-# Initialize the matrix to store the results
-# Assuming bm and bs are already defined and populated
-results <- matrix(nrow = length(bm), ncol = length(bs))
-colnames(results) <- names(bs)
-rownames(results) <- names(bm)
+```{r match_bm_bs, echo=FALSE, results='asis', fig.height=6}
+for (facet_name in names(bs_by_facet)) {
+  facet_bs <- bs_by_facet[[facet_name]]
+  results <- matrix(nrow = length(bm), ncol = length(facet_bs))
+  colnames(results) <- names(facet_bs)
+  rownames(results) <- names(bm)
 
-# Fill the matrix with the number of matching genes for each bioset
-for (i in 1:length(bm)) {
-  biomarker_df <- bm[[i]]
-  for (j in 1:length(bs)) {
-    bioset_df <- bs[[j]]
-    merged <- merge(biomarker_df, bioset_df, by.x = "ID", by.y = "Gene")
-    results[i, j] <- nrow(merged)
+  for (i in seq_along(bm)) {
+    for (j in seq_along(facet_bs)) {
+      merged <- merge(
+        bm[[i]],
+        facet_bs[[j]],
+        by.x = "ID",
+        by.y = "Gene"
+      )
+      results[i, j] <- nrow(merged)
+    }
   }
+
+  results_df <- as.data.frame(results, stringsAsFactors = FALSE)
+  results_df$Biomarker <- rownames(results_df)
+  final_df <- merge(match_counts, results_df, by = "Biomarker")
+
+  formatted_table <- final_df %>%
+    formattable::formattable(
+      align = c("l", rep("r", ncol(final_df) - 1)),
+      list(
+        area(col = 2:3) ~ formattable::formatter(
+          "span",
+          style = ~ formattable::style(font.style = "italic")
+        ),
+        area(col = 4:ncol(final_df)) ~ formattable::color_tile("#ffffff", "#54ce89")
+      )
+    ) %>%
+    formattable::as.htmlwidget()
+
+  cat(knitr::knit_child(
+    text = c(
+      paste0("### ", facet_name),
+      "",
+      "```{r, echo=FALSE, results='asis'}",
+      "htmltools::browsable(htmltools::div(",
+      "  style = \"overflow-x: auto; width: 100%; height: 700px;\",",
+      "  formatted_table",
+      "))",
+      "```"
+    ),
+    envir = environment(),
+    quiet = TRUE
+  ), "\n\n")
 }
-
-# Convert the matrix to a data frame
-results_df <- as.data.frame(results, stringsAsFactors = FALSE)
-results_df$Biomarker <- rownames(results_df)
-
-# Merge the match_counts and results_df dataframes
-final_df <- merge(match_counts, results_df, by = "Biomarker")
-
-# Fancy formatting
-formatted_table <- final_df %>%
-  formattable::formattable(
-    align = c("l", rep("r", ncol(final_df) - 1)),
-    list(
-      area(col = 2:3) ~ formattable::formatter("span", style = ~ formattable::style(font.style = "italic")),
-      area(col = 4:ncol(final_df)) ~ formattable::color_tile("#ffffff", "#54ce89")
-    )
-  ) %>%
-  formattable::as.htmlwidget()
-
-# Make table horizontally scrollable
-htmltools::div(
-  style = "overflow-x: auto; width: 100%; height: 700px;",
-  formatted_table
-)
 
 ```
 
@@ -443,7 +529,7 @@ thresholdunknown <- as.data.frame(thresholds) %>%
               dplyr::pull(Biomarker)
 
 # Define fig heights for heatmaps
-heatmap_height <- (length(bs) / 6) + 5
+heatmap_height <- (max(lengths(bs_by_facet)) / 6) + 5
 ```
 
 ### Heatmap {.tabset .tabset-pills}
@@ -461,8 +547,6 @@ Biomarkers without published threshold (no symbols will appear on heatmap): `r p
 ```{r heatmap_function, echo=FALSE}
 
 make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, cluster_rows = FALSE, cluster_columns = FALSE) {
-  print(cont_legend_limit)
-
   legend_values <- round(seq(-cont_legend_limit, cont_legend_limit, length.out = 5), digits = 1)
 
   ComplexHeatmap::Heatmap(
@@ -482,18 +566,18 @@ make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, clu
   column_title_side = "top",
   # Add symbols for values above and below thresholds
   cell_fun = function(j, i, x, y, width, height, fill) {
-    threshold <- thresholds[colnames(selected_data)[j]]
+    threshold <- thresholds[colnames(matrix_data)[j]]
     if (!is.na(threshold)) {
-      if (selected_data[i, j] > threshold) {
+      if (matrix_data[i, j] > threshold) {
         grid.points(x, y, pch = 16, size = unit(2, "mm"), gp = gpar(col = "black"))
-      } else if (selected_data[i, j] < -threshold) {
+      } else if (matrix_data[i, j] < -threshold) {
         grid.text("x", x, y, gp = gpar(col = "black", fontsize = 10))
       }
     }
   },
   # Add annotations for thresholds across top of heatmap
   top_annotation = HeatmapAnnotation(
-    thresholds = anno_text(as.character(thresholds[colnames(selected_data)]), 
+    thresholds = anno_text(as.character(thresholds[colnames(matrix_data)]),
                            rot = 0, 
                            just = "center", 
                            gp = gpar(fontsize = 10))
@@ -503,57 +587,88 @@ make_complex_heatmap <- function(matrix_data, thresholds, cont_legend_limit, clu
 
 ```
 
-#### Unclustered Heatmap {-}
+```{r facet_heatmaps, echo=FALSE, results='asis', fig.height=heatmap_height}
+for (facet_name in names(rf_by_facet)) {
+  selected_data <- rf_by_facet[[facet_name]]$out2 %>%
+    dplyr::select(-Biomarker) %>%
+    as.matrix() %>%
+    t()
 
-```{r unclust_heatmap, fig.height=heatmap_height}
-selected_data <- out2 %>%
-  select(-Biomarker) %>%
-  as.matrix() %>%
-  t()
+  colnames(selected_data) <- biomarkers
+  finite_scores <- selected_data[is.finite(selected_data)]
 
-colnames(selected_data) <- biomarkers
+  if (length(finite_scores) == 0) {
+    cat(knitr::knit_child(
+      text = c(
+        paste0("#### ", facet_name, " - No finite RF scores"),
+        "",
+        "No finite Running Fisher scores were available for this facet.",
+        ""
+      ),
+      envir = environment(),
+      quiet = TRUE
+    ), "\n\n")
+    next
+  }
 
-# Set up color palette so zero is white
-min_logpval <- min(selected_data, na.rm = TRUE)
-max_logpval <- max(selected_data, na.rm = TRUE)
-cont_legend_limit <- round(max(abs(min_logpval), abs(max_logpval)))
+  cont_legend_limit <- round(max(abs(finite_scores)))
+  if (!is.finite(cont_legend_limit) || cont_legend_limit <= 0) {
+    cont_legend_limit <- 1
+  }
 
+  heatmap <- make_complex_heatmap(
+    selected_data,
+    thresholds,
+    cont_legend_limit
+  )
+  cat(knitr::knit_child(
+    text = c(
+      paste0("#### ", facet_name, " - Unclustered"),
+      "",
+      "```{r, echo=FALSE}",
+      "draw(heatmap)",
+      "```"
+    ),
+    envir = environment(),
+    quiet = TRUE
+  ), "\n\n")
 
-heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit)
+  heatmap <- make_complex_heatmap(
+    selected_data,
+    thresholds,
+    cont_legend_limit,
+    cluster_rows = TRUE
+  )
+  cat(knitr::knit_child(
+    text = c(
+      paste0("#### ", facet_name, " - Clustered rows"),
+      "",
+      "```{r, echo=FALSE}",
+      "draw(heatmap)",
+      "```"
+    ),
+    envir = environment(),
+    quiet = TRUE
+  ), "\n\n")
 
-draw(heatmap)
-
-# Save the heatmap to a PDF file, for testing.
-# pdf("heatmap.pdf", width = 10, height = 10)
-# draw(heatmap)
-# dev.off()
-
-```
-
-#### Heatmap, clustered rows {-}
-
-```{r rowclust_heatmap, fig.height=heatmap_height}
-rowclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_rows = TRUE)
-
-draw(rowclust_heatmap)
-
-# Save the heatmap to a PDF file, for testing.
-# pdf("rowclust_heatmap.pdf", width = 10, height = 10)
-# draw(rowclust_heatmap)
-# dev.off()
-```
-
-#### Heatmap, clustered columns {-}
-
-```{r colclust_heatmap, fig.height=heatmap_height}
-colclust_heatmap <- make_complex_heatmap(selected_data, thresholds, cont_legend_limit, cluster_columns = TRUE)
-
-draw(colclust_heatmap)
-
-# Save the heatmap to a PDF file, for testing.
-# pdf("colclust_heatmap.pdf", width = 10, height = 10)
-# draw(colclust_heatmap)
-# dev.off()
+  heatmap <- make_complex_heatmap(
+    selected_data,
+    thresholds,
+    cont_legend_limit,
+    cluster_columns = TRUE
+  )
+  cat(knitr::knit_child(
+    text = c(
+      paste0("#### ", facet_name, " - Clustered columns"),
+      "",
+      "```{r, echo=FALSE}",
+      "draw(heatmap)",
+      "```"
+    ),
+    envir = environment(),
+    quiet = TRUE
+  ), "\n\n")
+}
 ```
 
 
@@ -562,74 +677,80 @@ draw(colclust_heatmap)
 These plots show a more detailed view of the -log10(p-value) scores for each bioset and biomarker combination.
 This is a more detailed view of the data shown in the heatmaps above.
 
-```{r plot_RF, echo=FALSE, results='asis'}
-# Initialize an empty list to store ggplot objects for the combined plot
-plot_list_combined <- list()
+```{r plot_RF, echo=FALSE, results='asis', fig.height=20, fig.width=10}
+for (facet_name in names(rf_by_facet)) {
+  facet_out <- rf_by_facet[[facet_name]]$out
+  plot_list_combined <- list()
 
-for (i in seq_along(unique(out$Biomarker))) {
-  biomarker <- unique(out$Biomarker)[i]
-  
-  if (biomarker %in% threshold15) {
-    threshold_hi <- 15
-    threshold_lo <- -15
-  } else if (biomarker %in% threshold4) {
-    threshold_hi <- 4
-    threshold_lo <- -4
-  } else {
-    threshold_hi <- NULL
-    threshold_lo <- NULL
+  for (biomarker in unique(facet_out$Biomarker)) {
+    if (biomarker %in% threshold15) {
+      threshold_hi <- 15
+      threshold_lo <- -15
+    } else if (biomarker %in% threshold4) {
+      threshold_hi <- 4
+      threshold_lo <- -4
+    } else {
+      threshold_hi <- NULL
+      threshold_lo <- NULL
+    }
+
+    plot_data <- facet_out %>%
+      dplyr::filter(Biomarker == biomarker) %>%
+      dplyr::arrange(dplyr::desc(o)) %>%
+      dplyr::mutate(
+        Group = stringr::str_extract(Chem, "^[^_]+"),
+        Chem = forcats::fct_reorder(Chem, o, .desc = TRUE)
+      )
+
+    plot_object <- ggplot(
+      plot_data,
+      aes(x = Chem, y = o, color = Group)
+    ) +
+      geom_point(size = 3) +
+      geom_hline(yintercept = threshold_hi, color = "black") +
+      geom_hline(yintercept = threshold_lo, color = "black") +
+      labs(
+        title = biomarker,
+        y = "-log10(p-value)",
+        x = "Bioset"
+      ) +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+    plot_list_combined[[biomarker]] <- plot_object
+    cat(knitr::knit_child(
+      text = c(
+        paste0("#### ", facet_name, " - ", biomarker),
+        "",
+        "```{r, echo=FALSE}",
+        "print(plot_object)",
+        "```"
+      ),
+      envir = environment(),
+      quiet = TRUE
+    ), "\n\n")
   }
 
-  j <- out %>% 
-    filter(Biomarker == biomarker) %>%
-    arrange(o, decreasing = TRUE) %>%
-    mutate(Group = str_extract(Chem, "^[^_]+")) %>% 
-    mutate(Chem = fct_reorder(Chem, o, .desc = TRUE))
-  
-  cat(paste0("#### ", biomarker, "\n\n"))  # Show each plot in its own tab
-
-  # Create the plot with full x-axis and y-axis labels
-  p <- ggplot(j, aes(x = Chem, y = o, color = Group)) +
-    geom_point(size = 3) +
-    geom_hline(yintercept = threshold_hi, color = "black") +
-    geom_hline(yintercept = threshold_lo, color = "black") +
-    labs(title = biomarker,
-         y = "-log10(p-value)",
-         x = "Bioset") +
-    theme_bw() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-  print(p)
-
-  cat("\n\n")
-  
-  # Save the individual plot
-  # ggsave(paste0(biomarker, ".png"), plot = p, device = "png")
-
-  # Append the modified plot to the list for the combined plot
-  plot_list_combined[[biomarker]] <- p
+  combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
+      plot_layout(guides = "collect", axis_titles = "collect") +
+      plot_annotation(
+        theme = theme(
+          axis.title.x = element_text(size = 12, face = "bold"),
+          axis.title.y = element_text(size = 12, face = "bold")
+        )
+      )
+  cat(knitr::knit_child(
+    text = c(
+      paste0("#### ", facet_name, " - Combined"),
+      "",
+      "```{r, echo=FALSE}",
+      "print(combined_plot)",
+      "```"
+    ),
+    envir = environment(),
+    quiet = TRUE
+  ), "\n\n")
 }
-```
-
-```{r plot_combined, echo=FALSE, fig.height=20, fig.width=10}
-# Combine the plots using patchwork with a shared legend
-combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
-  plot_layout(guides = "collect",
-  axis_titles = "collect") +
-  plot_annotation(
-    title = NULL,
-    subtitle = NULL,
-    caption = NULL,
-    theme = theme(
-      plot.title = element_blank(),
-      plot.subtitle = element_blank(),
-      plot.caption = element_blank(),
-      axis.title.x = element_text(size = 12, face = "bold"),
-      axis.title.y = element_text(size = 12, face = "bold")
-    )
-  )
-
-# combined_plot
 ```
 
 ## Biomarker Table {-}
