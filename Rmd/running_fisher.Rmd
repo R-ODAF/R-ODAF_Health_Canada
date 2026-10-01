@@ -24,6 +24,7 @@ params:
   deseq_filter:  null        # Which group will this report be done on?
   reports_facet: null #  
   reports_filter:  null # 
+  running_fisher_facet: null
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -251,7 +252,7 @@ select_and_rename <- function(df) {
 original_names <- names(bs)
 
 # Match biosets to the requested metadata facet before shortening their names.
-if (is.null(params$reports_facet)) {
+if (is.na(params$running_fisher_facet)) {
   bs_by_facet <- list(All = bs)
 } else {
   design_column <- params$design
