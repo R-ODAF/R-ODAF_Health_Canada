@@ -115,7 +115,7 @@ Report prepared for: `r params$researcher_name`
 Modified from code provided by Andrew Williams (Health Canada) and based on Running Fisher analysis as described in @kupershmidt_ontology_based_2010.
 
 The Running Fisher (RF) algorithm is a method for comparing two ranked lists of genes. The algorithm is based on the Fisher's exact test.
-The results of the analysis in this report can be considered *exploratory* and should be *interpreted with caution*. 
+The results of the analysis in this report can be considered **exploratory** and should be **interpreted with caution**. 
 Biomarkers were developed in specific cell lines (see the table at the end of this report), and the results may not be generalizable to other cell lines or conditions.
 
 This report was generated as part of the R-ODAF_Health_Canada pipeline. For more information, see the [R-ODAF GitHub repository](https://github.com/R-ODAF/R-ODAF_Health_Canada/).
