@@ -64,6 +64,7 @@ DESeq2:
   deseq_filter:  null        # Which group will this report be done on?
   reports_facet: "chemical" #  Separate reports will be made for each facet
   reports_filter:  null # You can choose just one group within the column used for reports_facet, and produce reports only for that group
+  running_fisher_facet: "chemical" # Column in the metadata to facet the plots in the running Fisher analysis report 
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
   strict_contrasts: FALSE         # Use BOTH columns (exp, cont) of contrasts file to limit what is included in the report

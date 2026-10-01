@@ -24,6 +24,7 @@ params:
   deseq_filter:  null        # Which group will this report be done on?
   reports_facet: "chemical_timepoint" #  
   reports_filter:  "estradiol 10d" # 
+  running_fisher_facet: null
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
