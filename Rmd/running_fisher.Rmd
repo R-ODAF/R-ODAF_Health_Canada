@@ -679,73 +679,55 @@ These plots show a more detailed view of the -log10(p-value) scores for each bio
 This is a more detailed view of the data shown in the heatmaps above.
 
 ```{r plot_RF, echo=FALSE, results='asis', fig.height=20, fig.width=10}
-for (facet_name in names(rf_by_facet)) {
-  facet_out <- rf_by_facet[[facet_name]]$out
-  plot_list_combined <- list()
+plot_data_all <- dplyr::bind_rows(
+  lapply(names(rf_by_facet), function(facet_name) {
+    rf_by_facet[[facet_name]]$out %>%
+      dplyr::mutate(Facet = facet_name)
+  })
+)
 
-  for (biomarker in unique(facet_out$Biomarker)) {
-    if (biomarker %in% threshold15) {
-      threshold_hi <- 15
-      threshold_lo <- -15
-    } else if (biomarker %in% threshold4) {
-      threshold_hi <- 4
-      threshold_lo <- -4
-    } else {
-      threshold_hi <- NULL
-      threshold_lo <- NULL
-    }
-
-    plot_data <- facet_out %>%
-      dplyr::filter(Biomarker == biomarker) %>%
-      dplyr::arrange(dplyr::desc(o)) %>%
-      dplyr::mutate(
-        Group = stringr::str_extract(Chem, "^[^_]+"),
-        Chem = forcats::fct_reorder(Chem, o, .desc = TRUE)
-      )
-
-    plot_object <- ggplot(
-      plot_data,
-      aes(x = Chem, y = o, color = Group)
-    ) +
-      geom_point(size = 3) +
-      geom_hline(yintercept = threshold_hi, color = "black") +
-      geom_hline(yintercept = threshold_lo, color = "black") +
-      labs(
-        title = biomarker,
-        y = "-log10(p-value)",
-        x = "Bioset"
-      ) +
-      theme_bw() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-    plot_list_combined[[biomarker]] <- plot_object
-    cat(knitr::knit_child(
-      text = c(
-        paste0("#### ", facet_name, " - ", biomarker),
-        "",
-        "```{r, echo=FALSE}",
-        "print(plot_object)",
-        "```"
-      ),
-      envir = environment(),
-      quiet = TRUE
-    ), "\n\n")
+for (biomarker in unique(plot_data_all$Biomarker)) {
+  if (biomarker %in% threshold15) {
+    threshold_hi <- 15
+    threshold_lo <- -15
+  } else if (biomarker %in% threshold4) {
+    threshold_hi <- 4
+    threshold_lo <- -4
+  } else {
+    threshold_hi <- NULL
+    threshold_lo <- NULL
   }
 
-  combined_plot <- wrap_plots(plot_list_combined, ncol = 3) +
-      plot_layout(guides = "collect", axis_titles = "collect") +
-      plot_annotation(
-        theme = theme(
-          axis.title.x = element_text(size = 12, face = "bold"),
-          axis.title.y = element_text(size = 12, face = "bold")
-        )
-      )
+  plot_data <- plot_data_all %>%
+    dplyr::filter(Biomarker == biomarker) %>%
+    dplyr::arrange(dplyr::desc(o)) %>%
+    dplyr::mutate(
+      Group = stringr::str_extract(Chem, "^[^_]+"),
+      Chem = forcats::fct_reorder(Chem, o, .desc = TRUE)
+    )
+
+  plot_object <- ggplot(
+    plot_data,
+    aes(x = Chem, y = o, color = Group)
+  ) +
+    geom_point(size = 3) +
+    geom_hline(yintercept = threshold_hi, color = "black") +
+    geom_hline(yintercept = threshold_lo, color = "black") +
+    facet_wrap(~Facet, scales = "free_x") +
+    labs(
+      title = biomarker,
+      y = "-log10(p-value)",
+      x = "Bioset"
+    ) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
   cat(knitr::knit_child(
     text = c(
-      paste0("#### ", facet_name, " - Combined"),
+      paste0("#### ", biomarker),
       "",
       "```{r, echo=FALSE}",
-      "print(combined_plot)",
+      "print(plot_object)",
       "```"
     ),
     envir = environment(),
