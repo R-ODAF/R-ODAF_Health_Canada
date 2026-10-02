@@ -45,7 +45,7 @@ rule studywideqc:
     input:
         qc_dir / "MultiQC_Report.html",
         processed_dir / "count_table.tsv",
-        sm_temp_dir / "genome.removed"
+        genome_removed
     output:
         qc_dir / "details/samples_removed.txt"
     conda:
