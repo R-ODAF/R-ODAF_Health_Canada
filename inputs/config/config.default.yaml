@@ -26,6 +26,8 @@ common:
 
 pipeline:
   genomedir: ~/shared/dbs/biospyder/humansurrogate2_0/ # directory where genome information can be found (the files below should be in this directory)
+  reference_dir: null # Optional separate directory containing the FASTA and GTF files; defaults to genomedir
+  star_index_dir: null # Optional directory for STAR indexes; defaults to genomedir
   genome_filename: humansurrogate2_0.fa # filename for genome
   annotation_filename: humansurrogate2_0.gtf # filename for gene annotations
   genome_name: "S1500_2.0" # used for labeling genome index files
