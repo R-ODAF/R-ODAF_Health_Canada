@@ -6,7 +6,7 @@ rule pp_rs_all:
     input: 
         processed_dir / "count_table.tsv",
         processed_dir / "isoforms_table.tsv",
-        sm_temp_dir / "genome.removed"
+        genome_removed
 
 #######################
 # QUANTIFICATION RSEM #
