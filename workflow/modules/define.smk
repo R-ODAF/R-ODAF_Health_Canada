@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import os
+import yaml
 from snakemake.utils import validate
 
 # load and validate config 
@@ -24,8 +25,42 @@ if main_dir is None:
     main_dir = os.getcwd()
 main_dir = Path(main_dir)
 
+# Record the version of STAR and RSEM (RNA-seq only)
+# Will be used in align.smk to check whether the index/indices should be remade
+preprocessing_env_file = Path(workflow.basedir) / "envs/preprocessing.yml"
+with preprocessing_env_file.open() as env_file:
+    preprocessing_env = yaml.safe_load(env_file)
 
-genome_dir = Path(pipeline_config["genomedir"])
+star_dependencies = [
+    str(dependency).rsplit("::", 1)[-1]
+    for dependency in preprocessing_env["dependencies"]
+    if str(dependency).rsplit("::", 1)[-1].startswith("star=")
+]
+if len(star_dependencies) != 1:
+    raise ValueError(
+        "workflow/envs/preprocessing.yml must contain exactly one pinned STAR dependency"
+    )
+STAR_version = star_dependencies[0].split("=", 1)[1]
+
+RSEM_dependencies = [
+    str(dependency).rsplit("::", 1)[-1]
+    for dependency in preprocessing_env["dependencies"]
+    if str(dependency).rsplit("::", 1)[-1].startswith("rsem=")
+]
+if len(RSEM_dependencies) != 1:
+    raise ValueError(
+        "workflow/envs/preprocessing.yml must contain exactly one pinned RSEM dependency"
+    )
+RSEM_version = RSEM_dependencies[0].split("=", 1)[1]
+
+reference_dir = Path(pipeline_config.get("reference_dir") or pipeline_config["genomedir"])
+star_index_root = Path(pipeline_config.get("star_index_dir") or pipeline_config["genomedir"])
+rsem_index_root = Path(
+    pipeline_config.get("rsem_index_dir")
+    or pipeline_config["genomedir"]
+)
+# Keep the existing name for modules that use the reference-file location.
+genome_dir = reference_dir
 num_threads = pipeline_config["threads"]
 
 input_dir = main_dir / "inputs"
