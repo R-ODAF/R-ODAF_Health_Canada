@@ -81,6 +81,10 @@ properties:
         type:
           - 'null'
           - string
+      rsem_index_dir:
+        type:
+          - 'null'
+          - string
       genome_filename:
         type: string
       annotation_filename:
