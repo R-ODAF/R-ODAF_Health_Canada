@@ -157,6 +157,10 @@ properties:
           - mouse
           - rat
           - hamster
+      genome_assembly:
+        type:
+          - string
+          - 'null'
       design:
         type: string
       intgroup_to_plot:
