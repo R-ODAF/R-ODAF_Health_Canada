@@ -105,16 +105,22 @@ if (params$generate_tgxddi_report) {
     base::mapply(FUN = make_tgxddi_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
     # Concatenate all the TGxDDI output csv files into one
     tgxddi_files <- list.files(paths$reports_dir, pattern = "_tgx-ddi_results.csv", full.names = TRUE)
-    tgxddi_df <- readr::read_csv(tgxddi_files[1], show_col_types = FALSE)
-    if (length(tgxddi_files) > 1) {
-      for (i in 2:length(tgxddi_files)) {
-        tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
+    
+    # Skip if no files found
+    if (length(tgxddi_files) == 0) {
+      message("No TGx-DDI results files found. Skipping concatenation.")
+    } else {
+      tgxddi_df <- readr::read_csv(tgxddi_files[1], show_col_types = FALSE)
+      if (length(tgxddi_files) > 1) {
+        for (i in 2:length(tgxddi_files)) {
+          tgxddi_df <- dplyr::bind_rows(tgxddi_df, readr::read_csv(tgxddi_files[i], show_col_types = FALSE))
+        }
       }
+      # Write out the concatenated file
+      readr::write_csv(tgxddi_df, file.path(paths$summary, paste0("tgx-ddi_results_summary.csv")))
+      # Delete the individual files
+      file.remove(tgxddi_files)
     }
-    # Write out the concatenated file
-    readr::write_csv(tgxddi_df, file.path(paths$summary, paste0("tgx-ddi_results_summary.csv")))
-    # Delete the individual files
-    file.remove(tgxddi_files)
   }
   else {
     message(paste("TGx-DDI analysis is only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-DDI analysis."))
@@ -126,16 +132,22 @@ if (params$generate_tgxhdaci_report) {
     base::mapply(FUN = make_hdaci_reports, facet = facets, MoreArgs = list(pars = params, paths = paths))
     # Concatenate all the TGxHDACi output csv files into one
     tgxhdaci_files <- list.files(paths$reports_dir, pattern = "_tgx-HDACi_results.csv", full.names = TRUE)
-    tgxhdaci_df <- readr::read_csv(tgxhdaci_files[1], show_col_types = FALSE)
-    if (length(tgxhdaci_files) > 1) {
-      for (i in 2:length(tgxhdaci_files)) {
-        tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
+
+    # Skip if no files found
+    if(length(tgxhdaci_files) == 0) {
+      message("No TGx-HDACi results files found.")
+    } else {
+      tgxhdaci_df <- readr::read_csv(tgxhdaci_files[1], show_col_types = FALSE)
+      if (length(tgxhdaci_files) > 1) {
+        for (i in 2:length(tgxhdaci_files)) {
+          tgxhdaci_df <- dplyr::bind_rows(tgxhdaci_df, readr::read_csv(tgxhdaci_files[i], show_col_types = FALSE))
+        }
       }
+      # Write out the concatenated file
+      readr::write_csv(tgxhdaci_df, file.path(paths$summary, paste0("tgx-hdaci_results_summary.csv")))
+      # Delete the individual files
+      file.remove(tgxhdaci_files)
     }
-    # Write out the concatenated file
-    readr::write_csv(tgxhdaci_df, file.path(paths$summary, paste0("tgx-hdaci_results_summary.csv")))
-    # Delete the individual files
-    file.remove(tgxhdaci_files)
   }
   else {
     message("TGx-HDACi report generation is currently only available for human datasets. Your parameters indicate that the data is from", params$species, ". Skipping TGx-HDACi analysis.")

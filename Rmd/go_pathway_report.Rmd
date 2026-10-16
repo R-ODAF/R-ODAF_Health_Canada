@@ -24,6 +24,7 @@ params:
   deseq_filter:  null        # Which group will this report be done on?
   reports_facet: null #  
   reports_filter:  null # 
+  running_fisher_facet: null
   sortcol: "dose"                # Optionally, a column by which to sort the contrasts
   solvent_control: "solvent_control"
   lenient_contrasts: FALSE         # Use either column (exp, cont) of contrasts file to limit what is included in the report (instead of just exp column)
@@ -373,10 +374,10 @@ wpid2name <- wp2gene %>% dplyr::select(wpid,name) #TERM2NAME
 
 matches <- wpid2gene %>% filter(gene %in% entrezDEGs)
 
-if(is.na(params$reports_filter)){
-  pathway_output_dir <- paths$pathway_analysis
-} else {
+if(!is.na(params$reports_filter)) {
   pathway_output_dir <- paths$pathway_analysis[[params$reports_filter]]
+} else {
+  pathway_output_dir <- paths$pathway_analysis
 }
 
 if (nrow(matches) > 1) {

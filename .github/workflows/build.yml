@@ -2,8 +2,9 @@ name: Build and push a container to GHCR
 on:
   push:
     branches:
-      - try_miniforge
+      - 'hotfix/**'
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -37,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ghcr.io/r-odaf/r-odaf_health_canada:r-pkg-test
+          tags: ghcr.io/r-odaf/r-odaf_health_canada:latest
           file: ./Dockerfile
           cache-from: type=registry,ref=ghcr.io/r-odaf/r-odaf_health_canada:cache
           cache-to: type=inline
