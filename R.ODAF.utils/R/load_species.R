@@ -6,9 +6,10 @@
 #' @param species Target species for the analysis.
 #' @param wiki Path or URL to the WikiPathways data.
 #' @param manifest Path to the manifest file required for TempO-Seq analysis.
+#' @param genome_assembly Optional Ensembl genome assembly accession.
 #' @return A list containing various objects pertaining to the species data.
 #' @export
-load_species <- function(species, wiki, manifest) {
+load_species <- function(species, wiki, manifest, genome_assembly = NULL) {
   species_data <- list()
   species_data$loaded <- FALSE
   if (species == "human") {
@@ -63,5 +64,24 @@ load_species <- function(species, wiki, manifest) {
   } else {
     stop("No species picked!")
   }
+  species_data$genome_assembly <- resolve_genome_assembly(species, genome_assembly)
   return(species_data)
+}
+
+# Prefer the configured assembly; otherwise use the default for the species found on Emsembl website as of 15 Oct 2026.
+resolve_genome_assembly <- function(species, configured_genome_assembly = NULL) {
+  if (!is.null(configured_genome_assembly)) {
+    return(configured_genome_assembly)
+  }
+  assemblies <- c(
+    human = "GCA_000001405.29",
+    mouse = "GCA_000001635.9",
+    rat = "GCA_015227675.2",
+    hamster = "GCA_017639785.1"
+  )
+  assembly <- assemblies[[species]]
+  if (is.null(assembly)) {
+    stop("No Ensembl assembly configured for species: ", species)
+  }
+  unname(assembly)
 }

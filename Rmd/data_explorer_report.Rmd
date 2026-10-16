@@ -16,6 +16,7 @@ params:
   celltype: "MCF7 cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
   species: "human"                 # one of human, mouse, rat, hamster
+  genome_assembly: null # Optional Ensembl assembly accession; defaults from species
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than on
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
@@ -121,7 +122,9 @@ The links will search the NCBI and Ensembl sites for the gene of interest. Note 
 ```{r 'topFeatures', results = 'asis', warning = FALSE, message = FALSE}
 human_rounding <- 2
 searchURL_NCBI <- "http://www.ncbi.nlm.nih.gov/gene/?term="
-searchURL_Ensembl <- "https://ensembl.org/Multi/Search/Results?q="
+searchURL_Ensembl <- paste0("https://www.ensembl.org/feature-explorer/",
+                            params$genome_assembly,
+                            "/gene:")
 ## Add search url if appropriate
 res.df.dt <- allResults %>%
   dplyr::filter(abs(linearFoldChange) > params$linear_fc_filter_DEGs) %>%

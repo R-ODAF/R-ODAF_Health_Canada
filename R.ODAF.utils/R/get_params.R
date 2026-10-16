@@ -20,7 +20,9 @@ get_params <- function(context = "analysis") {
     message("Setting up species data...")
     params$species_data <- load_species(params$species,
                                         params$wikipathways_filename,
-                                        params$biospyder_manifest_file)
+                                        params$biospyder_manifest_file,
+                                        params$genome_assembly)
+    params$genome_assembly <- params$species_data$genome_assembly
     message("Setting up platform specific parameters...")
     params <- set_up_platform_params(params)
     check_required_params(params) # TODO - run a different set of checks for QC params?
