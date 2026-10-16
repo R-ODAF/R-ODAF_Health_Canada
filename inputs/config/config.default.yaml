@@ -57,7 +57,6 @@ QC:
 DESeq2:
   analysis_name: "default"  # short string identifying analysis settings. This will appear in the analysis directory and file names
   species: "human"                 # one of human, mouse, rat, hamster
-  genome_assembly: null # Optional override; null uses the species default: human GCA_000001405.29; mouse GCA_000001635.9; rat GCA_015227675.2; hamster GCA_017639785.1
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup_to_plot: "group" # for PCA plots, add tabs for one or more groups to color
   formula_override: null # e.g., "~batch + condition", to enable users to specify the DESeq2 formula to use
