@@ -359,6 +359,10 @@ if (!is.null(enrich_go_cc)) {
 
 This section uses clusterProfiler to detect enriched gene sets using [WikiPathways](https://www.wikipathways.org/) data.  
 
+The species in this dataset is `r params$species `.
+The WikiPathways file being used is `r params$wikipathways_filename `.
+
+
 ```{r 'pathway_analysis', collapse=TRUE, eval=params$run_pathway_analysis, include=params$run_pathway_analysis, warning = FALSE, message = FALSE}
 if (!is.na(params$reports_filter)) {
   pathway_output_dir <- paths$pathway_analysis[[params$reports_filter]]
