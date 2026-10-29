@@ -15,7 +15,7 @@ params:
   write_additional_output: FALSE # export BMD, biomarker, and biosets output? facet variable should contain chemical and timepoint information
   celltype: "Some cells" # only required for biosets output. Cell type or species used
   units: "uM" # only required for biosets output. Units of dose
-  species: "human"                 # one of human, mouse, rat, hamster
+  species: "human"                 # one of human, mouse, rat, hamster, zebrafish
   design: "group"                # single experimental group of interest; entries in this column must match the contrast names.
   intgroup: ["group"]            # experimental group of interest plus covariates; can be more than one
   intgroup_to_plot: ["group"]   # for PCA plots, add tabs for one or more groups to color
@@ -494,7 +494,7 @@ plotListGSEA_escore <- list()
 contrasts <- levels(allResults$contrast)
 
 # Set species
-# Currently this works for human, mouse, and rat. Otherwise report will error out.
+# The organism code and scientific name are loaded from the configured species.
 kegg_organism <- params$species_data$kegg_organism
 
 # Workaround necessary to use GSEA with KEGG data, because gseKEGG doesn't work in this clusterProfiler version
@@ -543,16 +543,39 @@ for (i in seq_along(contrasts)) {
               pvalueCutoff = 0.05,
               pAdjustMethod = "fdr")
 
-
   gsea_sorted <- kk %>% arrange(desc(enrichmentScore))
-  gsea_sig <- gsea_sorted %>% filter(p.adjust < 0.05)
+  
+  # Shorten pathway descriptions by removing species information
+  # So plots are more readable
+  kk_plot <- kk
+  kk_plot@result$Description <- stringr::str_remove(
+    kk_plot@result$Description,
+    paste0(
+      " - ",
+      params$species_data$species_sci,
+      " [(][^)]*[)]$"
+    )
+  )
+
+  gsea_plot_sig <- kk_plot %>%
+    arrange(desc(enrichmentScore)) %>%
+    filter(p.adjust < 0.05)
+  
   write.table(as.data.frame(gsea_sorted),
               file = file.path(pathway_output_dir,paste0("Enriched.KEGG_Pathways.",
                                                        str_replace_all(contrasts[i]," ","_"),
                                                        ".txt")))
   if (dim(kk@result)[1] > 1) {
-    plotListGSEA[[i]] <- ridgeplot(kk)
-    plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(gsea_sig, geneSetID = c(seq_along(gsea_sig$ID)))
+    plotListGSEA[[i]] <- ridgeplot(kk_plot) + 
+      theme(axis.text.y = element_text(size = 10))
+    if (length(gsea_plot_sig$ID) > 0) {
+      plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(
+        gsea_plot_sig,
+        geneSetID = seq_along(gsea_plot_sig$ID)
+      )
+    } else {
+      plotListGSEA_escore[[i]] <- NA
+    }
   } else {
     plotListGSEA[[i]] <- NA
     plotListGSEA_escore[[i]] <- NA
