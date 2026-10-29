@@ -57,8 +57,10 @@ load_species <- function(species, wiki, manifest) {
     species_data$OrgDb.Ma <- AnnotationHub::query(AnnotationHub::AnnotationHub(), c("OrgDb", "Mesocricetus auratus"))[[1]]
     species_data$orgdb <- "OrgDb.Ma"
     species_data$species_sci <- "Mesocricetus auratus"
+    species_data$wiki <- wiki
     species_data$ensembl_species <- "mauratus_gene_ensembl"
     species_data$species_gene_symbol <- "external_gene_name"
+    species_data$kegg_organism <- "maua"
     species_data$loaded <- TRUE
   } else if (species == "zebrafish") {
     if (!requireNamespace("org.Dr.eg.db", quietly = TRUE)) {
