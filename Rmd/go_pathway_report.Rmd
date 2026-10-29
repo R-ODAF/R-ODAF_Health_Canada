@@ -571,7 +571,7 @@ for (i in seq_along(contrasts)) {
                                                        ".txt")))
   if (dim(kk@result)[1] > 1) {
     plotListGSEA[[i]] <- ridgeplot(kk_plot) + 
-      theme(axis.text.y = element_text(size = 10))
+      theme(axis.text.y = element_text(size = 10, lineheight = 0.6))
     if (length(gsea_plot_sig$ID) > 0) {
       plotListGSEA_escore[[i]] <- enrichplot::gseaplot2(
         gsea_plot_sig,
