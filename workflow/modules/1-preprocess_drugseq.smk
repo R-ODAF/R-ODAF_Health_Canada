@@ -276,6 +276,8 @@ rule combine_counttables:
     output: 
         counttable = processed_dir / "count_table.tsv", # To fit into current R-ODAF needs
         # dummy= sm_temp_dir / "genome.removed" # Super annoying, but other preprocessing paths make it, needed for QC to run
+    conda:
+        "../envs/drugseq.yaml"
     shell:
         """
         python scripts/combine_counts.py {input.metadata} {input.tables} {output.counttable}

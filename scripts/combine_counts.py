@@ -36,4 +36,4 @@ print(f"Combined table: {combined_filt.shape[0]} genes x {combined_filt.shape[1]
 print(f"Writing to: {output_file}")
 
 # Write output
-combined.to_csv(output_file, sep="\t")
+combined_filt.to_csv(output_file, sep="\t")
